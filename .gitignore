@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+*.backup*
+golf_rounds.json
+.DS_Store
