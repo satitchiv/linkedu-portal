@@ -3,3 +3,6 @@ __pycache__/
 *.backup*
 golf_rounds.json
 .DS_Store
+.env
+node_modules/
+.netlify/

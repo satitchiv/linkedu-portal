@@ -1,0 +1,14 @@
+{
+  "name": "linkedu-parent-portal",
+  "version": "2.0.0",
+  "description": "LinkedU Parent Portal — Supabase + Netlify",
+  "scripts": {
+    "dev": "netlify dev",
+    "build": "echo 'Static site — no build step required'"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "@notionhq/client": "^2.2.14"
+  },
+  "devDependencies": {}
+}
