@@ -30,6 +30,9 @@
 
     /* ── Reset ─────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    .lang-th { display: none; }
+    .portal-lang-th .lang-th { display: inline; }
+    .portal-lang-th .lang-en { display: none; }
     html, body { height: 100%; }
     body {
       background: var(--bg);
@@ -166,6 +169,14 @@
       text-transform: uppercase;
     }
     .header-signout:hover { color: #999; }
+    .header-lang {
+      font-size: 11px; color: #888; cursor: pointer;
+      background: none; border: 1px solid #333;
+      border-radius: 3px; padding: 3px 8px;
+      font-family: 'Inter', sans-serif; letter-spacing: 0.03em;
+      margin-right: 4px; transition: color 0.2s, border-color 0.2s;
+    }
+    .header-lang:hover { color: #ccc; border-color: #555; }
 
     /* ── Tab nav ───────────────────────────────────────── */
     #tabnav {
@@ -828,6 +839,7 @@
   <div id="header">
     <div class="header-logo">LINKEDU</div>
     <div class="header-student">Portal — <span id="header-name">Loading...</span></div>
+    <button class="header-lang" id="lang-btn" onclick="toggleLang()" title="Switch language">EN | ภาษาไทย</button>
     <button class="header-signout" onclick="signOut()">Sign out</button>
   </div>
   <div id="tabnav">
@@ -970,6 +982,13 @@ async function signIn() {
   }
 }
 
+function toggleLang() {
+  const isNowTH = !document.body.classList.contains('portal-lang-th')
+  document.body.classList.toggle('portal-lang-th', isNowTH)
+  $id('lang-btn').textContent = isNowTH ? 'ภาษาไทย | EN' : 'EN | ภาษาไทย'
+  localStorage.setItem('portal_lang', isNowTH ? 'th' : 'en')
+}
+
 function resetAuthForm() {
   $id('auth-form-wrap').style.display = 'block'
   $id('auth-sent-wrap').style.display = 'none'
@@ -994,6 +1013,12 @@ document.addEventListener('DOMContentLoaded', () => {
   $id('auth-email').addEventListener('keydown', e => {
     if (e.key === 'Enter') signIn()
   })
+  // Restore language preference
+  if (localStorage.getItem('portal_lang') === 'th') {
+    document.body.classList.add('portal-lang-th')
+    const btn = $id('lang-btn')
+    if (btn) btn.textContent = 'ภาษาไทย | EN'
+  }
 })
 
 // ── Data loading ─────────────────────────────────────────────────────────────
@@ -2331,6 +2356,29 @@ function renderAll() {
 sb.auth.onAuthStateChange(async (event, session) => {
   if (session) {
     $id('auth-screen').style.display = 'none'
+
+    // Try instant cache load (< 30 min old)
+    try {
+      const cached = localStorage.getItem('portal_cache')
+      if (cached) {
+        const { D: cD, golfRounds: cR, ts } = JSON.parse(cached)
+        if (Date.now() - ts < 30 * 60 * 1000) {
+          D = cD; golfRounds = cR; userRole = D.role || 'parent'
+          $id('header-name').textContent = D.student.studentName || 'Parent'
+          renderAll()
+          $id('app').style.display = 'flex'
+          $id('app').classList.add('visible')
+          // Refresh in background silently
+          loadData(session.access_token).then(fresh => {
+            D = fresh; userRole = D.role || 'parent'
+            try { localStorage.setItem('portal_cache', JSON.stringify({ D, golfRounds, ts: Date.now() })) } catch(e) {}
+            renderAll()
+          }).catch(() => {})
+          return
+        }
+      }
+    } catch(e) {}
+
     $id('loading').classList.add('show')
 
     try {
@@ -2341,6 +2389,11 @@ sb.auth.onAuthStateChange(async (event, session) => {
       D = dataRes
       userRole = D.role || 'parent'
       golfRounds = await loadGolfRounds(session.access_token, D.student.id)
+
+      // Cache for instant reload
+      try {
+        localStorage.setItem('portal_cache', JSON.stringify({ D, golfRounds, ts: Date.now() }))
+      } catch(e) {}
 
       $id('header-name').textContent = D.student.studentName || 'Parent'
       renderAll()
