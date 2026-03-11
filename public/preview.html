@@ -7,7 +7,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     /* ── Design tokens — LinkedU Bible (light) ─────────── */
@@ -798,7 +797,7 @@
 <body>
 
 <!-- Loading overlay -->
-<div id="loading" class="show">LinkedU</div>
+<div id="loading">LinkedU</div>
 
 <!-- Auth screen -->
 <div id="auth-screen" style="display:none">
@@ -877,147 +876,318 @@
 </div>
 
 <script>
-// ── Config ─────────────────────────────────────────────────────────────────
-// Replace these with your actual Supabase project values.
-// The anon key is safe to expose in client-side code — it is designed for this.
-const SUPABASE_URL      = 'https://ufspivvuevllmkxmivbe.supabase.co'
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmc3BpdnZ1ZXZsbG1reG1pdmJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxMTU2MDUsImV4cCI6MjA4ODY5MTYwNX0.aybHZVeG4_gl5RDXjrhfTAKNq0sUEdYslwuwTdghIpk'
+// ── PREVIEW MODE — no login required ──────────────────────────────────────
+const sb = { auth: { onAuthStateChange: () => {}, signOut: async () => {}, getSession: async () => {} } }
+const MOCK_GOLF_ROUNDS = [
+  {
+    id:'r1', roundId:'r1', date:'2026-03-08', course:'Lam Luk Ka Country Club',
+    round_type:'Stroke Play', tees:'Red', weather:'Sunny', conditions:'Dry',
+    coach_recommendation:'Ping showed great composure on the back nine. Focus this week on approach shots with 7-iron — consistent contact needed before the summer school.',
+    debrief:'Felt nervous on hole 13 but recovered well. Happy with putting today.',
+    holes:[
+      {holeNumber:1,par:4,score:5,putts:2,mentalRating:1,shots:[{shotNumber:1,club:'Driver',result:'Fairway',quality:'Pure'},{shotNumber:2,club:'7-iron',result:'Green',quality:'OK'},{shotNumber:3,club:'Putter',result:'Miss',quality:'OK'},{shotNumber:4,club:'Putter',result:'In',quality:'OK'}]},
+      {holeNumber:2,par:3,score:4,putts:2,mentalRating:2,shots:[{shotNumber:1,club:'6-iron',result:'Rough',quality:'Mishit'},{shotNumber:2,club:'PW',result:'Green',quality:'OK'},{shotNumber:3,club:'Putter',result:'Miss',quality:'OK'},{shotNumber:4,club:'Putter',result:'In',quality:'OK'}]},
+      {holeNumber:3,par:5,score:6,putts:2,mentalRating:1,shots:[{shotNumber:1,club:'Driver',result:'Fairway',quality:'Pure'},{shotNumber:2,club:'3-wood',result:'Fairway',quality:'OK'},{shotNumber:3,club:'9-iron',result:'Green',quality:'Pure'},{shotNumber:4,club:'Putter',result:'Miss',quality:'OK'},{shotNumber:5,club:'Putter',result:'In',quality:'OK'}]},
+      {holeNumber:4,par:4,score:5,putts:2,mentalRating:1,shots:[{shotNumber:1,club:'Driver',result:'Rough',quality:'OK'},{shotNumber:2,club:'8-iron',result:'Green',quality:'OK'},{shotNumber:3,club:'Putter',result:'Miss',quality:'OK'},{shotNumber:4,club:'Putter',result:'In',quality:'OK'}]},
+      {holeNumber:5,par:4,score:5,putts:2,mentalRating:2,shots:[{shotNumber:1,club:'Driver',result:'Fairway',quality:'OK'},{shotNumber:2,club:'7-iron',result:'Rough',quality:'Mishit'},{shotNumber:3,club:'SW',result:'Green',quality:'OK'},{shotNumber:4,club:'Putter',result:'Miss',quality:'OK'},{shotNumber:5,club:'Putter',result:'In',quality:'OK'}]},
+      {holeNumber:6,par:3,score:3,putts:1,mentalRating:1,shots:[{shotNumber:1,club:'8-iron',result:'Green',quality:'Pure'},{shotNumber:2,club:'Putter',result:'Miss',quality:'OK'},{shotNumber:3,club:'Putter',result:'In',quality:'OK'}]},
+      {holeNumber:7,par:5,score:6,putts:2,mentalRating:1,shots:[{shotNumber:1,club:'Driver',result:'Fairway',quality:'Pure'},{shotNumber:2,club:'5-iron',result:'Fairway',quality:'OK'},{shotNumber:3,club:'PW',result:'Green',quality:'OK'},{shotNumber:4,club:'Putter',result:'Miss',quality:'OK'},{shotNumber:5,club:'Putter',result:'In',quality:'OK'}]},
+      {holeNumber:8,par:4,score:5,putts:2,mentalRating:1,shots:[{shotNumber:1,club:'Driver',result:'Fairway',quality:'OK'},{shotNumber:2,club:'9-iron',result:'Green',quality:'OK'},{shotNumber:3,club:'Putter',result:'Miss',quality:'OK'},{shotNumber:4,club:'Putter',result:'In',quality:'OK'}]},
+      {holeNumber:9,par:4,score:5,putts:2,mentalRating:2,shots:[{shotNumber:1,club:'Driver',result:'Rough',quality:'Mishit'},{shotNumber:2,club:'7-iron',result:'Green',quality:'Pure'},{shotNumber:3,club:'Putter',result:'Miss',quality:'OK'},{shotNumber:4,club:'Putter',result:'In',quality:'OK'}]},
+      {holeNumber:10,par:4,score:5,putts:2,mentalRating:1,shots:[{shotNumber:1,club:'Driver',result:'Fairway',quality:'OK'},{shotNumber:2,club:'8-iron',result:'Green',quality:'OK'},{shotNumber:3,club:'Putter',result:'Miss',quality:'OK'},{shotNumber:4,club:'Putter',result:'In',quality:'OK'}]},
+      {holeNumber:11,par:3,score:4,putts:2,mentalRating:2,shots:[{shotNumber:1,club:'7-iron',result:'Rough',quality:'Mishit'},{shotNumber:2,club:'SW',result:'Green',quality:'OK'},{shotNumber:3,club:'Putter',result:'Miss',quality:'OK'},{shotNumber:4,club:'Putter',result:'In',quality:'OK'}]},
+      {holeNumber:12,par:5,score:7,putts:3,mentalRating:3,shots:[{shotNumber:1,club:'Driver',result:'OB',quality:'Mishit'},{shotNumber:2,club:'Driver',result:'Rough',quality:'OK'},{shotNumber:3,club:'5-iron',result:'Fairway',quality:'OK'},{shotNumber:4,club:'PW',result:'Green',quality:'OK'},{shotNumber:5,club:'Putter',result:'Miss',quality:'Mishit'},{shotNumber:6,club:'Putter',result:'Miss',quality:'OK'},{shotNumber:7,club:'Putter',result:'In',quality:'OK'}],noteText:'Lost focus after OB. Need to reset better.'},
+      {holeNumber:13,par:4,score:5,putts:2,mentalRating:2,shots:[{shotNumber:1,club:'Driver',result:'Fairway',quality:'Pure'}]},
+      {holeNumber:14,par:4,score:4,putts:1,mentalRating:1,shots:[{shotNumber:1,club:'Driver',result:'Fairway',quality:'Pure'},{shotNumber:2,club:'9-iron',result:'Green',quality:'Pure'},{shotNumber:3,club:'Putter',result:'In',quality:'Pure'}]},
+      {holeNumber:15,par:3,score:3,putts:1,mentalRating:1,shots:[{shotNumber:1,club:'6-iron',result:'Green',quality:'Pure'},{shotNumber:2,club:'Putter',result:'Miss',quality:'OK'},{shotNumber:3,club:'Putter',result:'In',quality:'OK'}]},
+      {holeNumber:16,par:5,score:6,putts:2,mentalRating:1,shots:[{shotNumber:1,club:'Driver',result:'Fairway',quality:'OK'}]},
+      {holeNumber:17,par:4,score:5,putts:2,mentalRating:1,shots:[{shotNumber:1,club:'Driver',result:'Fairway',quality:'OK'}]},
+      {holeNumber:18,par:4,score:5,putts:2,mentalRating:1,shots:[{shotNumber:1,club:'Driver',result:'Fairway',quality:'Pure'}]},
+    ]
+  },
+  {
+    id:'r2', roundId:'r2', date:'2026-02-22', course:'Windsor Park Golf Club',
+    round_type:'Practice', tees:'White', weather:'Cloudy', conditions:'Soft',
+    coach_recommendation:'Good round considering soft conditions. Driving accuracy improved. Work on wedge distance control.',
+    debrief:'Comfortable off the tee today.',
+    holes:[
+      {holeNumber:1,par:4,score:5,putts:2,mentalRating:1},{holeNumber:2,par:3,score:4,putts:2,mentalRating:1},
+      {holeNumber:3,par:5,score:6,putts:2,mentalRating:1},{holeNumber:4,par:4,score:5,putts:2,mentalRating:2},
+      {holeNumber:5,par:4,score:5,putts:2,mentalRating:1},{holeNumber:6,par:3,score:4,putts:2,mentalRating:2},
+      {holeNumber:7,par:5,score:7,putts:3,mentalRating:3},{holeNumber:8,par:4,score:6,putts:2,mentalRating:2},
+      {holeNumber:9,par:4,score:5,putts:2,mentalRating:1},
+    ]
+  },
+  {
+    id:'r3', roundId:'r3', date:'2026-02-15', course:'Lam Luk Ka Country Club',
+    round_type:'Stroke Play', tees:'Red', weather:'Hot', conditions:'Dry',
+    coach_recommendation:'Scoring average improving steadily. Mental game on holes 11-14 is the key area.',
+    debrief:'Tired on back nine but kept focus. Putting was great.',
+    holes:[
+      {holeNumber:1,par:4,score:5,putts:2,mentalRating:1},{holeNumber:2,par:3,score:3,putts:1,mentalRating:1},
+      {holeNumber:3,par:5,score:6,putts:2,mentalRating:1},{holeNumber:4,par:4,score:6,putts:2,mentalRating:2},
+      {holeNumber:5,par:4,score:5,putts:2,mentalRating:1},{holeNumber:6,par:3,score:4,putts:2,mentalRating:2},
+      {holeNumber:7,par:5,score:6,putts:2,mentalRating:1},{holeNumber:8,par:4,score:5,putts:2,mentalRating:1},
+      {holeNumber:9,par:4,score:5,putts:2,mentalRating:1},{holeNumber:10,par:4,score:6,putts:3,mentalRating:2},
+      {holeNumber:11,par:3,score:5,putts:2,mentalRating:3},{holeNumber:12,par:5,score:7,putts:3,mentalRating:3},
+      {holeNumber:13,par:4,score:5,putts:2,mentalRating:2},{holeNumber:14,par:4,score:5,putts:2,mentalRating:1},
+      {holeNumber:15,par:3,score:4,putts:2,mentalRating:1},{holeNumber:16,par:5,score:6,putts:2,mentalRating:1},
+      {holeNumber:17,par:4,score:6,putts:2,mentalRating:2},{holeNumber:18,par:4,score:5,putts:2,mentalRating:1},
+    ]
+  },
+  {
+    id:'r4', roundId:'r4', date:'2026-01-30', course:'Windsor Park Golf Club',
+    round_type:'Practice', tees:'White', weather:'Sunny', conditions:'Dry',
+    coach_recommendation:'Best round of the month. Consistent ball striking throughout.',
+    debrief:'Everything clicked today. Very happy.',
+    holes:[
+      {holeNumber:1,par:4,score:5,putts:2,mentalRating:1},{holeNumber:2,par:3,score:3,putts:1,mentalRating:1},
+      {holeNumber:3,par:5,score:5,putts:2,mentalRating:1},{holeNumber:4,par:4,score:5,putts:2,mentalRating:1},
+      {holeNumber:5,par:4,score:4,putts:1,mentalRating:1},{holeNumber:6,par:3,score:3,putts:1,mentalRating:1},
+      {holeNumber:7,par:5,score:6,putts:2,mentalRating:1},{holeNumber:8,par:4,score:5,putts:2,mentalRating:2},
+      {holeNumber:9,par:4,score:5,putts:2,mentalRating:1},
+    ]
+  },
+  {
+    id:'r5', roundId:'r5', date:'2026-01-18', course:'Lam Luk Ka Country Club',
+    round_type:'Ranked Tournament', tees:'Red', weather:'Overcast', conditions:'Normal',
+    coach_recommendation:'Tournament experience is invaluable. Ping handled pressure well for a first ranked event.',
+    debrief:'Nervous at first but got better after hole 5.',
+    holes:[
+      {holeNumber:1,par:4,score:6,putts:3,mentalRating:3},{holeNumber:2,par:3,score:5,putts:2,mentalRating:3},
+      {holeNumber:3,par:5,score:7,putts:2,mentalRating:2},{holeNumber:4,par:4,score:6,putts:2,mentalRating:2},
+      {holeNumber:5,par:4,score:5,putts:2,mentalRating:2},{holeNumber:6,par:3,score:3,putts:1,mentalRating:1},
+      {holeNumber:7,par:5,score:6,putts:2,mentalRating:1},{holeNumber:8,par:4,score:5,putts:2,mentalRating:1},
+      {holeNumber:9,par:4,score:5,putts:2,mentalRating:1},{holeNumber:10,par:4,score:5,putts:2,mentalRating:1},
+      {holeNumber:11,par:3,score:4,putts:2,mentalRating:2},{holeNumber:12,par:5,score:6,putts:2,mentalRating:1},
+      {holeNumber:13,par:4,score:5,putts:2,mentalRating:1},{holeNumber:14,par:4,score:5,putts:2,mentalRating:2},
+      {holeNumber:15,par:3,score:4,putts:2,mentalRating:2},{holeNumber:16,par:5,score:7,putts:3,mentalRating:3},
+      {holeNumber:17,par:4,score:6,putts:2,mentalRating:2},{holeNumber:18,par:4,score:5,putts:2,mentalRating:1},
+    ]
+  },
+  {
+    id:'r6', roundId:'r6', date:'2025-12-20', course:'Lam Luk Ka Country Club',
+    round_type:'Practice', tees:'Red', weather:'Sunny', conditions:'Dry',
+    coach_recommendation:'Early baseline round. Lots of room to grow — exactly where we want to be at this stage.',
+    debrief:'First round with full tracking. Exciting!',
+    holes:[
+      {holeNumber:1,par:4,score:7,putts:3,mentalRating:2},{holeNumber:2,par:3,score:5,putts:2,mentalRating:2},
+      {holeNumber:3,par:5,score:8,putts:3,mentalRating:2},{holeNumber:4,par:4,score:6,putts:2,mentalRating:2},
+      {holeNumber:5,par:4,score:6,putts:2,mentalRating:2},{holeNumber:6,par:3,score:5,putts:2,mentalRating:2},
+      {holeNumber:7,par:5,score:8,putts:3,mentalRating:3},{holeNumber:8,par:4,score:6,putts:2,mentalRating:2},
+      {holeNumber:9,par:4,score:6,putts:2,mentalRating:2},{holeNumber:10,par:4,score:7,putts:3,mentalRating:2},
+      {holeNumber:11,par:3,score:5,putts:2,mentalRating:2},{holeNumber:12,par:5,score:9,putts:3,mentalRating:3},
+      {holeNumber:13,par:4,score:6,putts:2,mentalRating:2},{holeNumber:14,par:4,score:6,putts:2,mentalRating:2},
+      {holeNumber:15,par:3,score:5,putts:2,mentalRating:2},{holeNumber:16,par:5,score:8,putts:3,mentalRating:2},
+      {holeNumber:17,par:4,score:6,putts:2,mentalRating:2},{holeNumber:18,par:4,score:7,putts:3,mentalRating:2},
+    ]
+  },
+];
 
-// ── Client ──────────────────────────────────────────────────────────────────
-const { createClient } = window.supabase
-const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-
-// ── State ───────────────────────────────────────────────────────────────────
-let D = null          // all data from /api/student
-let golfRounds = []
+// ── State ──────────────────────────────────────────────────────────────────
+let D = {
+  role: 'parent',
+  student: {
+    id: 'preview-student',
+    studentName: 'Ping',
+    parentName: 'Khun Mae Araya',
+    currentSchool: 'Bangkok Patana School',
+    currentYearGroup: 'Year 8',
+    dob: '2013-03-01',
+    nationality: 'Thai',
+    englishLevel: 'Upper-Intermediate',
+    primarySport: 'Golf',
+    goal: 'Gain entry to a top UK boarding school with a strong golf programme by Year 9 entry (September 2027).',
+    destination: ['UK Boarding'],
+    consultant: 'Satit Chivangkur',
+    budgetGBP: 45000,
+    status: '🟢 On Track',
+    stage: '3 - Roadmap',
+    targetEntryYear: '2027',
+    targetYearGroup: 'Year 9',
+    consultantMessage: 'Ping is making excellent progress. The focus for this term is UKISET preparation and finalising the school shortlist. Bromsgrove remains our top choice given their golf scholarship programme. We are on track for a September 2027 entry.',
+    servicesActive: ['School Matching', 'Tutoring', 'Summer Camp', 'Golf Performance'],
+  },
+  academics: [
+    { subject:'Mathematics', grade:'A', assessmentType:'School Report', term:'Term 1', date:'2025-08-31', score:null, maxScore:null },
+    { subject:'English',     grade:'B', assessmentType:'School Report', term:'Term 1', date:'2025-08-31', score:null, maxScore:null },
+    { subject:'Science',     grade:'A', assessmentType:'School Report', term:'Term 2', date:'2025-04-30', score:null, maxScore:null },
+    { subject:'Thai',        grade:'A', assessmentType:'School Report', term:'Term 2', date:'2025-04-30', score:null, maxScore:null },
+    { subject:'English',     grade:'',  assessmentType:'Mock CE',       term:'',       date:'2025-07-15', score:58,   maxScore:100  },
+    { subject:'Mathematics', grade:'B', assessmentType:'School Report', term:'Term 2', date:'2025-04-30', score:null, maxScore:null },
+  ],
+  subscriptions: [
+    { service:'School Matching',  active:true  },
+    { service:'UKISET Tutoring',  active:true  },
+    { service:'Summer Camp',      active:true  },
+    { service:'Golf Performance', active:true  },
+    { service:'Guardianship',     active:false },
+  ],
+  milestones: [
+    { id:'m1',  title:'UKISET Exam Prep Start',           type:'Academic', date:'2026-02-01', status:'🟢 Done',     notes:'Begin UKISET prep. Target: Verbal Reasoning 110+',                   priority:'High'   },
+    { id:'m2',  title:'Bromsgrove Summer School Application', type:'School',  date:'2026-03-31', status:'🔵 Upcoming', notes:'Apply for Bromsgrove Summer School 2026. Golf programme priority.',   priority:'High'   },
+    { id:'m3',  title:'Bromsgrove Summer School',         type:'School',   date:'2026-07-15', status:'🔵 Upcoming', notes:'2-week summer school. Golf programme + school exposure.',             priority:'Medium' },
+    { id:'m4',  title:'Mock Entrance Exam',               type:'Academic', date:'2026-09-01', status:'🔵 Upcoming', notes:'Internal mock CE. Benchmark before formal prep intensification.',     priority:'High'   },
+    { id:'m5',  title:'Bromsgrove Open Day',              type:'School',   date:'2026-10-15', status:'🔵 Upcoming', notes:'Attend open day with Khun Mae Araya. Meet golf coach.',               priority:'Medium' },
+    { id:'m6',  title:'Formal Application Deadline',      type:'Admin',    date:'2026-11-30', status:'🔵 Upcoming', notes:'Bromsgrove application submission deadline.',                          priority:'High'   },
+    { id:'m7',  title:'Entrance Exam — Bromsgrove',       type:'Academic', date:'2027-01-15', status:'🔵 Upcoming', notes:'CE Maths + English + Science. Target: 70%+ overall.',                 priority:'High'   },
+    { id:'m8',  title:'Interview — Bromsgrove',           type:'School',   date:'2027-01-20', status:'🔵 Upcoming', notes:'Formal interview. Prepare golf portfolio and personal statement.',    priority:'High'   },
+    { id:'m9',  title:'Offer Expected',                   type:'Admin',    date:'2027-03-15', status:'🔵 Upcoming', notes:'Conditional or unconditional offer expected from Bromsgrove.',        priority:'Medium' },
+    { id:'m10', title:'Deposit Deadline',                 type:'Admin',    date:'2027-04-30', status:'🔵 Upcoming', notes:'Acceptance deposit due. Confirm place at Bromsgrove.',               priority:'High'   },
+    { id:'m11', title:'Term Start — Bromsgrove',          type:'School',   date:'2027-09-08', status:'🔵 Upcoming', notes:'First day at Bromsgrove. Year 9 entry.',                              priority:'High'   },
+  ],
+  documents: [
+    { id:'d1', title:'Passport',                      status:'✅ Verified',          type:'Passport',         fileLink:null, notes:'Valid until 2031.',                                  dueDate:null       },
+    { id:'d2', title:'School Report Y7',              status:'✅ Verified',          type:'School Report',    fileLink:null, notes:'Bangkok Patana Year 7 full report.',                  dueDate:null       },
+    { id:'d3', title:'School Report Y8',              status:'📤 Uploaded',          type:'School Report',    fileLink:null, notes:'Uploaded — awaiting consultant verification.',        dueDate:null       },
+    { id:'d4', title:'Teacher Reference 1 (Maths)',   status:'⏳ Requested',         type:'Teacher Reference',fileLink:null, notes:'Requested from Maths teacher — awaiting response.',   dueDate:'2026-04-15'},
+    { id:'d5', title:'Teacher Reference 2 (English)', status:'❌ Missing',           type:'Teacher Reference',fileLink:null, notes:'To be requested from English teacher.',               dueDate:'2026-04-15'},
+    { id:'d6', title:'UKISET Result',                 status:'❌ Missing',           type:'UKISET Result',    fileLink:null, notes:'Not yet taken. Schedule for Term 3 2026.',            dueDate:'2026-08-01'},
+    { id:'d7', title:'Application Form — Bromsgrove', status:'🔒 Not Yet Required',  type:'Application Form', fileLink:null, notes:'Required Nov 2026. Portal to open Sept 2026.',        dueDate:'2026-11-30'},
+  ],
+}
+let golfRounds = [
+  {
+    id:'r1', roundId:'r1', date:'2026-03-08', course:'Lam Luk Ka Country Club',
+    round_type:'Stroke Play', tees:'Red', weather:'Sunny', conditions:'Dry',
+    coach_recommendation:'Ping showed great composure on the back nine. Focus this week on approach shots with 7-iron — consistent contact needed before the summer school.',
+    debrief:'Felt nervous on hole 13 but recovered well. Happy with putting today.',
+    holes:[
+      {holeNumber:1,par:4,score:5,putts:2,mentalRating:1,shots:[{shotNumber:1,club:'Driver',result:'Fairway',quality:'Pure'},{shotNumber:2,club:'7-iron',result:'Green',quality:'OK'},{shotNumber:3,club:'Putter',result:'Miss',quality:'OK'},{shotNumber:4,club:'Putter',result:'In',quality:'OK'}]},
+      {holeNumber:2,par:3,score:4,putts:2,mentalRating:2,shots:[{shotNumber:1,club:'6-iron',result:'Rough',quality:'Mishit'},{shotNumber:2,club:'PW',result:'Green',quality:'OK'},{shotNumber:3,club:'Putter',result:'Miss',quality:'OK'},{shotNumber:4,club:'Putter',result:'In',quality:'OK'}]},
+      {holeNumber:3,par:5,score:6,putts:2,mentalRating:1,shots:[{shotNumber:1,club:'Driver',result:'Fairway',quality:'Pure'},{shotNumber:2,club:'3-wood',result:'Fairway',quality:'OK'},{shotNumber:3,club:'9-iron',result:'Green',quality:'Pure'},{shotNumber:4,club:'Putter',result:'Miss',quality:'OK'},{shotNumber:5,club:'Putter',result:'In',quality:'OK'}]},
+      {holeNumber:4,par:4,score:5,putts:2,mentalRating:1,shots:[{shotNumber:1,club:'Driver',result:'Rough',quality:'OK'},{shotNumber:2,club:'8-iron',result:'Green',quality:'OK'},{shotNumber:3,club:'Putter',result:'Miss',quality:'OK'},{shotNumber:4,club:'Putter',result:'In',quality:'OK'}]},
+      {holeNumber:5,par:4,score:5,putts:2,mentalRating:2,shots:[{shotNumber:1,club:'Driver',result:'Fairway',quality:'OK'},{shotNumber:2,club:'7-iron',result:'Rough',quality:'Mishit'},{shotNumber:3,club:'SW',result:'Green',quality:'OK'},{shotNumber:4,club:'Putter',result:'Miss',quality:'OK'},{shotNumber:5,club:'Putter',result:'In',quality:'OK'}]},
+      {holeNumber:6,par:3,score:3,putts:1,mentalRating:1,shots:[{shotNumber:1,club:'8-iron',result:'Green',quality:'Pure'},{shotNumber:2,club:'Putter',result:'Miss',quality:'OK'},{shotNumber:3,club:'Putter',result:'In',quality:'OK'}]},
+      {holeNumber:7,par:5,score:6,putts:2,mentalRating:1,shots:[{shotNumber:1,club:'Driver',result:'Fairway',quality:'Pure'},{shotNumber:2,club:'5-iron',result:'Fairway',quality:'OK'},{shotNumber:3,club:'PW',result:'Green',quality:'OK'},{shotNumber:4,club:'Putter',result:'Miss',quality:'OK'},{shotNumber:5,club:'Putter',result:'In',quality:'OK'}]},
+      {holeNumber:8,par:4,score:5,putts:2,mentalRating:1,shots:[{shotNumber:1,club:'Driver',result:'Fairway',quality:'OK'},{shotNumber:2,club:'9-iron',result:'Green',quality:'OK'},{shotNumber:3,club:'Putter',result:'Miss',quality:'OK'},{shotNumber:4,club:'Putter',result:'In',quality:'OK'}]},
+      {holeNumber:9,par:4,score:5,putts:2,mentalRating:2,shots:[{shotNumber:1,club:'Driver',result:'Rough',quality:'Mishit'},{shotNumber:2,club:'7-iron',result:'Green',quality:'Pure'},{shotNumber:3,club:'Putter',result:'Miss',quality:'OK'},{shotNumber:4,club:'Putter',result:'In',quality:'OK'}]},
+      {holeNumber:10,par:4,score:5,putts:2,mentalRating:1,shots:[{shotNumber:1,club:'Driver',result:'Fairway',quality:'OK'},{shotNumber:2,club:'8-iron',result:'Green',quality:'OK'},{shotNumber:3,club:'Putter',result:'Miss',quality:'OK'},{shotNumber:4,club:'Putter',result:'In',quality:'OK'}]},
+      {holeNumber:11,par:3,score:4,putts:2,mentalRating:2,shots:[{shotNumber:1,club:'7-iron',result:'Rough',quality:'Mishit'},{shotNumber:2,club:'SW',result:'Green',quality:'OK'},{shotNumber:3,club:'Putter',result:'Miss',quality:'OK'},{shotNumber:4,club:'Putter',result:'In',quality:'OK'}]},
+      {holeNumber:12,par:5,score:7,putts:3,mentalRating:3,shots:[{shotNumber:1,club:'Driver',result:'OB',quality:'Mishit'},{shotNumber:2,club:'Driver',result:'Rough',quality:'OK'},{shotNumber:3,club:'5-iron',result:'Fairway',quality:'OK'},{shotNumber:4,club:'PW',result:'Green',quality:'OK'},{shotNumber:5,club:'Putter',result:'Miss',quality:'Mishit'},{shotNumber:6,club:'Putter',result:'Miss',quality:'OK'},{shotNumber:7,club:'Putter',result:'In',quality:'OK'}],noteText:'Lost focus after OB. Need to reset better.'},
+      {holeNumber:13,par:4,score:5,putts:2,mentalRating:2,shots:[{shotNumber:1,club:'Driver',result:'Fairway',quality:'Pure'}]},
+      {holeNumber:14,par:4,score:4,putts:1,mentalRating:1,shots:[{shotNumber:1,club:'Driver',result:'Fairway',quality:'Pure'},{shotNumber:2,club:'9-iron',result:'Green',quality:'Pure'},{shotNumber:3,club:'Putter',result:'In',quality:'Pure'}]},
+      {holeNumber:15,par:3,score:3,putts:1,mentalRating:1,shots:[{shotNumber:1,club:'6-iron',result:'Green',quality:'Pure'},{shotNumber:2,club:'Putter',result:'Miss',quality:'OK'},{shotNumber:3,club:'Putter',result:'In',quality:'OK'}]},
+      {holeNumber:16,par:5,score:6,putts:2,mentalRating:1,shots:[{shotNumber:1,club:'Driver',result:'Fairway',quality:'OK'}]},
+      {holeNumber:17,par:4,score:5,putts:2,mentalRating:1,shots:[{shotNumber:1,club:'Driver',result:'Fairway',quality:'OK'}]},
+      {holeNumber:18,par:4,score:5,putts:2,mentalRating:1,shots:[{shotNumber:1,club:'Driver',result:'Fairway',quality:'Pure'}]},
+    ]
+  },
+  {
+    id:'r2', roundId:'r2', date:'2026-02-22', course:'Windsor Park Golf Club',
+    round_type:'Practice', tees:'White', weather:'Cloudy', conditions:'Soft',
+    coach_recommendation:'Good round considering soft conditions. Driving accuracy improved. Work on wedge distance control.',
+    debrief:'Comfortable off the tee today.',
+    holes:[
+      {holeNumber:1,par:4,score:5,putts:2,mentalRating:1},{holeNumber:2,par:3,score:4,putts:2,mentalRating:1},
+      {holeNumber:3,par:5,score:6,putts:2,mentalRating:1},{holeNumber:4,par:4,score:5,putts:2,mentalRating:2},
+      {holeNumber:5,par:4,score:5,putts:2,mentalRating:1},{holeNumber:6,par:3,score:4,putts:2,mentalRating:2},
+      {holeNumber:7,par:5,score:7,putts:3,mentalRating:3},{holeNumber:8,par:4,score:6,putts:2,mentalRating:2},
+      {holeNumber:9,par:4,score:5,putts:2,mentalRating:1},
+    ]
+  },
+  {
+    id:'r3', roundId:'r3', date:'2026-02-15', course:'Lam Luk Ka Country Club',
+    round_type:'Stroke Play', tees:'Red', weather:'Hot', conditions:'Dry',
+    coach_recommendation:'Scoring average improving steadily. Mental game on holes 11-14 is the key area.',
+    debrief:'Tired on back nine but kept focus. Putting was great.',
+    holes:[
+      {holeNumber:1,par:4,score:5,putts:2,mentalRating:1},{holeNumber:2,par:3,score:3,putts:1,mentalRating:1},
+      {holeNumber:3,par:5,score:6,putts:2,mentalRating:1},{holeNumber:4,par:4,score:6,putts:2,mentalRating:2},
+      {holeNumber:5,par:4,score:5,putts:2,mentalRating:1},{holeNumber:6,par:3,score:4,putts:2,mentalRating:2},
+      {holeNumber:7,par:5,score:6,putts:2,mentalRating:1},{holeNumber:8,par:4,score:5,putts:2,mentalRating:1},
+      {holeNumber:9,par:4,score:5,putts:2,mentalRating:1},{holeNumber:10,par:4,score:6,putts:3,mentalRating:2},
+      {holeNumber:11,par:3,score:5,putts:2,mentalRating:3},{holeNumber:12,par:5,score:7,putts:3,mentalRating:3},
+      {holeNumber:13,par:4,score:5,putts:2,mentalRating:2},{holeNumber:14,par:4,score:5,putts:2,mentalRating:1},
+      {holeNumber:15,par:3,score:4,putts:2,mentalRating:1},{holeNumber:16,par:5,score:6,putts:2,mentalRating:1},
+      {holeNumber:17,par:4,score:6,putts:2,mentalRating:2},{holeNumber:18,par:4,score:5,putts:2,mentalRating:1},
+    ]
+  },
+  {
+    id:'r4', roundId:'r4', date:'2026-01-30', course:'Windsor Park Golf Club',
+    round_type:'Practice', tees:'White', weather:'Sunny', conditions:'Dry',
+    coach_recommendation:'Best round of the month. Consistent ball striking throughout.',
+    debrief:'Everything clicked today. Very happy.',
+    holes:[
+      {holeNumber:1,par:4,score:5,putts:2,mentalRating:1},{holeNumber:2,par:3,score:3,putts:1,mentalRating:1},
+      {holeNumber:3,par:5,score:5,putts:2,mentalRating:1},{holeNumber:4,par:4,score:5,putts:2,mentalRating:1},
+      {holeNumber:5,par:4,score:4,putts:1,mentalRating:1},{holeNumber:6,par:3,score:3,putts:1,mentalRating:1},
+      {holeNumber:7,par:5,score:6,putts:2,mentalRating:1},{holeNumber:8,par:4,score:5,putts:2,mentalRating:2},
+      {holeNumber:9,par:4,score:5,putts:2,mentalRating:1},
+    ]
+  },
+  {
+    id:'r5', roundId:'r5', date:'2026-01-18', course:'Lam Luk Ka Country Club',
+    round_type:'Ranked Tournament', tees:'Red', weather:'Overcast', conditions:'Normal',
+    coach_recommendation:'Tournament experience is invaluable. Ping handled pressure well for a first ranked event.',
+    debrief:'Nervous at first but got better after hole 5.',
+    holes:[
+      {holeNumber:1,par:4,score:6,putts:3,mentalRating:3},{holeNumber:2,par:3,score:5,putts:2,mentalRating:3},
+      {holeNumber:3,par:5,score:7,putts:2,mentalRating:2},{holeNumber:4,par:4,score:6,putts:2,mentalRating:2},
+      {holeNumber:5,par:4,score:5,putts:2,mentalRating:2},{holeNumber:6,par:3,score:3,putts:1,mentalRating:1},
+      {holeNumber:7,par:5,score:6,putts:2,mentalRating:1},{holeNumber:8,par:4,score:5,putts:2,mentalRating:1},
+      {holeNumber:9,par:4,score:5,putts:2,mentalRating:1},{holeNumber:10,par:4,score:5,putts:2,mentalRating:1},
+      {holeNumber:11,par:3,score:4,putts:2,mentalRating:2},{holeNumber:12,par:5,score:6,putts:2,mentalRating:1},
+      {holeNumber:13,par:4,score:5,putts:2,mentalRating:1},{holeNumber:14,par:4,score:5,putts:2,mentalRating:2},
+      {holeNumber:15,par:3,score:4,putts:2,mentalRating:2},{holeNumber:16,par:5,score:7,putts:3,mentalRating:3},
+      {holeNumber:17,par:4,score:6,putts:2,mentalRating:2},{holeNumber:18,par:4,score:5,putts:2,mentalRating:1},
+    ]
+  },
+  {
+    id:'r6', roundId:'r6', date:'2025-12-20', course:'Lam Luk Ka Country Club',
+    round_type:'Practice', tees:'Red', weather:'Sunny', conditions:'Dry',
+    coach_recommendation:'Early baseline round. Lots of room to grow — exactly where we want to be at this stage.',
+    debrief:'First round with full tracking. Exciting!',
+    holes:[
+      {holeNumber:1,par:4,score:7,putts:3,mentalRating:2},{holeNumber:2,par:3,score:5,putts:2,mentalRating:2},
+      {holeNumber:3,par:5,score:8,putts:3,mentalRating:2},{holeNumber:4,par:4,score:6,putts:2,mentalRating:2},
+      {holeNumber:5,par:4,score:6,putts:2,mentalRating:2},{holeNumber:6,par:3,score:5,putts:2,mentalRating:2},
+      {holeNumber:7,par:5,score:8,putts:3,mentalRating:3},{holeNumber:8,par:4,score:6,putts:2,mentalRating:2},
+      {holeNumber:9,par:4,score:6,putts:2,mentalRating:2},{holeNumber:10,par:4,score:7,putts:3,mentalRating:2},
+      {holeNumber:11,par:3,score:5,putts:2,mentalRating:2},{holeNumber:12,par:5,score:9,putts:3,mentalRating:3},
+      {holeNumber:13,par:4,score:6,putts:2,mentalRating:2},{holeNumber:14,par:4,score:6,putts:2,mentalRating:2},
+      {holeNumber:15,par:3,score:5,putts:2,mentalRating:2},{holeNumber:16,par:5,score:8,putts:3,mentalRating:2},
+      {holeNumber:17,par:4,score:6,putts:2,mentalRating:2},{holeNumber:18,par:4,score:7,putts:3,mentalRating:2},
+    ]
+  },
+]
 let currentTab = 'overview'
 let userRole = 'parent'
 
-// ── Utilities ───────────────────────────────────────────────────────────────
+// ── Utilities ──────────────────────────────────────────────────────────────
 function $id(id) { return document.getElementById(id) }
-
 function fmtDate(d) {
   if (!d) return '—'
-  const dt = new Date(d)
-  return dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  return new Date(d).toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'})
 }
-
 function daysUntil(d) {
   if (!d) return null
-  const diff = new Date(d) - new Date()
-  return Math.ceil(diff / 86400000)
+  return Math.ceil((new Date(d) - new Date()) / 86400000)
 }
-
 function statusBadge(s) {
   const map = {
-    'Complete': 'badge-green',
-    'Completed': 'badge-green',
-    'Done': 'badge-green',
-    'Uploaded': 'badge-green',
-    'Active': 'badge-gold',
-    'In Progress': 'badge-amber',
-    'Pending': 'badge-amber',
-    'Not Started': 'badge-muted',
-    'Overdue': 'badge-red',
-    'submitted': 'badge-amber',
-    'reviewed': 'badge-gold',
-    'verified': 'badge-green',
-    'rejected': 'badge-red',
+    'Complete':'badge-green','Completed':'badge-green','Done':'badge-green','Uploaded':'badge-green',
+    '✅ Verified':'badge-green','Active':'badge-gold','In Progress':'badge-amber','Pending':'badge-amber',
+    '⏳ Requested':'badge-amber','📤 Uploaded':'badge-amber','Not Started':'badge-muted',
+    '🔒 Not Yet Required':'badge-muted','Overdue':'badge-red','❌ Missing':'badge-red',
   }
-  const cls = map[s] || 'badge-muted'
-  return `<span class="badge ${cls}">${s || 'Unknown'}</span>`
+  return `<span class="badge ${map[s]||'badge-muted'}">${s||'Unknown'}</span>`
 }
-
 function tlDotClass(status) {
   if (!status) return 'pending'
   const s = status.toLowerCase()
-  if (s.includes('complete') || s.includes('done') || s.includes('verified')) return 'done'
-  if (s.includes('progress') || s.includes('active')) return 'in-prog'
-  if (s.includes('overdue')) return 'overdue'
+  if (s.includes('complet')||s.includes('done')||s.includes('✅')) return 'done'
+  if (s.includes('progress')||s.includes('active')||s.includes('🟡')) return 'active'
+  if (s.includes('overdue')||s.includes('🔴')) return 'overdue'
   return 'pending'
 }
-
-// ── Auth ─────────────────────────────────────────────────────────────────────
-async function signIn() {
-  const email = $id('auth-email').value.trim()
-  const btn = $id('auth-btn')
-  const err = $id('auth-error')
-
-  if (!email) {
-    err.textContent = 'Please enter your email address.'
-    err.style.display = 'block'
-    return
-  }
-
-  btn.disabled = true
-  btn.textContent = 'Sending...'
-  err.style.display = 'none'
-
-  const { error } = await sb.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: window.location.origin }
-  })
-
-  if (error) {
-    err.textContent = error.message
-    err.style.display = 'block'
-    btn.disabled = false
-    btn.textContent = 'Send me a login link'
-  } else {
-    $id('auth-sent-email').textContent = email
-    $id('auth-form-wrap').style.display = 'none'
-    $id('auth-sent-wrap').style.display = 'block'
-  }
+function urgColour(d) {
+  if (d===null) return 'var(--muted)'
+  if (d<0||d<30) return 'var(--red)'
+  if (d<60) return 'var(--amber)'
+  return 'var(--green)'
 }
-
-function resetAuthForm() {
-  $id('auth-form-wrap').style.display = 'block'
-  $id('auth-sent-wrap').style.display = 'none'
-  $id('auth-btn').disabled = false
-  $id('auth-btn').textContent = 'Send me a login link'
-  $id('auth-error').style.display = 'none'
-}
-
-async function signOut() {
-  await sb.auth.signOut()
-  D = null
-  golfRounds = []
-  $id('app').classList.remove('visible')
-  $id('app').style.display = 'none'
-  resetAuthForm()
-  $id('auth-email').value = ''
-  $id('auth-screen').style.display = 'flex'
-}
-
-// ── Enter key on email field ──────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  $id('auth-email').addEventListener('keydown', e => {
-    if (e.key === 'Enter') signIn()
-  })
-})
-
-// ── Data loading ─────────────────────────────────────────────────────────────
-async function loadData(token) {
-  const res = await fetch('/api/student', {
-    headers: { Authorization: `Bearer ${token}` }
-  })
-  if (!res.ok) throw new Error(`Student API error ${res.status}`)
-  return res.json()
-}
-
-async function loadGolfRounds(token, studentId) {
-  try {
-    const res = await fetch(`/api/golf-rounds?student_id=${studentId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    if (res.ok) {
-      const j = await res.json()
-      return j.rounds || []
-    }
-  } catch (e) { /* non-fatal */ }
-  return []
-}
-
+function signOut() {}
 
 // ── Extra helpers (rich portal) ─────────────────────────────────────────────
 function urgColour(d) {
@@ -1917,17 +2087,8 @@ function normalizeRound(r) {
 }
 
 async function fetchRounds(studentId) {
-  try {
-    const { data:{ session } } = await sb.auth.getSession();
-    if (!session) return [];
-    const res = await fetch(`/api/golf-rounds?student_id=${encodeURIComponent(studentId)}`, {
-      headers: { Authorization: `Bearer ${session.access_token}` }
-    });
-    if (!res.ok) return [];
-    const json = await res.json();
-    const raw = json.rounds || json || [];
-    return raw.map(normalizeRound);
-  } catch(e) { return []; }
+  // PREVIEW MODE: return mock data directly, no auth needed
+  return MOCK_GOLF_ROUNDS.map(normalizeRound);
 }
 
 window.renderList = async function(studentId) {
@@ -2327,43 +2488,20 @@ function renderAll() {
   renderDocuments()
 }
 
+// ── Preview overrides ──────────────────────────────────────────────────────
+// Override fetchRounds so golf tab uses mock data without needing auth
+async function fetchRounds(studentId) {
+  return MOCK_GOLF_ROUNDS.map(normalizeRound)
+}
 
-sb.auth.onAuthStateChange(async (event, session) => {
-  if (session) {
-    $id('auth-screen').style.display = 'none'
-    $id('loading').classList.add('show')
-
-    try {
-      const [dataRes] = await Promise.all([
-        loadData(session.access_token),
-      ])
-
-      D = dataRes
-      userRole = D.role || 'parent'
-      golfRounds = await loadGolfRounds(session.access_token, D.student.id)
-
-      $id('header-name').textContent = D.student.studentName || 'Parent'
-      renderAll()
-
-      $id('loading').classList.remove('show')
-      $id('app').style.display = 'flex'
-      $id('app').classList.add('visible')
-
-    } catch (err) {
-      console.error('Load error:', err)
-      $id('loading').classList.remove('show')
-      resetAuthForm()
-      $id('auth-screen').style.display = 'flex'
-      const errEl = $id('auth-error')
-      errEl.textContent = 'Could not load your data (' + (err.message || 'server error') + '). Please check your connection and try again.'
-      errEl.style.display = 'block'
-      await sb.auth.signOut()
-    }
-
-  } else {
-    $id('loading').classList.remove('show')
-    $id('auth-screen').style.display = 'flex'
-  }
+// ── Auto-boot (preview mode) ───────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  $id('auth-screen').style.display = 'none'
+  $id('app').style.display = 'flex'
+  $id('app').classList.add('visible')
+  $id('header-name').textContent = D.student.studentName
+  renderAll()
+  initGolfTab(D.student.id, D.student.studentName)
 })
 </script>
 </body>
