@@ -7,8 +7,8 @@
     "build": "echo 'Static site — no build step required'"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
-    "@notionhq/client": "^2.2.14"
-  },
-  "devDependencies": {}
+    "@google/generative-ai": "^0.24.1",
+    "@notionhq/client": "^2.2.14",
+    "@supabase/supabase-js": "^2.39.0"
+  }
 }

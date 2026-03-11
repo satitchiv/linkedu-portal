@@ -39,18 +39,22 @@ exports.handler = async (event) => {
 
     // GET — fetch rounds
     if (event.httpMethod === 'GET') {
-      const studentId = event.queryStringParameters?.student_id || profile.notion_student_id
+      const ownStudentId = profile.student_id || profile.notion_student_id
+      const requestedId = event.queryStringParameters?.student_id || ownStudentId
 
       // Non-analysts can only fetch their own student's rounds
-      if (profile.role !== 'analyst' && studentId !== profile.notion_student_id) {
+      if (profile.role !== 'analyst' && requestedId !== ownStudentId) {
         return { statusCode: 403, headers, body: JSON.stringify({ error: 'Forbidden' }) }
       }
 
-      const { data: rounds, error } = await supabase
-        .from('golf_rounds')
-        .select('*')
-        .eq('notion_student_id', studentId)
-        .order('date', { ascending: false })
+      // Support both student_id (UUID) and notion_student_id
+      let query = supabase.from('golf_rounds').select('*').order('date', { ascending: false })
+      if (profile.student_id) {
+        query = query.eq('student_id', requestedId)
+      } else {
+        query = query.eq('notion_student_id', requestedId)
+      }
+      const { data: rounds, error } = await query
 
       if (error) throw error
 

@@ -737,6 +737,29 @@
     .btn-sm:hover { border-color: var(--gold); background: rgba(184,150,46,.08); }
     .btn-sm-primary { background: var(--gold); color: #000; border-color: var(--gold); }
     .btn-sm-primary:hover { background: #caa938; }
+    /* Completion bar */
+    .comp-bar-wrap { background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 20px 24px; margin-bottom: 20px; }
+    .comp-bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+    .comp-bar-label { font-size: 12px; color: var(--muted); flex: 1; }
+    .comp-bar-pct { font-size: 18px; font-weight: 700; color: var(--gold); }
+    .comp-bar-track { height: 6px; background: var(--surface3); border-radius: 3px; overflow: hidden; }
+    .comp-bar-fill { height: 6px; border-radius: 3px; transition: width 0.4s; }
+    /* Edit/Save buttons */
+    .btn-edit { font-size: 11px; padding: 4px 12px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text); border-radius: 4px; cursor: pointer;
+      font-family: 'Inter', sans-serif; letter-spacing: 0.04em; }
+    .btn-edit:hover { border-color: var(--gold); color: var(--gold); }
+    .prof-edit-form { padding: 16px 24px; border-top: 1px solid var(--border); background: var(--surface2); }
+    .prof-edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+    .prof-edit-field label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; letter-spacing: 0.04em; text-transform: uppercase; }
+    .prof-edit-field input, .prof-edit-field select, .prof-edit-field textarea {
+      width: 100%; background: var(--surface); border: 1px solid rgba(0,0,0,0.14);
+      border-radius: 4px; padding: 8px 10px; color: var(--text);
+      font-family: 'Inter', sans-serif; font-size: 13px; outline: none; box-sizing: border-box; }
+    .prof-edit-field input:focus, .prof-edit-field select:focus { border-color: var(--gold); }
+    .prof-edit-actions { display: flex; gap: 8px; }
+    .prof-save-msg { font-size: 12px; color: var(--green); margin-left: 8px; display: none; }
     /* Profile sections */
     .prof-completeness { background: var(--surface); border: 1px solid var(--border);
       border-radius: 4px; padding: 20px 24px; margin-bottom: 24px;
@@ -809,10 +832,10 @@
 <body>
 
 <!-- Loading overlay -->
-<div id="loading" class="show">LinkedU</div>
+<div id="loading">LinkedU</div>
 
 <!-- Auth screen -->
-<div id="auth-screen" style="display:none">
+<div id="auth-screen" style="display:flex">
   <div class="auth-card">
     <div class="auth-logo">LINKEDU</div>
     <div class="auth-subtitle">Parent Portal</div>
@@ -846,11 +869,11 @@
     <button class="tab-btn active" onclick="showTab('overview')">Overview</button>
     <button class="tab-btn" onclick="showTab('journey')">Journey</button>
     <button class="tab-btn" onclick="showTab('schools')">Schools</button>
-    <button class="tab-btn" onclick="showTab('services')">Services</button>
-    <button class="tab-btn" onclick="showTab('profile')">Profile</button>
-    <button class="tab-btn" onclick="showTab('recommendations')">Recommendations</button>
     <button class="tab-btn" onclick="showTab('golf')">Golf</button>
+    <button class="tab-btn" onclick="showTab('services')">Services</button>
+    <button class="tab-btn" onclick="showTab('recommendations')">Recommendations</button>
     <button class="tab-btn" onclick="showTab('documents')">Documents</button>
+    <button class="tab-btn" onclick="showTab('profile')">Profile</button>
   </div>
   <div id="main">
     <div class="tab-panel active" id="tab-overview"><div id="overview-content"></div></div>
@@ -922,19 +945,25 @@ function daysUntil(d) {
 
 function statusBadge(s) {
   const map = {
+    'complete': 'badge-green',
     'Complete': 'badge-green',
     'Completed': 'badge-green',
     'Done': 'badge-green',
-    'Uploaded': 'badge-green',
+    'approved': 'badge-green',
+    'verified': 'badge-green',
     'Active': 'badge-gold',
+    'reviewed': 'badge-gold',
+    'upcoming': 'badge-amber',
+    'in_progress': 'badge-amber',
     'In Progress': 'badge-amber',
     'Pending': 'badge-amber',
-    'Not Started': 'badge-muted',
-    'Overdue': 'badge-red',
     'submitted': 'badge-amber',
-    'reviewed': 'badge-gold',
-    'verified': 'badge-green',
+    'overdue': 'badge-red',
+    'Overdue': 'badge-red',
+    'missing': 'badge-red',
+    'expired': 'badge-red',
     'rejected': 'badge-red',
+    'Not Started': 'badge-muted',
   }
   const cls = map[s] || 'badge-muted'
   return `<span class="badge ${cls}">${s || 'Unknown'}</span>`
@@ -1164,7 +1193,7 @@ const SHORTLISTED_SCHOOLS = [
 // ── Tab switching ─────────────────────────────────────────────────────────────
 function showTab(name) {
   currentTab = name
-  const tabs = ['overview','journey','schools','services','profile','recommendations','golf','documents']
+  const tabs = ['overview','journey','schools','golf','services','recommendations','documents','profile']
   document.querySelectorAll('.tab-btn').forEach((b, i) => {
     b.classList.toggle('active', tabs[i] === name)
   })
@@ -1177,13 +1206,13 @@ function renderOverview() {
   const ms = D.milestones || []
   const docs = D.documents || []
 
-  // Build all urgent items: school events + Notion milestones
+  // Build all urgent items from real data: milestones + school deadlines
   const allEvents = []
-  SCHOOL_EVENTS.forEach(ev => {
-    const d = daysUntil(ev.date)
+  ;(D.schools || []).forEach(sc => {
+    const d = daysUntil(sc.deadline)
     if (d !== null && d >= 0) {
-      allEvents.push({ days: d, label: ev.label, date: ev.date,
-        school: ev.school, owner: ev.owner, type: ev.type, tab: 'schools' })
+      allEvents.push({ days: d, label: 'Application Deadline', date: sc.deadline,
+        school: sc.school_name, owner: 'Both', type: 'deadline', tab: 'schools' })
     }
   })
   ms.forEach(m => {
@@ -1192,7 +1221,7 @@ function renderOverview() {
     const d = daysUntil(m.date)
     if (d !== null && d >= 0) {
       allEvents.push({ days: d, label: m.title, date: m.date,
-        school: null, owner: 'Both', type: 'milestone', tab: 'journey' })
+        school: null, owner: 'Both', type: m.type || 'milestone', tab: 'journey' })
     }
   })
   allEvents.sort((a,b) => a.days - b.days)
@@ -1224,17 +1253,17 @@ function renderOverview() {
   }
 
   // Zone 2 — status board
-  const nextSchoolEv = SCHOOL_EVENTS
-    .filter(e => daysUntil(e.date) >= 0)
-    .sort((a,b) => daysUntil(a.date) - daysUntil(b.date))[0]
+  const nextSchoolEv = (D.schools || [])
+    .filter(s => s.deadline && daysUntil(s.deadline) >= 0)
+    .sort((a,b) => daysUntil(a.deadline) - daysUntil(b.deadline))[0]
   const schoolNext = nextSchoolEv
-    ? `Next: ${nextSchoolEv.label.substring(0,32)} in ${daysUntil(nextSchoolEv.date)}d`
-    : 'No upcoming events'
+    ? `${nextSchoolEv.school_name.split(' ')[0]} deadline in ${daysUntil(nextSchoolEv.deadline)}d`
+    : 'No upcoming deadlines'
 
   const zone2 = `<div class="ov-status-board">
     <div class="ov-sb-card" onclick="showTab('schools')">
       <div class="ov-sb-label">Schools</div>
-      <div class="ov-sb-value">3 shortlisted</div>
+      <div class="ov-sb-value">${(D.schools||[]).length} shortlisted</div>
       <div class="ov-sb-sub">${schoolNext}</div>
       <div class="ov-sb-link">View tracker →</div>
     </div>
@@ -1244,17 +1273,17 @@ function renderOverview() {
       <div class="ov-sb-sub" style="color:var(--red)">Overdue — book now</div>
       <div class="ov-sb-link">See profile →</div>
     </div>
-    <div class="ov-sb-card" onclick="showTab('recommendations')">
-      <div class="ov-sb-label">Summer Camp</div>
-      <div class="ov-sb-value" style="color:var(--amber)">Recommended</div>
-      <div class="ov-sb-sub">Bromsgrove Golf Academy 2026</div>
-      <div class="ov-sb-link">View camps →</div>
+    <div class="ov-sb-card" onclick="showTab('profile')">
+      <div class="ov-sb-label">Profile</div>
+      <div class="ov-sb-value" style="color:${(()=>{const {pct}=computeCompletion(D.student||{});return pct>=90?'var(--green)':pct>=70?'var(--gold)':'var(--amber)'})()}">${computeCompletion(D.student||{}).pct}% complete</div>
+      <div class="ov-sb-sub">${computeCompletion(D.student||{}).filled} of ${computeCompletion(D.student||{}).total} fields filled</div>
+      <div class="ov-sb-link">Complete profile →</div>
     </div>
     <div class="ov-sb-card" onclick="showTab('recommendations')">
-      <div class="ov-sb-label">Tutoring</div>
-      <div class="ov-sb-value" style="color:var(--amber)">Not started</div>
-      <div class="ov-sb-sub">Maths gap — recommend 2× weekly</div>
-      <div class="ov-sb-link">View plan →</div>
+      <div class="ov-sb-label">Recommendations</div>
+      <div class="ov-sb-value" style="color:var(--amber)">View</div>
+      <div class="ov-sb-sub">Schools, tutoring & camps</div>
+      <div class="ov-sb-link">See all →</div>
     </div>
   </div>`
 
@@ -1338,14 +1367,27 @@ function renderJourney() {
 
 // ── Schools (application tracker) ────────────────────────────────────────────
 function renderSchools() {
-  // Urgency strip — all upcoming events within 120 days
-  const upcoming = SCHOOL_EVENTS
-    .map(e => ({ ...e, days: daysUntil(e.date) }))
-    .filter(e => e.days !== null && e.days >= 0 && e.days <= 120)
-    .sort((a,b) => a.days - b.days)
-    .slice(0, 6)
+  const schools = D.schools || []
 
-  const ownCls = o => o === 'Both' ? 'own-both' : o === 'Satit' ? 'own-satit' : 'own-parent'
+  // Pipeline stages
+  const PIPELINE = ['Researching','Applied','Interview','Offer','Accepted']
+  const statusToStage = { researching:0, applied:1, interview:2, offer:3, accepted:4, rejected:-1 }
+  const priorityLabel = { high:'Primary Target', medium:'Supporting', reach:'Stretch', low:'Monitoring' }
+  const priorityCls   = { high:'role-primary', medium:'role-support', reach:'role-stretch', low:'role-support' }
+  const statusColour  = { researching:'var(--muted)', applied:'var(--amber)', interview:'var(--gold)', offer:'var(--green)', accepted:'var(--green)', rejected:'var(--red)' }
+
+  const total = schools.length
+  const applied = schools.filter(s => ['applied','interview','offer','accepted'].includes(s.application_status)).length
+  const researching = schools.filter(s => s.application_status === 'researching').length
+  const targetYear = D.student.targetEntryYear || '—'
+
+  // Upcoming deadlines from real schools
+  const upcoming = schools
+    .filter(s => s.deadline && daysUntil(s.deadline) >= 0)
+    .map(s => ({ school: s.school_name, date: s.deadline, days: daysUntil(s.deadline), label: 'Application Deadline' }))
+    .sort((a,b) => a.days - b.days)
+    .slice(0, 5)
+
   const urgRows = upcoming.map(e => {
     const col = urgColour(e.days)
     return `<div class="sa-urg-row">
@@ -1354,20 +1396,14 @@ function renderSchools() {
       <span class="sa-urg-lbl">${e.label}</span>
       <span class="sa-urg-date">${fmtDate(e.date)}</span>
       <span class="sa-urg-days" style="color:${col}">${e.days}d</span>
-      <span class="ov-owner-badge ${ownCls(e.owner)}" style="font-size:9px;padding:1px 6px">${e.owner}</span>
     </div>`
   }).join('')
 
-  const docIcons = { 'verified':'badge-green', 'pending':'badge-amber', 'missing':'badge-red', 'not-yet':'badge-muted' }
-  const docLabels = { 'verified':'Verified', 'pending':'Pending', 'missing':'Missing', 'not-yet':'Not yet required' }
-
-  const pipStages = { 'Researching':0,'Open Day':0,'Registration':0,'Application':0,'Interview':0,'Offer':0 }
-
-  const cards = SHORTLISTED_SCHOOLS.map(sc => {
-    // Pipeline
-    const pip = sc.pipeline.map((stage, i) => {
-      const isDone = i < sc.pipelineStage
-      const isActive = i === sc.pipelineStage
+  const cards = schools.map(sc => {
+    const stage = statusToStage[sc.application_status] ?? 0
+    const pip = PIPELINE.map((label, i) => {
+      const isDone = i < stage
+      const isActive = i === stage
       const dotCls = isDone ? 'pip-done' : isActive ? 'pip-active' : 'pip-upcoming'
       const lblCls = isDone ? 'pip-lbl-done' : isActive ? 'pip-lbl-active' : 'pip-lbl-up'
       return `<div class="sa-pip-step">
@@ -1375,150 +1411,266 @@ function renderSchools() {
           <div class="sa-pip-dot ${dotCls}"></div>
           <div class="sa-pip-line"></div>
         </div>
-        <div class="sa-pip-lbl ${lblCls}">${stage}</div>
+        <div class="sa-pip-lbl ${lblCls}">${label}</div>
       </div>`
     }).join('')
 
-    // Events
-    const scEvents = SCHOOL_EVENTS
-      .filter(e => e.school === sc.name.split(' ')[0])
-      .map(e => {
-        const d = daysUntil(e.date)
-        const col = urgColour(d)
-        return `<div class="sa-ev-row">
-          <div class="sa-ev-lbl">${e.label}</div>
-          <div class="sa-ev-days" style="color:${col}">${d !== null ? d + 'd' : fmtDate(e.date)}</div>
-          <span class="sa-ev-own ov-owner-badge ${ownCls(e.owner)}" style="font-size:9px;padding:1px 6px">${e.owner}</span>
-        </div>`
-      }).join('')
-
-    // Docs
-    const docRows = sc.docs.map((doc, i) => {
-      const st = sc.docStatus[i] || 'not-yet'
-      return `<div class="sa-doc-row">
-        <span class="badge ${docIcons[st]}" style="font-size:9px">${docLabels[st]}</span>
-        <span class="sa-doc-lbl">${doc}</span>
-      </div>`
-    }).join('')
-
-    const golfChip = sc.golfNote
-      ? `<div class="sa-golf-chip">Golf — ${sc.golfNote}</div>`
-      : ''
-    const thb = `฿${Math.round(sc.fee * 46 / 1000)}k`
+    const fee = sc.annual_fee_gbp
+    const thb = fee ? `฿${Math.round(fee * 46 / 1000)}k` : ''
+    const feeStr = fee ? `£${fee.toLocaleString()} / yr · ${thb}` : '—'
+    const deadline = sc.deadline ? `Deadline: ${fmtDate(sc.deadline)} (${daysUntil(sc.deadline)}d)` : ''
+    const fitBar = sc.fit_score ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">Fit score: ${'★'.repeat(Math.round(sc.fit_score/2))}${'☆'.repeat(5-Math.round(sc.fit_score/2))} ${sc.fit_score}/10</div>` : ''
 
     return `<div class="sa-card">
       <div class="sa-card-head">
         <div>
-          <div class="sa-card-name">${sc.name}</div>
-          <div class="sa-card-meta">${sc.loc} · ${sc.type}</div>
-          <div class="sa-card-fee">£${sc.fee.toLocaleString()} / yr · ${thb} · ${sc.entry}</div>
+          <div class="sa-card-name">${sc.school_name}</div>
+          <div class="sa-card-meta">${sc.country||'UK'}</div>
+          <div class="sa-card-fee">${feeStr}</div>
+          ${fitBar}
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-          <span class="sa-role ${sc.roleCls}">${sc.role}</span>
-          <span class="sa-status ${sc.statusCls}">${sc.status}</span>
+          <span class="sa-role ${priorityCls[sc.priority]||'role-support'}">${priorityLabel[sc.priority]||sc.priority}</span>
+          <span class="sa-status" style="color:${statusColour[sc.application_status]||'var(--muted)'}">● ${sc.application_status.charAt(0).toUpperCase()+sc.application_status.slice(1)}</span>
         </div>
       </div>
-      ${golfChip}
       <div class="sa-pipeline">${pip}</div>
       <div class="sa-body">
         <div class="sa-col">
-          <div class="sa-sec-lbl">Key Dates &amp; Events</div>
-          ${scEvents || '<div style="font-size:12px;color:var(--muted)">No events listed</div>'}
+          <div class="sa-sec-lbl">Timeline</div>
+          ${deadline ? `<div class="sa-ev-row"><div class="sa-ev-lbl">${deadline}</div></div>` : '<div style="font-size:12px;color:var(--muted)">No deadline set</div>'}
         </div>
         <div class="sa-col">
-          <div class="sa-sec-lbl">Documents</div>
-          ${docRows}
-          <div class="sa-note">${sc.note}</div>
+          <div class="sa-sec-lbl">Consultant Note</div>
+          <div class="sa-note">${sc.notes||'—'}</div>
         </div>
       </div>
       <div class="sa-actions">
-        <a href="https://linkeduth.netlify.app/schools/${sc.slug}.html" target="_blank" class="btn-sm">View School Profile →</a>
-        <a href="https://line.me/R/ti/p/@linkedu" target="_blank" class="btn-sm btn-sm-primary">Ask Satit</a>
+        <a href="https://line.me/R/ti/p/@linkedu" target="_blank" class="btn-sm btn-sm-primary">Ask Consultant</a>
       </div>
     </div>`
   }).join('')
 
   const html = `
     <div class="sa-summary">
-      <div class="sa-sum-card"><div class="sa-sum-num">5</div><div class="sa-sum-lbl">Schools Tracked</div></div>
-      <div class="sa-sum-card"><div class="sa-sum-num">3</div><div class="sa-sum-lbl">Shortlisted</div></div>
-      <div class="sa-sum-card"><div class="sa-sum-num">2</div><div class="sa-sum-lbl">Researching</div></div>
-      <div class="sa-sum-card"><div class="sa-sum-num" style="color:var(--amber)">Sep 2027</div><div class="sa-sum-lbl">Target Entry</div></div>
+      <div class="sa-sum-card"><div class="sa-sum-num">${total}</div><div class="sa-sum-lbl">Schools Tracked</div></div>
+      <div class="sa-sum-card"><div class="sa-sum-num">${applied}</div><div class="sa-sum-lbl">Applied</div></div>
+      <div class="sa-sum-card"><div class="sa-sum-num">${researching}</div><div class="sa-sum-lbl">Researching</div></div>
+      <div class="sa-sum-card"><div class="sa-sum-num" style="color:var(--amber)">${targetYear}</div><div class="sa-sum-lbl">Target Entry</div></div>
     </div>
-    <div class="sa-urgency">
-      <div class="sa-urg-hdr">Upcoming — Next 120 Days</div>
-      ${urgRows || '<div style="font-size:12px;color:var(--muted)">No events in the next 120 days</div>'}
-    </div>
+    ${upcoming.length ? `<div class="sa-urgency"><div class="sa-urg-hdr">Upcoming Deadlines</div>${urgRows}</div>` : ''}
     <div class="section-title">Application Tracker</div>
-    ${cards}`
+    ${cards || '<div class="empty">No schools on shortlist yet. Your consultant will add them here.</div>'}`
 
   $id('schools-content').innerHTML = html
 }
 
 // ── Services ──────────────────────────────────────────────────────────────────
 function renderServices() {
-  const svcs = D.subscriptions || []
+  const svcs = D.student && D.student.servicesActive ? D.student.servicesActive : []
   let html = `<div class="section-title">Your Services</div>`
   if (!svcs.length) {
-    html += `<div class="empty">No services found.</div>`
+    html += `<div class="empty">No active services. Contact your consultant to learn more.</div>`
   } else {
-    const active = svcs.filter(s => s.active)
-    const inactive = svcs.filter(s => !s.active)
-    if (active.length) {
-      html += `<div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted2);margin-bottom:10px">Active</div>`
-      active.forEach(s => {
-        html += `<div class="service-card active"><div class="service-name">${s.service}</div>${statusBadge('Active')}</div>`
-      })
-    }
-    if (inactive.length) {
-      html += `<div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted2);margin:20px 0 10px">Other</div>`
-      inactive.forEach(s => {
-        html += `<div class="service-card"><div class="service-name" style="color:var(--muted)">${s.service}</div>${statusBadge('Inactive')}</div>`
-      })
-    }
+    html += `<div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted2);margin-bottom:10px">Active</div>`
+    svcs.forEach(s => {
+      html += `<div class="service-card active"><div class="service-name">${s}</div>${statusBadge('Active')}</div>`
+    })
   }
   $id('services-content').innerHTML = html
 }
 
 // ── Profile (8 sections) ──────────────────────────────────────────────────────
-function renderProfile() {
-  const p = PING
-  const acads = D.academics || []
+// ── Profile completion calculator ─────────────────────────────────────────────
+function computeCompletion(p) {
+  const fields = [
+    p.studentName, p.preferredName, p.dob, p.nationality,
+    p.currentSchool, p.currentYearGroup, p.curriculum, p.englishLevel,
+    p.goal, p.destination && p.destination.length ? p.destination[0] : null,
+    p.budgetGBP, p.targetEntryYear, p.primarySport
+  ]
+  const filled = fields.filter(f => f !== null && f !== undefined && f !== '').length
+  return { filled, total: fields.length, pct: Math.round(filled / fields.length * 100) }
+}
 
-  const secBadge = (t) => {
-    if (t === 'complete') return `<span class="prof-sec-badge sec-complete">Complete</span>`
-    if (t === 'partial')  return `<span class="prof-sec-badge sec-partial">Partial</span>`
-    return `<span class="prof-sec-badge sec-pending">Pending</span>`
+// ── Edit / Save helpers ───────────────────────────────────────────────────────
+function editSection(id) {
+  document.getElementById('prof-read-' + id).style.display = 'none'
+  document.getElementById('prof-edit-' + id).style.display = 'block'
+}
+function cancelSection(id) {
+  document.getElementById('prof-read-' + id).style.display = 'block'
+  document.getElementById('prof-edit-' + id).style.display = 'none'
+}
+async function saveSection(id, fields) {
+  const msgEl = document.getElementById('prof-msg-' + id)
+  const btn = document.getElementById('prof-savebtn-' + id)
+  btn.disabled = true
+  btn.textContent = 'Saving…'
+  try {
+    const { data: { session } } = await sb.auth.getSession()
+    const res = await fetch('/api/update-student', {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(fields)
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Save failed')
+    // Update local D.student with saved values
+    Object.assign(D.student, fields.student_name !== undefined ? {
+      studentName: fields.student_name, preferredName: fields.preferred_name,
+      dob: fields.dob, nationality: fields.nationality
+    } : fields.current_school !== undefined ? {
+      currentSchool: fields.current_school, currentYearGroup: fields.current_year_group,
+      curriculum: fields.curriculum, englishLevel: fields.english_level
+    } : fields.goal !== undefined ? {
+      goal: fields.goal, destination: fields.destination ? fields.destination.split(',').map(s=>s.trim()).filter(Boolean) : D.student.destination,
+      budgetGBP: fields.budget_gbp ? parseInt(fields.budget_gbp) : D.student.budgetGBP,
+      targetEntryYear: fields.target_entry_year
+    } : { primarySport: fields.primary_sport })
+    cancelSection(id)
+    msgEl.style.display = 'inline'
+    setTimeout(() => { msgEl.style.display = 'none' }, 3000)
+    // Update cache and re-render completion bar
+    try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {}
+    renderProfile()
+  } catch(err) {
+    btn.textContent = 'Error — try again'
+    btn.style.color = 'var(--red)'
+    console.error('saveSection error:', err)
+  } finally {
+    btn.disabled = false
+    if (btn.textContent === 'Saving…') { btn.textContent = 'Save'; btn.style.color = '' }
   }
+}
 
-  function section(title, status, body) {
-    return `<div class="prof-section">
+function renderProfile() {
+  const p = D.student || {}
+  const acads = D.academics || []
+  const { filled, total, pct } = computeCompletion(p)
+
+  const barColour = pct >= 90 ? '#27ae60' : pct >= 70 ? '#B8962E' : pct >= 40 ? '#d68910' : '#c0392b'
+  const barLabel  = pct >= 90 ? 'Profile complete' : pct >= 70 ? 'Almost there' : pct >= 40 ? 'In progress' : 'Getting started'
+
+  const field = (lbl, val) => `
+    <div class="prof-field">
+      <div class="prof-field-lbl">${lbl}</div>
+      <div class="prof-field-val">${val || '<span style="color:var(--muted2)">—</span>'}</div>
+    </div>`
+
+  const editBtn = (id) => `<button class="btn-edit" onclick="editSection('${id}')">Edit</button>`
+
+  const secWrap = (id, title, readHTML, editHTML) => `
+    <div class="prof-section">
       <div class="prof-sec-hdr">
         <div class="prof-sec-title">${title}</div>
-        ${secBadge(status)}
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="prof-save-msg" id="prof-msg-${id}">✓ Saved</span>
+          ${editBtn(id)}
+        </div>
       </div>
-      <div class="prof-sec-body">${body}</div>
-    </div>`
-  }
-
-  // Section 1 — Personal Identity
-  const s1 = `
-    <div class="prof-grid-2">
-      <div class="prof-field"><div class="prof-field-lbl">Full Name</div><div class="prof-field-val">${p.studentName}</div></div>
-      <div class="prof-field"><div class="prof-field-lbl">Parent / Guardian</div><div class="prof-field-val">${p.parentName}</div></div>
-      <div class="prof-field"><div class="prof-field-lbl">Date of Birth</div><div class="prof-field-val">${fmtDate(p.dob)} (Age 13)</div></div>
-      <div class="prof-field"><div class="prof-field-lbl">Nationality</div><div class="prof-field-val">${p.nationality}</div></div>
-      <div class="prof-field"><div class="prof-field-lbl">Current School</div><div class="prof-field-val">${p.currentSchool}</div></div>
-      <div class="prof-field"><div class="prof-field-lbl">Year Group</div><div class="prof-field-val">${p.currentYearGroup}</div></div>
-      <div class="prof-field"><div class="prof-field-lbl">Goal</div><div class="prof-field-val">${p.goal}</div></div>
-      <div class="prof-field"><div class="prof-field-lbl">Destination</div><div class="prof-field-val">${p.destination.join(', ')}</div></div>
-    </div>
-    <div class="prof-voice">
-      <div class="prof-voice-lbl">Consultant Note</div>
-      <div class="prof-voice-text">${p.consultantMessage}</div>
+      <div class="prof-sec-body" id="prof-read-${id}">${readHTML}</div>
+      <div class="prof-edit-form" id="prof-edit-${id}" style="display:none">${editHTML}</div>
     </div>`
 
-  // Section 2 — Academic Record
+  const readOnlySec = (title, readHTML) => `
+    <div class="prof-section">
+      <div class="prof-sec-hdr">
+        <div class="prof-sec-title">${title}</div>
+        <span class="badge badge-muted" style="font-size:10px">Consultant only</span>
+      </div>
+      <div class="prof-sec-body">${readHTML}</div>
+    </div>`
+
+  // ── Section 1: Personal Info ──────────────────────────────────────────────
+  const s1read = `<div class="prof-grid-2">
+    ${field('Full Name', p.studentName)}
+    ${field('Preferred Name', p.preferredName)}
+    ${field('Date of Birth', p.dob ? fmtDate(p.dob) : '')}
+    ${field('Nationality', p.nationality)}
+  </div>`
+  const s1edit = `<div class="prof-edit-grid">
+    <div class="prof-edit-field"><label>Full Name</label><input id="pe-name" value="${p.studentName||''}" /></div>
+    <div class="prof-edit-field"><label>Preferred Name</label><input id="pe-pname" value="${p.preferredName||''}" /></div>
+    <div class="prof-edit-field"><label>Date of Birth</label><input type="date" id="pe-dob" value="${p.dob||''}" /></div>
+    <div class="prof-edit-field"><label>Nationality</label><input id="pe-nat" value="${p.nationality||''}" /></div>
+  </div>
+  <div class="prof-edit-actions">
+    <button class="btn-primary btn-sm" id="prof-savebtn-personal"
+      onclick="saveSection('personal',{student_name:$id('pe-name').value,preferred_name:$id('pe-pname').value,dob:$id('pe-dob').value,nationality:$id('pe-nat').value})">Save</button>
+    <button class="btn-sm" onclick="cancelSection('personal')">Cancel</button>
+  </div>`
+
+  // ── Section 2: School Info ────────────────────────────────────────────────
+  const s2read = `<div class="prof-grid-2">
+    ${field('Current School', p.currentSchool)}
+    ${field('Year Group', p.currentYearGroup)}
+    ${field('Curriculum', p.curriculum)}
+    ${field('English Level', p.englishLevel)}
+  </div>`
+  const s2edit = `<div class="prof-edit-grid">
+    <div class="prof-edit-field"><label>Current School</label><input id="pe-school" value="${p.currentSchool||''}" /></div>
+    <div class="prof-edit-field"><label>Year Group</label>
+      <select id="pe-yg">
+        ${['Year 7','Year 8','Year 9','Year 10','Year 11','Year 12','Year 13','Other'].map(y=>`<option ${p.currentYearGroup===y?'selected':''}>${y}</option>`).join('')}
+      </select></div>
+    <div class="prof-edit-field"><label>Curriculum</label>
+      <select id="pe-cur">
+        ${['IGCSE','IB','A-Level','Thai National','AP','Other'].map(c=>`<option ${p.curriculum===c?'selected':''}>${c}</option>`).join('')}
+      </select></div>
+    <div class="prof-edit-field"><label>English Level</label>
+      <select id="pe-eng">
+        ${['Beginner','Elementary','Intermediate','Upper-Intermediate','Advanced','Native'].map(e=>`<option ${p.englishLevel===e?'selected':''}>${e}</option>`).join('')}
+      </select></div>
+  </div>
+  <div class="prof-edit-actions">
+    <button class="btn-primary btn-sm" id="prof-savebtn-school"
+      onclick="saveSection('school',{current_school:$id('pe-school').value,current_year_group:$id('pe-yg').value,curriculum:$id('pe-cur').value,english_level:$id('pe-eng').value})">Save</button>
+    <button class="btn-sm" onclick="cancelSection('school')">Cancel</button>
+  </div>`
+
+  // ── Section 3: Goals & Destination ───────────────────────────────────────
+  const s3read = `<div class="prof-grid-2">
+    ${field('Goal', p.goal)}
+    ${field('Destination', (p.destination||[]).join(', '))}
+    ${field('Annual Budget', p.budgetGBP ? '£'+p.budgetGBP.toLocaleString() : '')}
+    ${field('Target Entry Year', p.targetEntryYear)}
+  </div>`
+  const s3edit = `<div class="prof-edit-grid">
+    <div class="prof-edit-field" style="grid-column:1/-1"><label>Goal (in your own words)</label>
+      <input id="pe-goal" value="${p.goal||''}" /></div>
+    <div class="prof-edit-field"><label>Destination (e.g. UK, USA)</label>
+      <input id="pe-dest" value="${(p.destination||[]).join(', ')}" placeholder="UK, USA" /></div>
+    <div class="prof-edit-field"><label>Annual Budget (£ GBP)</label>
+      <input type="number" id="pe-budget" value="${p.budgetGBP||''}" placeholder="45000" /></div>
+    <div class="prof-edit-field"><label>Target Entry Year</label>
+      <input id="pe-year" value="${p.targetEntryYear||''}" placeholder="2026" /></div>
+  </div>
+  <div class="prof-edit-actions">
+    <button class="btn-primary btn-sm" id="prof-savebtn-goals"
+      onclick="saveSection('goals',{goal:$id('pe-goal').value,destination:$id('pe-dest').value,budget_gbp:$id('pe-budget').value,target_entry_year:$id('pe-year').value})">Save</button>
+    <button class="btn-sm" onclick="cancelSection('goals')">Cancel</button>
+  </div>`
+
+  // ── Section 4: Sport Profile ──────────────────────────────────────────────
+  const s4read = `<div class="prof-grid-2">
+    ${field('Primary Sport', p.primarySport)}
+    ${field('Golf Handicap', 'See Golf tab →')}
+    ${field('Scholarship Track', p.primarySport ? 'Active' : 'Not set')}
+  </div>`
+  const s4edit = `<div class="prof-edit-grid">
+    <div class="prof-edit-field"><label>Primary Sport</label>
+      <select id="pe-sport">
+        ${['Golf','Tennis','Swimming','Football','Rugby','Cricket','Hockey','Other'].map(s=>`<option ${p.primarySport===s?'selected':''}>${s}</option>`).join('')}
+      </select></div>
+  </div>
+  <div class="prof-edit-actions">
+    <button class="btn-primary btn-sm" id="prof-savebtn-sport"
+      onclick="saveSection('sport',{primary_sport:$id('pe-sport').value})">Save</button>
+    <button class="btn-sm" onclick="cancelSection('sport')">Cancel</button>
+  </div>`
+
+  // ── Section 5: Academic Record (read only) ────────────────────────────────
   const gradeRows = acads.length
     ? acads.map(a => `<tr>
         <td>${a.subject||'—'}</td><td>${a.term||'—'}</td>
@@ -1527,106 +1679,42 @@ function renderProfile() {
         <td>${a.score !== null && a.maxScore ? `${a.score}/${a.maxScore}` : a.score !== null ? a.score : '—'}</td>
         <td>${fmtDate(a.date)}</td>
       </tr>`).join('')
-    : `<tr><td colspan="6" style="text-align:center;color:var(--muted)">Academic records loading from Notion…</td></tr>`
+    : `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">No academic records yet — your consultant will add these.</td></tr>`
+  const s5read = `<div class="card" style="padding:0;overflow:hidden;margin-bottom:0">
+    <table><thead><tr><th>Subject</th><th>Term</th><th>Type</th><th>Grade</th><th>Score</th><th>Date</th></tr></thead>
+    <tbody>${gradeRows}</tbody></table>
+  </div>`
 
-  const s2 = `
-    <div class="prof-grid-3">
-      <div class="prof-field"><div class="prof-field-lbl">Current School</div><div class="prof-field-val">${p.currentSchool}</div></div>
-      <div class="prof-field"><div class="prof-field-lbl">Year Group</div><div class="prof-field-val">${p.currentYearGroup}</div></div>
-      <div class="prof-field"><div class="prof-field-lbl">English Level</div><div class="prof-field-val">${p.englishLevel}</div></div>
-    </div>
-    <div class="card" style="padding:0;overflow:hidden">
-      <table><thead><tr><th>Subject</th><th>Term</th><th>Type</th><th>Grade</th><th>Score</th><th>Date</th></tr></thead>
-      <tbody>${gradeRows}</tbody></table>
-    </div>`
-
-  // Section 3 — Standardised Assessments
-  const s3 = `
-    <div class="prof-grid-2">
-      <div class="prof-field"><div class="prof-field-lbl">UKISET</div>
-        <div class="prof-field-val" style="color:var(--red)">Not yet taken — book before September 2026</div></div>
-      <div class="prof-field"><div class="prof-field-lbl">CE Mock (Overall)</div>
-        <div class="prof-field-val">Not yet attempted</div></div>
-      <div class="prof-field"><div class="prof-field-lbl">English (EFL)</div>
-        <div class="prof-field-val">${p.englishLevel} — Cambridge Assessment pending</div></div>
-      <div class="prof-field"><div class="prof-field-lbl">CE Maths Target</div>
-        <div class="prof-field-val">${p.ceTarget.Maths}%</div></div>
-    </div>
-    <div class="prof-voice">
-      <div class="prof-voice-lbl">Action Required</div>
-      <div class="prof-voice-text">UKISET is the most urgent item. Most UK schools require it as part of the application. Satit has shortlisted 3 test centres in Bangkok — please confirm a date by end of March 2026.</div>
-    </div>`
-
-  // Section 4 — Learning Profile
-  const s4 = `
-    <div class="prof-grid-2">
-      <div class="prof-field"><div class="prof-field-lbl">Learning Style</div><div class="prof-field-val">${p.learningStyle}</div></div>
-      <div class="prof-field"><div class="prof-field-lbl">Study Habits</div><div class="prof-field-val">2–3 hours weekdays, structured</div></div>
-      <div class="prof-field"><div class="prof-field-lbl">Strongest Subject</div><div class="prof-field-val">Science & PE</div></div>
-      <div class="prof-field"><div class="prof-field-lbl">Area for Development</div><div class="prof-field-val">Maths problem-solving, English writing</div></div>
-    </div>
-    <div class="badge badge-muted" style="font-size:11px;padding:5px 10px">Learning Style Quiz — Phase 2 (Coming Soon)</div>`
-
-  // Section 5 — Sport Profile
-  const s5 = `
-    <div class="prof-grid-2">
-      <div class="prof-field"><div class="prof-field-lbl">Primary Sport</div><div class="prof-field-val">${p.primarySport}</div></div>
-      <div class="prof-field"><div class="prof-field-lbl">Current Handicap</div><div class="prof-field-val">${p.handicap} (improving)</div></div>
-      <div class="prof-field"><div class="prof-field-lbl">Home Club</div><div class="prof-field-val">${p.golfClub}</div></div>
-      <div class="prof-field"><div class="prof-field-lbl">Scholarship Readiness</div><div class="prof-field-val" style="color:var(--amber)">In Progress — target handicap 12</div></div>
-    </div>
-    <div class="prof-voice">
-      <div class="prof-voice-lbl">Coach Assessment</div>
-      <div class="prof-voice-text">Ping has excellent course management instincts for his age. Consistency off the tee is the main area to address before the Millfield assessment. Recommend 3 competitive rounds before September 2026.</div>
-    </div>`
-
-  // Section 6 — Creative Arts
-  const s6 = `
-    <div class="prof-grid-3">
-      <div class="prof-field"><div class="prof-field-lbl">Visual Art</div><div class="prof-field-val">Moderate interest</div></div>
-      <div class="prof-field"><div class="prof-field-lbl">Music</div><div class="prof-field-val">Piano — Grade 3</div></div>
-      <div class="prof-field"><div class="prof-field-lbl">Drama</div><div class="prof-field-val">No formal activity</div></div>
-    </div>`
-
-  // Section 7 — Character
-  const s7 = `
-    <div class="prof-grid-2">
-      <div class="prof-field"><div class="prof-field-lbl">Positions of Responsibility</div><div class="prof-field-val">House Sports Captain, Y8</div></div>
-      <div class="prof-field"><div class="prof-field-lbl">Volunteering</div><div class="prof-field-val">School food drive, 2025</div></div>
-      <div class="prof-field"><div class="prof-field-lbl">International Experience</div><div class="prof-field-val">UK visit 2024, Malaysia golf tournaments</div></div>
-      <div class="prof-field"><div class="prof-field-lbl">Extracurricular</div><div class="prof-field-val">Golf, Swimming, Coding Club</div></div>
-    </div>`
-
-  // Section 8 — Wellbeing
-  const s8 = `
-    <div class="prof-grid-2">
-      <div class="prof-field"><div class="prof-field-lbl">Boarding Readiness</div><div class="prof-field-val" style="color:var(--green)">High — 2 weeks' summer camp (2024)</div></div>
-      <div class="prof-field"><div class="prof-field-lbl">Social Profile</div><div class="prof-field-val">Confident, makes friends quickly</div></div>
-      <div class="prof-field"><div class="prof-field-lbl">Communication Plan</div><div class="prof-field-val">Video call 3× / week (agreed)</div></div>
-      <div class="prof-field"><div class="prof-field-lbl">Pre-departure Checklist</div><div class="prof-field-val" style="color:var(--amber)">3 of 8 items complete</div></div>
-    </div>`
+  // ── Section 6: Consultant Note (read only) ────────────────────────────────
+  const s6read = p.consultantMessage
+    ? `<div class="prof-voice"><div class="prof-voice-lbl">Note from ${p.consultant||'your consultant'}</div>
+       <div class="prof-voice-text">${p.consultantMessage}</div></div>`
+    : `<div style="color:var(--muted);font-size:13px;padding:4px 0">No message yet from your consultant.</div>`
 
   const html = `
-    <div class="prof-completeness">
-      <div class="prof-avatar">P</div>
-      <div class="prof-comp-info">
-        <div class="prof-comp-name">${p.studentName}</div>
-        <div class="prof-comp-sub">Parent: ${p.parentName} · Consultant: ${p.consultant} · ${p.currentSchool}, ${p.currentYearGroup}</div>
-        <div class="prof-comp-badges">
-          <span class="badge badge-gold">6 of 8 sections complete</span>
-          <span class="badge badge-amber">UKISET — Action needed</span>
-          <span class="badge badge-green">${p.primarySport} Scholarship Track Active</span>
+    <div class="comp-bar-wrap">
+      <div class="comp-bar-row">
+        <div class="prof-avatar" style="width:36px;height:36px;font-size:14px;flex-shrink:0">${(p.preferredName||p.studentName||'?')[0].toUpperCase()}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--text)">${p.studentName||'Your child'}</div>
+          <div style="font-size:11px;color:var(--muted)">${p.currentSchool||''} ${p.currentYearGroup ? '· '+p.currentYearGroup : ''}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="comp-bar-pct" style="color:${barColour}">${pct}%</div>
+          <div style="font-size:11px;color:var(--muted)">${barLabel}</div>
         </div>
       </div>
+      <div class="comp-bar-track">
+        <div class="comp-bar-fill" style="width:${pct}%;background:${barColour}"></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px">${filled} of ${total} fields complete · Fill in the sections below to help your consultant build the best plan for your child.</div>
     </div>
-    ${section('1. Personal Identity', 'complete', s1)}
-    ${section('2. Academic Record', 'partial', s2)}
-    ${section('3. Standardised Assessments', 'partial', s3)}
-    ${section('4. Learning Profile', 'partial', s4)}
-    ${section('5. Sport Profile', 'complete', s5)}
-    ${section('6. Creative Arts', 'partial', s6)}
-    ${section('7. Character & Activities', 'complete', s7)}
-    ${section('8. Wellbeing & Boarding Readiness', 'complete', s8)}`
+    ${secWrap('personal', '1. Personal Info', s1read, s1edit)}
+    ${secWrap('school',   '2. School Info',   s2read, s2edit)}
+    ${secWrap('goals',    '3. Goals & Destination', s3read, s3edit)}
+    ${secWrap('sport',    '4. Sport Profile', s4read, s4edit)}
+    ${readOnlySec('5. Academic Record', s5read)}
+    ${readOnlySec('6. Consultant Note', s6read)}`
 
   $id('profile-content').innerHTML = html
 }
@@ -1942,6 +2030,8 @@ function normalizeRound(r) {
 }
 
 async function fetchRounds(studentId) {
+  // Use pre-loaded golf rounds from D if available
+  if (golfRounds && golfRounds.length) return golfRounds.map(normalizeRound);
   try {
     const { data:{ session } } = await sb.auth.getSession();
     if (!session) return [];
@@ -2034,6 +2124,8 @@ function renderProgressCharts(rounds) {
     ].forEach(cd => {
       const ctx = document.getElementById(cd.id);
       if (!ctx) return;
+      const existing = Chart.getChart(ctx);
+      if (existing) existing.destroy();
       new Chart(ctx, {
         type:'line',
         data:{labels,datasets:[{data:cd.data,borderColor:cd.color,backgroundColor:cd.color+'22',
@@ -2252,8 +2344,8 @@ function renderDocuments() {
   const el = $id('documents-content')
   const docs = D.documents || []
 
-  const statusBadge = s => {
-    const map = { submitted: 'badge-amber', reviewed: 'badge-gold', verified: 'badge-green', rejected: 'badge-red' }
+  const docStatusBadge = s => {
+    const map = { submitted: 'badge-amber', approved: 'badge-green', reviewed: 'badge-gold', verified: 'badge-green', missing: 'badge-red', rejected: 'badge-red', expired: 'badge-red' }
     return `<span class="badge ${map[s] || 'badge-muted'}">${s || 'pending'}</span>`
   }
 
@@ -2267,15 +2359,43 @@ function renderDocuments() {
       <div class="doc-item">
         <div class="doc-icon ${d.status === 'verified' ? 'submitted' : d.status === 'rejected' ? 'missing' : 'pending'}"></div>
         <div class="doc-title">${d.title || '—'}</div>
-        <div class="doc-meta">${d.dueDate ? 'Due ' + d.dueDate : ''}</div>
-        ${statusBadge(d.status)}
-        ${d.fileLink ? `<a href="${d.fileLink}" target="_blank" style="font-size:11px;color:var(--gold)">View</a>` : ''}
+        <div class="doc-meta">${d.due_date || d.dueDate ? 'Due ' + fmtDate(d.due_date || d.dueDate) : ''} ${d.required_by ? '· '+d.required_by : ''}</div>
+        ${docStatusBadge(d.status)}
+        ${d.file_url || d.fileLink ? `<a href="${d.file_url || d.fileLink}" target="_blank" style="font-size:11px;color:var(--gold)">View</a>` : ''}
       </div>`).join('')
   }
 
   html += `</div>
-  <div class="upload-form">
-    <h3>Submit a Document</h3>
+
+  <!-- ── Smart Upload: PDF → AI Extract ───────────────────── -->
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">Upload School Report</div>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:20px">Upload a PDF school report and we'll automatically extract grades and fill your profile.</p>
+    <div class="form-field" style="margin-bottom:16px">
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);display:block;margin-bottom:6px">Select PDF</label>
+      <input type="file" id="report-file-input" accept=".pdf" style="font-size:13px;color:var(--text)" />
+    </div>
+    <button class="btn-submit" id="extract-btn" onclick="uploadAndExtract()" style="margin-bottom:12px">Extract from Report</button>
+    <div class="form-msg" id="extract-msg"></div>
+
+    <!-- Confirmation card — hidden until extraction done -->
+    <div id="extract-preview" style="display:none;margin-top:20px;border:1px solid var(--border);border-radius:8px;padding:20px;background:var(--surface2)">
+      <div style="font-size:13px;font-weight:600;margin-bottom:14px;color:var(--text)">Review Extracted Data</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Profile fields found:</div>
+      <div id="extract-profile-preview" style="margin-bottom:16px;font-size:13px;color:var(--text)"></div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Grades found:</div>
+      <div id="extract-grades-preview" style="margin-bottom:18px"></div>
+      <div style="display:flex;gap:10px">
+        <button class="btn-submit" id="confirm-extract-btn" onclick="confirmExtracted()">Save to Profile</button>
+        <button onclick="cancelExtract()" style="background:none;border:1px solid var(--border);border-radius:4px;padding:8px 16px;font-size:13px;cursor:pointer;color:var(--muted)">Cancel</button>
+      </div>
+      <div class="form-msg" id="confirm-msg"></div>
+    </div>
+  </div>
+
+  <!-- ── Manual document submission ───────────────────────── -->
+  <div class="upload-form" style="margin-top:16px">
+    <h3>Submit a Document Link</h3>
     <div class="form-row">
       <div class="form-field">
         <label>Document title</label>
@@ -2311,6 +2431,173 @@ function renderDocuments() {
   </div>`
 
   el.innerHTML = html
+}
+
+// Holds last extracted data for confirm step
+let _lastExtracted = null
+
+async function uploadAndExtract() {
+  const input = $id('report-file-input')
+  const btn   = $id('extract-btn')
+  const msg   = $id('extract-msg')
+  const preview = $id('extract-preview')
+
+  if (!input || !input.files || !input.files[0]) {
+    msg.className = 'form-msg error'; msg.textContent = 'Please select a PDF file first.'; return
+  }
+
+  const file = input.files[0]
+  if (file.type !== 'application/pdf') {
+    msg.className = 'form-msg error'; msg.textContent = 'Only PDF files are supported.'; return
+  }
+  if (file.size > 3_000_000) {
+    msg.className = 'form-msg error'; msg.textContent = 'File too large. Please keep reports under 3MB.'; return
+  }
+
+  btn.disabled = true; btn.textContent = 'Extracting…'
+  msg.className = 'form-msg'; msg.textContent = 'Reading report with AI — this takes about 10 seconds…'
+  preview.style.display = 'none'
+  _lastExtracted = null
+
+  try {
+    // Read file as base64
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result.split(',')[1]) // strip data:application/pdf;base64,
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+
+    const { data: { session } } = await sb.auth.getSession()
+    if (!session) { msg.className='form-msg error'; msg.textContent='Not logged in.'; return }
+
+    const res = await fetch('/api/parse-report', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pdfBase64: base64, fileName: file.name })
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Extraction failed')
+
+    const e = json.extracted
+    _lastExtracted = e
+
+    // Show profile fields found
+    const profileLines = []
+    if (e.studentName) profileLines.push(`<b>Name:</b> ${e.studentName}`)
+    if (e.dob)         profileLines.push(`<b>Date of birth:</b> ${e.dob}`)
+    if (e.school)      profileLines.push(`<b>School:</b> ${e.school}`)
+    if (e.yearGroup)   profileLines.push(`<b>Year group:</b> ${e.yearGroup}`)
+    if (e.curriculum)  profileLines.push(`<b>Curriculum:</b> ${e.curriculum}`)
+    if (e.term)        profileLines.push(`<b>Term:</b> ${e.term}`)
+    if (e.academicYear)profileLines.push(`<b>Academic year:</b> ${e.academicYear}`)
+
+    $id('extract-profile-preview').innerHTML = profileLines.length
+      ? profileLines.join('<br>')
+      : '<span style="color:var(--muted)">No profile fields found</span>'
+
+    // Show grades table
+    const grades = e.grades || []
+    if (grades.length) {
+      const rows = grades.map(g => `
+        <tr>
+          <td style="padding:4px 8px;border-bottom:1px solid var(--border)">${g.subject}</td>
+          <td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:center">${g.grade || '—'}</td>
+          <td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:center">${g.score !== null && g.score !== undefined ? g.score : '—'}${g.maxScore ? '/'+g.maxScore : ''}</td>
+        </tr>`).join('')
+      $id('extract-grades-preview').innerHTML = `
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:var(--surface3)">
+            <th style="padding:6px 8px;text-align:left;font-weight:500">Subject</th>
+            <th style="padding:6px 8px;text-align:center;font-weight:500">Grade</th>
+            <th style="padding:6px 8px;text-align:center;font-weight:500">Score</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`
+    } else {
+      $id('extract-grades-preview').innerHTML = '<span style="color:var(--muted);font-size:12px">No grades found in this document</span>'
+    }
+
+    preview.style.display = 'block'
+    msg.className = 'form-msg ok'; msg.textContent = `Found ${grades.length} subject${grades.length!==1?'s':''} — review below and confirm to save.`
+
+  } catch (err) {
+    msg.className = 'form-msg error'; msg.textContent = err.message || 'Extraction failed.'
+    console.error('uploadAndExtract error:', err)
+  } finally {
+    btn.disabled = false; btn.textContent = 'Extract from Report'
+  }
+}
+
+function cancelExtract() {
+  $id('extract-preview').style.display = 'none'
+  $id('extract-msg').textContent = ''
+  _lastExtracted = null
+}
+
+async function confirmExtracted() {
+  if (!_lastExtracted) return
+  const btn = $id('confirm-extract-btn')
+  const msg = $id('confirm-msg')
+  btn.disabled = true; btn.textContent = 'Saving…'
+  msg.className = 'form-msg'; msg.textContent = ''
+
+  try {
+    const { data: { session } } = await sb.auth.getSession()
+    const e = _lastExtracted
+
+    // Build profile updates (only fields we have values for)
+    const profileUpdates = {}
+    if (e.studentName && !D.student.studentName) profileUpdates.student_name = e.studentName
+    if (e.dob         && !D.student.dob)         profileUpdates.dob = e.dob
+    if (e.school      && !D.student.currentSchool) profileUpdates.current_school = e.school
+    if (e.yearGroup   && !D.student.currentYearGroup) profileUpdates.current_year_group = e.yearGroup
+    if (e.curriculum  && !D.student.curriculum)   profileUpdates.curriculum = e.curriculum
+
+    const res = await fetch('/api/save-academics', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        grades:         e.grades || [],
+        term:           e.term,
+        academicYear:   e.academicYear,
+        profileUpdates,
+      })
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Save failed')
+
+    // Update local D.student with any profile fills
+    if (profileUpdates.student_name)    D.student.studentName    = profileUpdates.student_name
+    if (profileUpdates.dob)             D.student.dob            = profileUpdates.dob
+    if (profileUpdates.current_school)  D.student.currentSchool  = profileUpdates.current_school
+    if (profileUpdates.current_year_group) D.student.currentYearGroup = profileUpdates.current_year_group
+    if (profileUpdates.curriculum)      D.student.curriculum     = profileUpdates.curriculum
+
+    // Reload academics from server
+    const refreshRes = await fetch('/api/student', { headers: { Authorization: `Bearer ${session.access_token}` } })
+    if (refreshRes.ok) {
+      const fresh = await refreshRes.json()
+      D.academics = fresh.academics || D.academics
+      try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {}
+    }
+
+    msg.className = 'form-msg ok'
+    msg.textContent = `Saved ${json.inserted} grade${json.inserted!==1?'s':''} successfully!`
+    _lastExtracted = null
+    $id('extract-preview').style.display = 'none'
+    $id('extract-msg').className = 'form-msg ok'
+    $id('extract-msg').textContent = `${json.inserted} grades saved to your profile.`
+
+    // Re-render profile to show new academics + updated completion
+    renderProfile()
+
+  } catch (err) {
+    msg.className = 'form-msg error'; msg.textContent = err.message || 'Save failed.'
+    console.error('confirmExtracted error:', err)
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save to Profile'
+  }
 }
 
 async function submitDoc() {
@@ -2357,21 +2644,24 @@ sb.auth.onAuthStateChange(async (event, session) => {
   if (session) {
     $id('auth-screen').style.display = 'none'
 
-    // Try instant cache load (< 30 min old)
+    // Try instant cache load (< 30 min old) — v2 schema only
     try {
       const cached = localStorage.getItem('portal_cache')
       if (cached) {
-        const { D: cD, golfRounds: cR, ts } = JSON.parse(cached)
+        const parsed = JSON.parse(cached)
+        // Invalidate old cache format (had golfRounds at top level)
+        if (parsed.golfRounds !== undefined) { localStorage.removeItem('portal_cache'); throw new Error('old cache') }
+        const { D: cD, ts } = parsed
         if (Date.now() - ts < 30 * 60 * 1000) {
-          D = cD; golfRounds = cR; userRole = D.role || 'parent'
-          $id('header-name').textContent = D.student.studentName || 'Parent'
+          D = cD; golfRounds = D.golfRounds || []; userRole = D.role || 'parent'
+          $id('header-name').textContent = (D && D.student && (D.student.preferredName || D.student.studentName)) || 'Parent'
           renderAll()
           $id('app').style.display = 'flex'
           $id('app').classList.add('visible')
           // Refresh in background silently
           loadData(session.access_token).then(fresh => {
-            D = fresh; userRole = D.role || 'parent'
-            try { localStorage.setItem('portal_cache', JSON.stringify({ D, golfRounds, ts: Date.now() })) } catch(e) {}
+            D = fresh; golfRounds = D.golfRounds || []; userRole = D.role || 'parent'
+            try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {}
             renderAll()
           }).catch(() => {})
           return
@@ -2388,14 +2678,14 @@ sb.auth.onAuthStateChange(async (event, session) => {
 
       D = dataRes
       userRole = D.role || 'parent'
-      golfRounds = await loadGolfRounds(session.access_token, D.student.id)
+      golfRounds = D.golfRounds || []
 
       // Cache for instant reload
       try {
-        localStorage.setItem('portal_cache', JSON.stringify({ D, golfRounds, ts: Date.now() }))
+        localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() }))
       } catch(e) {}
 
-      $id('header-name').textContent = D.student.studentName || 'Parent'
+      $id('header-name').textContent = (D && D.student && (D.student.preferredName || D.student.studentName)) || 'Parent'
       renderAll()
 
       $id('loading').classList.remove('show')
