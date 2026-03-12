@@ -1052,7 +1052,7 @@
     <button class="tab-btn" onclick="showTab('schools')">Schools</button>
     <button class="tab-btn" onclick="showTab('recommendations')">Recommendations</button>
     <button class="tab-btn" onclick="showTab('golf')">Golf</button>
-    <button class="tab-btn" onclick="showTab('services')">Services</button>
+    ${isAnalystView ? '<button class="tab-btn" onclick="showTab(\'services\')">Services</button>' : ''}
     <button class="tab-btn" onclick="showTab('documents')">Documents</button>
     <button class="tab-btn" onclick="showTab('profile')">Profile</button>
   </div>
@@ -2029,8 +2029,8 @@ function renderSchools() {
         <div class="sa-sec-lbl">Checklist</div>
         ${checkRows || '<div style="font-size:12px;color:var(--muted)">No checklist items.</div>'}
         <div style="margin-top:14px">
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:4px">Latest Update (auto-saves)</div>
-          <textarea class="sa-latest-update-edit" id="lu-${sc.id}" rows="2" oninput="scheduleUpdateSave('${sc.id}')">${sc.latest_update || ''}</textarea>
+          ${isAnalystView ? `<div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:4px">Latest Update (auto-saves)</div>
+          <textarea class="sa-latest-update-edit" id="lu-${sc.id}" rows="2" oninput="scheduleUpdateSave('${sc.id}')">${sc.latest_update || ''}</textarea>` : ''}
         </div>
       </div>`
     }
@@ -2699,7 +2699,7 @@ function renderRecommendations() {
     moved_to_applying: r.moved_to_applying || appliedNames.has((r.school_name || '').toLowerCase())
   }))
 
-  const approved = isAgent ? filteredRecs.filter(r => r.approved)  : filteredRecs
+  const approved = filteredRecs.filter(r => r.approved)
   const pending  = isAgent ? filteredRecs.filter(r => !r.approved) : []
 
   // School details link using slug
