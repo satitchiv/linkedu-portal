@@ -969,6 +969,16 @@
     .jny-update { font-size: 11px; color: #27ae60; margin-top: 3px; font-style: italic; }
     .jny-spine-item.done .jny-spine-title { color: #444; }
     .jny-spine-item.done .jny-spine-school { color: #444; }
+    /* Journey overview */
+    .jny-overview { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0 10px; }
+    .jny-ov-stat { background: #161616; border-radius: 6px; padding: 12px 18px; min-width: 72px; }
+    .jny-ov-num { font-size: 22px; font-weight: 700; color: var(--gold); }
+    .jny-ov-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 2px; }
+    .jny-ov-next { margin: 8px 0 4px; padding: 8px 12px; background: #161616; border-radius: 4px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+    .jny-school-pill { display: inline-flex; align-items: center; gap: 5px; background: #161616; border-radius: 4px; padding: 3px 9px; margin: 2px; font-size: 12px; color: #aaa; }
+    .jny-school-pill .pill-stage { color: var(--gold); font-weight: 700; font-size: 11px; }
+    /* Abandoned school card */
+    .sa-card.abandoned { opacity: 0.45; border-color: #1a1a1a; }
 
   </style>
 </head>
@@ -1492,24 +1502,33 @@ function renderOverview() {
 
 // ── Journey ───────────────────────────────────────────────────────────────────
 function renderJourney() {
-  const ms = D.milestones || []
-  let html = `<div class="section-title">Journey Milestones</div>`
-  if (!ms.length) {
-    html += `<div class="empty">No milestones yet.</div>`
-  } else {
-    html += `<div class="timeline">`
-    ms.forEach(m => {
-      const dot = tlDotClass(m.status)
-      html += `<div class="tl-item">
-        <div class="tl-dot ${dot}"></div>
-        <div class="tl-date">${fmtDate(m.date)}</div>
-        <div class="tl-title">${m.title || '—'}</div>
-        ${m.notes ? `<div class="tl-notes">${m.notes}</div>` : ''}
-        <div style="margin-top:4px">${statusBadge(m.status)}</div>
-      </div>`
-    })
-    html += `</div>`
-  }
+  // ── Overview panel ─────────────────────────────────────────────────────────
+  const activeSchools = (D.schools || []).filter(s => s.application_status !== 'abandoned')
+  const stsLabelMap = { researching:'Researching', applied:'Applied', interview:'Interview', offer:'Offer Received', visit:'Visit Booked', accepted:'Accepted', visa:'VISA', tb_test:'TB Test', guardianship:'Guardianship', enrolled:'Enrolled' }
+  const stageCounts = {}
+  activeSchools.forEach(s => {
+    const lbl = stsLabelMap[s.application_status] || s.application_status || 'Researching'
+    stageCounts[lbl] = (stageCounts[lbl] || 0) + 1
+  })
+  const stageBreakdown = Object.entries(stageCounts)
+    .map(([lbl, n]) => `<span class="jny-school-pill"><span class="pill-stage">${n}×</span> ${lbl}</span>`)
+    .join('')
+
+  const nextDeadline = activeSchools
+    .filter(s => s.deadline && daysUntil(s.deadline) >= 0)
+    .sort((a,b) => daysUntil(a.deadline) - daysUntil(b.deadline))[0]
+  const deadlineHtml = nextDeadline
+    ? `<div class="jny-ov-next"><span style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.1em">Next deadline</span> <span style="color:#eee;font-size:13px;margin-left:8px">${nextDeadline.school_name} — ${fmtDate(nextDeadline.deadline)}</span> <span class="jny-days-badge ${daysUntil(nextDeadline.deadline)<=7?'urgent':'soon'}" style="margin-left:6px">${daysUntil(nextDeadline.deadline)}d</span></div>`
+    : ''
+
+  let html = `<div class="section-title">Overview</div>
+    <div class="jny-overview">
+      <div class="jny-ov-stat"><div class="jny-ov-num">${activeSchools.length}</div><div class="jny-ov-lbl">Schools</div></div>
+      <div class="jny-ov-stat"><div class="jny-ov-num">${activeSchools.filter(s=>['applied','interview','offer','accepted','visa','tb_test','guardianship','enrolled'].includes(s.application_status)).length}</div><div class="jny-ov-lbl">Applied+</div></div>
+      <div class="jny-ov-stat"><div class="jny-ov-num" style="color:var(--amber)">${D.student.targetEntryYear || '—'}</div><div class="jny-ov-lbl">Target Year</div></div>
+    </div>
+    ${stageBreakdown ? `<div style="margin-bottom:6px">${stageBreakdown}</div>` : ''}
+    ${deadlineHtml}`
 
   // ── School Timeline — vertical spine ──────────────────────────────────────
   const stsMapJ = { researching:0, applied:1, interview:2, offer:3, visit:4, accepted:5, visa:6, tb_test:7, guardianship:8, enrolled:9 }
@@ -1536,16 +1555,17 @@ function renderJourney() {
     // Deadline
     if (sc.deadline) {
       allSchoolItems.push({
-        schoolName,
+        schoolName, schoolId: sc.id, stageKey: null, itemId: null, isActive: false,
         title: 'Application Deadline',
         date: sc.deadline,
         days: daysUntil(sc.deadline),
+        isDone: false,
         latestUpdate: null,
         calUrl: calendarLink('Application Deadline — ' + schoolName, sc.deadline, '', D.student.parentEmail),
       })
     }
 
-    // Base pipeline stages (upcoming only — past ones are "done")
+    // Base pipeline stages
     BASE_STAGES_J.forEach(s => {
       const stageIdx = stsMapJ[s.key] ?? 0
       const dbBase = (sc.timeline_items || []).find(i => i.item_type === 'base' && i.notes && i.notes.includes(`stage:${s.key}`))
@@ -1554,14 +1574,15 @@ function renderJourney() {
       const dateStr = dbBase ? dbBase.date : d.toISOString().slice(0, 10)
       if (!dateStr) return
       const days = daysUntil(dateStr)
-      const isDone = stageIdx <= curStage
+      const isDone = stageIdx < curStage   // strict: current stage is "active", not done
+      const isActive = stageIdx === curStage
       allSchoolItems.push({
-        schoolName,
+        schoolName, schoolId: sc.id, stageKey: s.key, itemId: null, isActive,
         title: s.title,
         date: dateStr,
         days: isDone ? (days < 0 ? days : -(stageIdx + 1) * 100) : days,
         isDone,
-        latestUpdate: isDone && sc.latest_update ? sc.latest_update : null,
+        latestUpdate: isActive && sc.latest_update ? sc.latest_update : null,
         calUrl: calendarLink(s.title + ' — ' + schoolName, dateStr, '', D.student.parentEmail),
       })
     })
@@ -1571,7 +1592,7 @@ function renderJourney() {
       if (!item.date) return
       const explicitDone = item.item_type === 'custom_done'
       allSchoolItems.push({
-        schoolName,
+        schoolName, schoolId: sc.id, stageKey: null, itemId: item.id, isActive: false,
         title: item.title,
         date: item.date,
         days: daysUntil(item.date),
@@ -1615,6 +1636,16 @@ function renderJourney() {
     const prefix = item.isDone ? '&#10003; ' : ''
     const updateHtml = item.latestUpdate ? `<div class="jny-update">${item.latestUpdate}</div>` : ''
     const badgeHtml = badgeLbl ? `<span class="jny-days-badge ${badgeCls}">${badgeLbl}</span>` : ''
+
+    let markDoneBtn = ''
+    if (isAnalystView && !item.isDone) {
+      if (item.isActive && item.schoolId && item.stageKey) {
+        markDoneBtn = `<button class="btn-sm btn-sm-primary" style="font-size:10px;padding:2px 8px" onclick="markStageDone('${item.schoolId}','${item.stageKey}')">Mark Done</button>`
+      } else if (item.itemId && item.schoolId) {
+        markDoneBtn = `<button class="btn-sm btn-sm-primary" style="font-size:10px;padding:2px 8px" onclick="markCustomDone('${item.itemId}','${item.schoolId}')">Mark Done</button>`
+      }
+    }
+
     return `<div class="jny-spine-item${item.isDone ? ' done' : ''}">
       <div class="jny-dot-col">
         <div class="jny-dot ${dotCls}"></div>
@@ -1628,6 +1659,7 @@ function renderJourney() {
           <span class="jny-spine-date">${fmtSpineDate(item.date)}</span>
           ${badgeHtml}
           <a class="jny-cal-link" href="${item.calUrl}" target="_blank">+ Cal</a>
+          ${markDoneBtn}
         </div>
       </div>
     </div>`
@@ -1912,14 +1944,16 @@ function renderSchools() {
       </div>`
     }
 
-    const previewCount = 3
-    const tlPreview = allTlItems.slice(0, previewCount)
-    const tlRest = allTlItems.slice(previewCount)
-    const hasMore = tlRest.length > 0
-
-    const tlRows = tlPreview.map(renderTlItem).join('')
-      + (hasMore ? `<div id="tl-more-${sc.id}" style="display:none">${tlRest.map(renderTlItem).join('')}</div>` : '')
-      + (hasMore ? `<button class="sa-tl-expand-btn" id="tl-expand-${sc.id}" onclick="toggleTlExpand('${sc.id}','${tlRest.length}')">Show ${tlRest.length} more stages</button>` : '')
+    const effectiveDoneItem = i => i.isDone || i.item_type === 'custom_done'
+    const pendingTlItems = allTlItems.filter(i => !effectiveDoneItem(i))
+    const doneTlItems    = allTlItems.filter(i =>  effectiveDoneItem(i))
+    const doneCollapseHtml = doneTlItems.length
+      ? `<details class="jny-completed" style="margin:4px 20px 12px">
+           <summary>Completed (${doneTlItems.length})</summary>
+           <div style="padding:4px 0">${doneTlItems.map(renderTlItem).join('')}</div>
+         </details>`
+      : ''
+    const tlRows = pendingTlItems.map(renderTlItem).join('') + doneCollapseHtml
 
     const addForm = isAnalystView ? `
       <div class="sa-tl-add-form">
@@ -1957,7 +1991,7 @@ function renderSchools() {
       </div>`
     }
 
-    return `<div class="sa-card">
+    return `<div class="sa-card${sc.application_status === 'abandoned' ? ' abandoned' : ''}">
       <div class="sa-card-head">
         <div>
           <div class="sa-card-name">${sc.school_name}</div>
@@ -1987,20 +2021,39 @@ function renderSchools() {
       ${checklistHtml}
       <div class="sa-actions">
         <a href="https://line.me/R/ti/p/@linkedu" target="_blank" class="btn-sm btn-sm-primary">Ask Consultant</a>
+        ${isAnalystView ? `<button class="btn-sm" style="color:var(--muted);border-color:#333;font-size:11px" onclick="abandonSchool('${sc.id}','${sc.school_name}')">Abandon</button>` : ''}
       </div>
     </div>`
-  }).join('')
+  })
+
+  const abandonedSchools = schools.filter(s => s.application_status === 'abandoned')
+  const activeSchools    = schools.filter(s => s.application_status !== 'abandoned')
+  const showAbandoned = window._showAbandoned || false
+
+  const abandonedToggle = abandonedSchools.length && isAnalystView
+    ? `<div style="margin-bottom:12px">
+        <button class="btn-sm" style="font-size:11px;color:var(--muted)" onclick="window._showAbandoned=!window._showAbandoned;renderSchools()">
+          ${showAbandoned ? 'Hide' : 'Show'} abandoned schools (${abandonedSchools.length})
+        </button>
+       </div>`
+    : ''
+
+  const activeCards = schools
+    .filter(s => showAbandoned || s.application_status !== 'abandoned')
+    .map(sc => cards[schools.indexOf(sc)])
+    .join('')
 
   const html = `
     <div class="sa-summary">
-      <div class="sa-sum-card"><div class="sa-sum-num">${total}</div><div class="sa-sum-lbl">Schools Tracked</div></div>
+      <div class="sa-sum-card"><div class="sa-sum-num">${activeSchools.length}</div><div class="sa-sum-lbl">Schools Tracked</div></div>
       <div class="sa-sum-card"><div class="sa-sum-num">${applied}</div><div class="sa-sum-lbl">Applied</div></div>
       <div class="sa-sum-card"><div class="sa-sum-num">${researching}</div><div class="sa-sum-lbl">Researching</div></div>
       <div class="sa-sum-card"><div class="sa-sum-num" style="color:var(--amber)">${targetYear}</div><div class="sa-sum-lbl">Target Entry</div></div>
     </div>
     ${upcoming.length ? `<div class="sa-urgency"><div class="sa-urg-hdr">Upcoming Deadlines</div>${urgRows}</div>` : ''}
     <div class="section-title">Application Tracker</div>
-    ${cards || '<div class="empty">No schools on shortlist yet. Your consultant will add them here.</div>'}`
+    ${abandonedToggle}
+    ${activeCards || '<div class="empty">No schools on shortlist yet. Your consultant will add them here.</div>'}`
 
   $id('schools-content').innerHTML = html
 }
@@ -3827,6 +3880,11 @@ async function _patchCustomItemType(itemId, schoolId, itemType) {
 
 function markCustomDone(itemId, schoolId) { return _patchCustomItemType(itemId, schoolId, 'custom_done') }
 function undoCustomDone(itemId, schoolId) { return _patchCustomItemType(itemId, schoolId, 'custom') }
+
+async function abandonSchool(schoolId, schoolName) {
+  if (!confirm(`Remove "${schoolName}" from active tracking?\n\nIt will be hidden but you can show it again from the Schools tab.`)) return
+  await updateSchoolStatus(schoolId, 'abandoned')
+}
 
 function toggleTlExpand(schoolId, count) {
   const el = document.getElementById('tl-more-' + schoolId)
