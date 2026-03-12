@@ -1052,7 +1052,7 @@
     <button class="tab-btn" onclick="showTab('schools')">Schools</button>
     <button class="tab-btn" onclick="showTab('recommendations')">Recommendations</button>
     <button class="tab-btn" onclick="showTab('golf')">Golf</button>
-    ${isAnalystView ? '<button class="tab-btn" onclick="showTab(\'services\')">Services</button>' : ''}
+    <button class="tab-btn" id="tab-btn-services" onclick="showTab('services')">Services</button>
     <button class="tab-btn" onclick="showTab('documents')">Documents</button>
     <button class="tab-btn" onclick="showTab('profile')">Profile</button>
   </div>
@@ -1112,6 +1112,7 @@ let userRole = 'parent'
 // Analyst view = no ?view=parent in URL. Used to gate consultant-only controls.
 const isAnalystView = !window.location.search.includes('view=parent')
 if (isAnalystView) window._adminSecret = 'linkedu-admin-2026'
+if (!isAnalystView) { const sb = document.getElementById('tab-btn-services'); if (sb) sb.style.display = 'none' }
 
 // ── Utilities ───────────────────────────────────────────────────────────────
 function $id(id) { return document.getElementById(id) }
