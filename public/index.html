@@ -1567,14 +1567,15 @@ function renderJourney() {
     })
 
     // Custom timeline items
-    ;(sc.timeline_items || []).filter(i => i.item_type === 'custom').forEach(item => {
+    ;(sc.timeline_items || []).filter(i => i.item_type === 'custom' || i.item_type === 'custom_done').forEach(item => {
       if (!item.date) return
+      const explicitDone = item.item_type === 'custom_done'
       allSchoolItems.push({
         schoolName,
         title: item.title,
         date: item.date,
         days: daysUntil(item.date),
-        isDone: daysUntil(item.date) < 0,
+        isDone: explicitDone || daysUntil(item.date) < 0,
         latestUpdate: null,
         calUrl: calendarLink(item.title, item.date, item.notes || '', D.student.parentEmail),
       })
@@ -1783,7 +1784,7 @@ function renderSchools() {
       return d.toISOString().slice(0, 10)
     }
 
-    const customItems = (sc.timeline_items || []).filter(i => i.item_type === 'custom')
+    const customItems = (sc.timeline_items || []).filter(i => i.item_type === 'custom' || i.item_type === 'custom_done')
     const dbBaseItems = (sc.timeline_items || []).filter(i => i.item_type === 'base')
 
     function getDbBase(stageKey) {
@@ -1820,9 +1821,10 @@ function renderSchools() {
 
     function renderTlItem(item) {
       const dDays = item.date ? daysUntil(item.date) : null
+      const effectiveDone = item.isDone || item.item_type === 'custom_done'
 
       let dotCls, dotColor
-      if (item.isDone)        { dotCls = 'sa-tl-dot-done';     dotColor = 'var(--gold)' }
+      if (effectiveDone)      { dotCls = 'sa-tl-dot-done';     dotColor = 'var(--gold)' }
       else if (item.isActive) { dotCls = 'sa-tl-dot-active';   dotColor = 'var(--gold)' }
       else                    { dotCls = 'sa-tl-dot-upcoming';  dotColor = 'var(--border)' }
 
@@ -1841,6 +1843,9 @@ function renderSchools() {
       let analystControls = ''
       if (isAnalystView) {
         if (item.isBase) {
+          const markDoneBtn = item.isActive
+            ? `<button class="btn-sm btn-sm-primary" style="font-size:10px" onclick="markStageDone('${sc.id}','${item.stageKey}')">Mark Done</button>`
+            : ''
           analystControls = `
             <div class="sa-tl-edit-row" id="tl-edit-${sc.id}-${item.stageKey}" style="display:none">
               <input type="date" class="sa-tl-date-input" id="tl-edit-date-${sc.id}-${item.stageKey}" value="${item.date || ''}" />
@@ -1848,9 +1853,14 @@ function renderSchools() {
               <button class="btn-sm btn-sm-primary" style="font-size:10px" onclick="saveBaseItem('${sc.id}','${item.stageKey}','${item.id || ''}')">Save</button>
               <button class="btn-sm" style="font-size:10px" onclick="document.getElementById('tl-edit-${sc.id}-${item.stageKey}').style.display='none'">Cancel</button>
             </div>
+            ${markDoneBtn}
             <button class="sa-tl-edit-btn" onclick="document.getElementById('tl-edit-${sc.id}-${item.stageKey}').style.display='flex';this.style.display='none'" id="tl-editbtn-${sc.id}-${item.stageKey}">Edit date</button>`
         } else {
-          analystControls = `<button class="btn-sm" style="font-size:10px;padding:2px 7px;color:var(--red);border-color:rgba(192,57,43,.3)" onclick="deleteTimelineItem('${item.id}','${sc.id}')">Delete</button>`
+          const isCustomDone = item.item_type === 'custom_done'
+          const doneToggleBtn = isCustomDone
+            ? `<button class="btn-sm" style="font-size:10px;color:var(--muted)" onclick="undoCustomDone('${item.id}','${sc.id}')">Undo</button>`
+            : `<button class="btn-sm btn-sm-primary" style="font-size:10px" onclick="markCustomDone('${item.id}','${sc.id}')">Mark Done</button>`
+          analystControls = `<button class="btn-sm" style="font-size:10px;padding:2px 7px;color:var(--red);border-color:rgba(192,57,43,.3)" onclick="deleteTimelineItem('${item.id}','${sc.id}')">Delete</button>${doneToggleBtn}`
         }
       }
 
@@ -1883,9 +1893,9 @@ function renderSchools() {
           ${(isAnalystView ? item.notes : item.parent_note) ? 'Edit note' : '+ Add note'}
         </button>` : (item.isBase ? `<span style="font-size:10px;color:var(--muted2);font-style:italic">Confirm date first to add notes</span>` : '')
 
-      return `<div class="sa-tl-item ${item.isActive ? 'sa-tl-item-active' : ''} ${item.isDone ? 'sa-tl-item-done' : ''}">
+      return `<div class="sa-tl-item ${item.isActive ? 'sa-tl-item-active' : ''} ${effectiveDone ? 'sa-tl-item-done' : ''}">
         <div class="sa-tl-dot-col">
-          <div class="${dotCls}" style="border-color:${dotColor};${item.isDone ? 'background:'+dotColor : ''}"></div>
+          <div class="${dotCls}" style="border-color:${dotColor};${effectiveDone ? 'background:'+dotColor : ''}"></div>
           <div class="sa-tl-connector"></div>
         </div>
         <div class="sa-tl-body">
@@ -3783,6 +3793,40 @@ async function updateSchoolStatus(schoolId, newStatus) {
     }
   } catch(e) { alert('Could not update status: ' + e.message) }
 }
+
+const NEXT_STAGE = {
+  researching:'applied', applied:'interview', interview:'offer',
+  offer:'visit', visit:'accepted', accepted:'visa',
+  visa:'tb_test', tb_test:'guardianship', guardianship:'enrolled'
+}
+
+async function markStageDone(schoolId, stageKey) {
+  const next = NEXT_STAGE[stageKey]
+  if (!next) return
+  await updateSchoolStatus(schoolId, next)
+}
+
+async function _patchCustomItemType(itemId, schoolId, itemType) {
+  try {
+    const res = await fetch('/api/school-timeline', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': window._adminSecret || '' },
+      body: JSON.stringify({ id: itemId, item_type: itemType })
+    })
+    if (!res.ok) { const j = await res.json(); throw new Error(j.error) }
+    const { data: { session } } = await sb.auth.getSession()
+    if (session) {
+      const fresh = await loadData(session.access_token)
+      D = fresh; golfRounds = D.golfRounds || []
+      try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {}
+      renderSchools()
+      renderJourney()
+    }
+  } catch(e) { alert('Could not update item: ' + e.message) }
+}
+
+function markCustomDone(itemId, schoolId) { return _patchCustomItemType(itemId, schoolId, 'custom_done') }
+function undoCustomDone(itemId, schoolId) { return _patchCustomItemType(itemId, schoolId, 'custom') }
 
 function toggleTlExpand(schoolId, count) {
   const el = document.getElementById('tl-more-' + schoolId)

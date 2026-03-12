@@ -57,11 +57,13 @@ exports.handler = async (event) => {
 
       if (isAdmin) {
         // Admin: allow updating all fields
+        const { item_type } = body
         const updates = {}
         if (title       !== undefined) updates.title       = title
         if (date        !== undefined) updates.date        = date || null
         if (notes       !== undefined) updates.notes       = notes || null
         if (parent_note !== undefined) updates.parent_note = parent_note || null
+        if (item_type   !== undefined) updates.item_type   = item_type || 'custom'
 
         const { data, error } = await supabase
           .from('school_timeline_items')
