@@ -61,6 +61,7 @@ exports.handler = async (event) => {
       milestonesRes,
       documentsRes,
       golfRes,
+      recsRes,
     ] = await Promise.all([
       supabase.from('students').select('*').eq('id', studentId).single(),
       supabase.from('student_academics').select('*').eq('student_id', studentId).order('date', { ascending: false }),
@@ -68,6 +69,7 @@ exports.handler = async (event) => {
       supabase.from('student_milestones').select('*').eq('student_id', studentId).order('date'),
       supabase.from('student_documents').select('*').eq('student_id', studentId).order('due_date'),
       supabase.from('golf_rounds').select('*').eq('student_id', studentId).order('date', { ascending: false }),
+      supabase.from('student_recommendations').select('*').eq('student_id', studentId).order('score', { ascending: false }),
     ])
 
     const s = studentRes.data || {}
@@ -112,10 +114,11 @@ exports.handler = async (event) => {
           timeline_items: school.school_timeline_items || [],
           school_timeline_items: undefined,
         })),
-        milestones: milestonesRes.data || [],
-        documents:  documentsRes.data  || [],
-        golfRounds: golfRes.data       || [],
-        role:       profile.role,
+        milestones:      milestonesRes.data || [],
+        documents:       documentsRes.data  || [],
+        golfRounds:      golfRes.data       || [],
+        recommendations: recsRes.data       || [],
+        role:            profile.role,
       })
     }
 
