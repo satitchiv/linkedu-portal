@@ -15,6 +15,9 @@ const PARENT_EDITABLE = new Set([
   'current_school', 'current_year_group', 'curriculum', 'english_level',
   'primary_sport', 'goal', 'destination', 'budget_gbp', 'target_entry_year',
   'photo_url',
+  'services_interested', 'school_types_interested', 'courses_interested',
+  'heard_from', 'referral_note',
+  'sport_notes', 'academic_notes', 'cert_notes',
 ])
 
 exports.handler = async (event) => {
@@ -49,7 +52,17 @@ exports.handler = async (event) => {
     const updates = {}
     for (const [key, val] of Object.entries(body)) {
       if (profile.role === 'analyst' || PARENT_EDITABLE.has(key)) {
-        updates[key] = val
+        // Type coercions for known array/number fields
+        if (key === 'destination' || key === 'services_interested' || key === 'school_types_interested' || key === 'courses_interested') {
+          // Accept both arrays and comma-separated strings
+          updates[key] = Array.isArray(val)
+            ? val
+            : (val ? val.split(',').map(s => s.trim()).filter(Boolean) : [])
+        } else if (key === 'budget_gbp') {
+          updates[key] = val ? parseInt(val, 10) : null
+        } else {
+          updates[key] = val
+        }
       }
     }
 

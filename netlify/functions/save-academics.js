@@ -1,6 +1,5 @@
 // POST /api/save-academics
-// Saves extracted academic grades to student_academics table
-// Also optionally updates student profile fields
+// Saves extracted data: grades, certifications, extraction log, optional profile updates
 // Requires: Supabase JWT in Authorization header
 
 const { createClient } = require('@supabase/supabase-js')
@@ -9,6 +8,12 @@ const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
+
+const PARENT_EDITABLE = new Set([
+  'student_name', 'preferred_name', 'dob', 'nationality',
+  'current_school', 'current_year_group', 'curriculum', 'english_level',
+  'primary_sport', 'goal', 'destination', 'budget_gbp', 'target_entry_year', 'photo_url',
+])
 
 exports.handler = async (event) => {
   const headers = {
@@ -37,47 +42,89 @@ exports.handler = async (event) => {
     }
 
     const body = JSON.parse(event.body || '{}')
-    const { grades, term, academicYear, profileUpdates } = body
+    const {
+      grades = [],
+      certifications = [],
+      term,
+      academicYear,
+      profileUpdates,
+      docName,
+      docType = 'other',
+      rawJson,
+      fileHash,
+    } = body
 
-    if (!grades || !Array.isArray(grades) || grades.length === 0) {
-      return { statusCode: 400, headers, body: JSON.stringify({ error: 'grades array is required' }) }
+    let gradesSaved = 0
+    let certsSaved = 0
+
+    // ── Save academic grades ─────────────────────────────────────────────────
+    if (grades.length > 0) {
+      let recordDate = new Date().toISOString().split('T')[0]
+      if (academicYear) {
+        const yearMatch = academicYear.match(/(\d{4})/)
+        if (yearMatch) recordDate = `${yearMatch[1]}-06-30`
+      }
+
+      const gradeRows = grades
+        .filter(g => g.subject && (g.grade || g.score !== null))
+        .map(g => ({
+          student_id:      profile.student_id,
+          subject:         g.subject,
+          grade:           g.grade || null,
+          score:           g.score !== null && g.score !== undefined ? parseFloat(g.score) : null,
+          max_score:       g.maxScore !== null && g.maxScore !== undefined ? parseFloat(g.maxScore) : null,
+          term:            term || null,
+          date:            recordDate,
+          assessment_type: 'Report Card',
+          notes:           academicYear ? `Academic year ${academicYear}` : null,
+        }))
+
+      if (gradeRows.length > 0) {
+        const { error } = await supabase.from('student_academics').insert(gradeRows)
+        if (error) throw error
+        gradesSaved = gradeRows.length
+      }
     }
 
-    // Build date from academicYear (use Jan 1 of the end year, or today)
-    let recordDate = new Date().toISOString().split('T')[0]
-    if (academicYear) {
-      const yearMatch = academicYear.match(/(\d{4})/)
-      if (yearMatch) recordDate = `${yearMatch[1]}-06-30`
+    // ── Save certifications ──────────────────────────────────────────────────
+    if (certifications.length > 0) {
+      const certRows = certifications
+        .filter(c => c.name)
+        .map(c => ({
+          student_id:   profile.student_id,
+          category:     c.category || 'other',
+          name:         c.name,
+          issuer:       c.issuer || null,
+          presenter:    c.presenter || null,
+          score:        c.score ? String(c.score) : null,
+          grade:        c.grade || null,
+          date:         c.date || null,
+          expiry_date:  c.expiryDate || null,
+          notes:        c.notes || null,
+        }))
+
+      if (certRows.length > 0) {
+        const { error } = await supabase.from('student_certifications').insert(certRows)
+        if (error) throw error
+        certsSaved = certRows.length
+      }
     }
 
-    // Insert academic records
-    const rows = grades
-      .filter(g => g.subject && (g.grade || g.score !== null))
-      .map(g => ({
-        student_id:      profile.student_id,
-        subject:         g.subject,
-        grade:           g.grade || null,
-        score:           g.score !== null && g.score !== undefined ? parseFloat(g.score) : null,
-        max_score:       g.maxScore !== null && g.maxScore !== undefined ? parseFloat(g.maxScore) : null,
-        term:            term || null,
-        date:            recordDate,
-        assessment_type: 'Report Card',
-        notes:           academicYear ? `Academic year ${academicYear}` : null,
-      }))
+    // ── Log extraction ───────────────────────────────────────────────────────
+    if (docName) {
+      await supabase.from('document_extractions').insert({
+        student_id:    profile.student_id,
+        doc_name:      docName,
+        doc_type:      docType,
+        grades_saved:  gradesSaved,
+        certs_saved:   certsSaved,
+        extracted_by:  user.id,
+        raw_json:      rawJson || null,
+        file_hash:     fileHash || null,
+      })
+    }
 
-    const { error: insertError } = await supabase
-      .from('student_academics')
-      .insert(rows)
-
-    if (insertError) throw insertError
-
-    // Optionally update student profile fields (parent-editable only)
-    const PARENT_EDITABLE = new Set([
-      'student_name', 'preferred_name', 'dob', 'nationality',
-      'current_school', 'current_year_group', 'curriculum', 'english_level',
-      'primary_sport', 'goal', 'destination', 'budget_gbp', 'target_entry_year', 'photo_url',
-    ])
-
+    // ── Update student profile fields ────────────────────────────────────────
     if (profileUpdates && typeof profileUpdates === 'object') {
       const updates = {}
       for (const [key, val] of Object.entries(profileUpdates)) {
@@ -87,18 +134,16 @@ exports.handler = async (event) => {
       }
       if (Object.keys(updates).length > 0) {
         updates.updated_at = new Date().toISOString()
-        const { error: updateError } = await supabase
-          .from('students')
-          .update(updates)
-          .eq('id', profile.student_id)
-        if (updateError) console.warn('Profile update partial fail:', updateError.message)
+        const { error } = await supabase
+          .from('students').update(updates).eq('id', profile.student_id)
+        if (error) console.warn('Profile update partial fail:', error.message)
       }
     }
 
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ ok: true, inserted: rows.length })
+      body: JSON.stringify({ ok: true, gradesSaved, certsSaved })
     }
 
   } catch (err) {

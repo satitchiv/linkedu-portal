@@ -220,7 +220,7 @@
 
     /* ── Loading ───────────────────────────────────────── */
     #loading {
-      display: none;
+      display: flex;
       position: fixed;
       inset: 0;
       background: var(--bg);
@@ -232,7 +232,7 @@
       font-size: 18px;
       letter-spacing: 0.05em;
     }
-    #loading.show { display: flex; }
+    #loading.hide { display: none; }
 
     /* ── Cards ─────────────────────────────────────────── */
     .card {
@@ -803,18 +803,48 @@
       color: var(--text); margin-bottom: 6px; }
     .rec-hdr-note { font-size: 12px; color: var(--muted); line-height: 1.6; }
     .rec-card { background: var(--surface); border: 1px solid var(--border);
-      border-radius: 4px; padding: 20px 22px; margin-bottom: 12px; }
-    .rec-card-top { display: flex; justify-content: space-between; align-items: flex-start;
-      gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
-    .rec-card-name { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--text); }
-    .rec-card-sub { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+      border-radius: 6px; margin-bottom: 12px; overflow: hidden; }
+    .rec-card-inner { display: flex; gap: 0; }
+    .rec-card-left { width: 220px; min-width: 180px; padding: 20px 18px;
+      border-right: 1px solid var(--border); display: flex; flex-direction: column;
+      gap: 10px; flex-shrink: 0; }
+    .rec-card-right { flex: 1; padding: 20px 22px; }
+    .rec-card-name { font-family: 'Playfair Display', serif; font-size: 1rem;
+      color: var(--text); line-height: 1.3; margin-bottom: 4px; }
+    .rec-card-sub { font-size: 11px; color: var(--muted); line-height: 1.6; }
     .rec-tier { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 3px;
-      letter-spacing: .06em; text-transform: uppercase; }
+      letter-spacing: .06em; text-transform: uppercase; display: inline-block; }
     .tier-target { background: var(--gold); color: #000; }
     .tier-strong { background: rgba(39,174,96,.14); color: var(--green); }
     .tier-consider { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
-    .rec-reason { font-size: 12px; color: var(--muted); line-height: 1.7;
-      border-top: 1px solid var(--border); padding-top: 10px; margin-top: 8px; }
+    .rec-reasons-title { font-size: 10px; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+    .rec-reasons-list { list-style: none; padding: 0; margin: 0; }
+    .rec-reasons-list li { font-size: 12px; color: var(--muted); line-height: 1.6;
+      padding: 3px 0 3px 14px; position: relative; }
+    .rec-reasons-list li::before { content: '•'; position: absolute; left: 0;
+      color: var(--gold); font-size: 14px; line-height: 1.4; }
+    .rec-note { font-size: 12px; color: var(--muted); line-height: 1.7;
+      border-top: 1px solid var(--border); padding-top: 10px; margin-top: 10px;
+      font-style: italic; }
+    .rec-btn { border: none; padding: 7px 12px; border-radius: 5px; font-size: 11px;
+      font-weight: 600; cursor: pointer; width: 100%; text-align: center; }
+    .rec-btn-gold { background: var(--gold); color: #1a1a1a; }
+    .rec-btn-dark { background: #2a2a2a; color: #fff; border: 1px solid var(--border); }
+    .rec-btn-danger { background: transparent; color: #c0392b; border: 1px solid #c0392b; }
+    .rec-btn-link { background: transparent; color: var(--gold); border: 1px solid rgba(184,150,46,.3);
+      font-size: 11px; }
+    .rec-section-label { font-size: 11px; font-weight: 700; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--muted); margin: 0 0 12px; }
+    .rec-divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+    .rec-search-row { display: flex; gap: 8px; margin-bottom: 20px; }
+    .rec-search-input { flex: 1; background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); padding: 9px 14px; border-radius: 6px; font-size: 13px; }
+    .rec-search-input:focus { outline: none; border-color: var(--gold); }
+    @media(max-width:600px) {
+      .rec-card-inner { flex-direction: column; }
+      .rec-card-left { width: auto; border-right: none; border-bottom: 1px solid var(--border); }
+    }
     .line-float { position: fixed; bottom: 28px; right: 28px; z-index: 50; }
     .line-float a { background: var(--gold); color: #000; padding: 10px 18px;
       border-radius: 24px; font-size: 12px; font-weight: 700; letter-spacing: .05em;
@@ -835,7 +865,7 @@
 <div id="loading">LinkedU</div>
 
 <!-- Auth screen -->
-<div id="auth-screen" style="display:flex">
+<div id="auth-screen" style="display:none">
   <div class="auth-card">
     <div class="auth-logo">LINKEDU</div>
     <div class="auth-subtitle">Parent Portal</div>
@@ -1052,6 +1082,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── Data loading ─────────────────────────────────────────────────────────────
 async function loadData(token) {
+  window._token = token
   const res = await fetch('/api/student', {
     headers: { Authorization: `Bearer ${token}` }
   })
@@ -1544,6 +1575,119 @@ async function saveSection(id, fields) {
   }
 }
 
+async function saveNotesField(dbField, studentField, value) {
+  const { data: { session } } = await sb.auth.getSession()
+  const res = await fetch('/api/update-student', {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ [dbField]: value })
+  })
+  const json = await res.json()
+  if (!res.ok) throw new Error(json.error || 'Save failed')
+  D.student[studentField] = value
+  try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {}
+}
+
+function notesBox(dbField, studentField, currentValue, elId) {
+  const val = currentValue || ''
+  return `
+    <div style="margin-top:20px;border:1.5px solid rgba(184,150,46,0.5);border-radius:10px;background:rgba(184,150,46,0.06);padding:16px 18px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="font-size:15px">📝</span>
+        <div>
+          <div style="font-size:12px;font-weight:600;color:var(--gold);letter-spacing:.04em">Important things to note</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:1px">Anything you want your consultant to know — context, reminders, extra info</div>
+        </div>
+      </div>
+      <div id="${elId}-read">
+        ${val
+          ? `<div style="font-size:13px;color:var(--text);white-space:pre-wrap;line-height:1.6;background:rgba(184,150,46,0.08);border-radius:6px;padding:12px 14px;border-left:3px solid var(--gold)">${val}</div>
+             <button onclick="showNotesEdit('${elId}')" style="margin-top:10px;background:none;border:1px solid rgba(184,150,46,0.4);border-radius:4px;color:var(--gold);font-size:12px;cursor:pointer;padding:5px 12px">✏ Edit note</button>`
+          : `<button onclick="showNotesEdit('${elId}')" style="width:100%;padding:14px;background:rgba(184,150,46,0.08);border:1.5px dashed rgba(184,150,46,0.4);border-radius:8px;color:var(--gold);font-size:13px;cursor:pointer;text-align:center;transition:background .15s" onmouseover="this.style.background='rgba(184,150,46,0.14)'" onmouseout="this.style.background='rgba(184,150,46,0.08)'">
+               + Add a note
+             </button>`}
+      </div>
+      <div id="${elId}-edit" style="display:none">
+        <textarea id="${elId}-ta" rows="5" style="width:100%;padding:12px 14px;border:1.5px solid var(--gold);border-radius:8px;font-size:13px;background:#fff;color:var(--text);resize:vertical;box-sizing:border-box;font-family:inherit;line-height:1.6;outline:none" placeholder="Write anything here — achievements, context, extra details, reminders for yourself or your consultant…">${val}</textarea>
+        <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+          <button onclick="submitNotesEdit('${elId}','${dbField}','${studentField}')" style="background:var(--gold);color:#fff;border:none;border-radius:6px;padding:9px 20px;font-size:13px;cursor:pointer;font-weight:600">Save</button>
+          <button onclick="hideNotesEdit('${elId}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:9px 16px;font-size:13px;cursor:pointer;color:var(--muted)">Cancel</button>
+          <span id="${elId}-msg" style="font-size:12px;color:var(--gold);margin-left:4px"></span>
+        </div>
+      </div>
+    </div>`
+}
+
+function showNotesEdit(elId) {
+  $id(elId+'-read').style.display = 'none'
+  $id(elId+'-edit').style.display = 'block'
+  const ta = $id(elId+'-ta'); if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length) }
+}
+function hideNotesEdit(elId) {
+  $id(elId+'-read').style.display = ''
+  $id(elId+'-edit').style.display = 'none'
+}
+async function submitNotesEdit(elId, dbField, studentField) {
+  const ta  = $id(elId+'-ta')
+  const msg = $id(elId+'-msg')
+  const val = ta.value.trim()
+  msg.textContent = 'Saving…'
+  try {
+    await saveNotesField(dbField, studentField, val)
+    msg.textContent = '✓ Saved'
+    setTimeout(() => { msg.textContent = ''; renderProfile() }, 1000)
+  } catch(err) {
+    msg.style.color = 'var(--red)'; msg.textContent = 'Error — try again'
+  }
+}
+
+async function saveIntakeSection() {
+  const btn   = document.getElementById('prof-savebtn-intake')
+  const msgEl = document.getElementById('prof-msg-intake')
+  btn.disabled = true; btn.textContent = 'Saving…'
+
+  const services    = Array.from(document.querySelectorAll('input[name="pe-services"]:checked')).map(el => el.value)
+  const schoolTypes = Array.from(document.querySelectorAll('input[name="pe-school-types"]:checked')).map(el => el.value)
+  const courses     = Array.from(document.querySelectorAll('input[name="pe-courses"]:checked')).map(el => el.value)
+  const heardFrom   = ($id('pe-heard') || {}).value || ''
+  const referralNote = ($id('pe-referral') || {}).value || ''
+
+  try {
+    const { data: { session } } = await sb.auth.getSession()
+    const res = await fetch('/api/update-student', {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        services_interested:    services,
+        school_types_interested: schoolTypes,
+        courses_interested:     courses,
+        heard_from:             heardFrom,
+        referral_note:          referralNote,
+      })
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Save failed')
+
+    D.student.servicesInterested    = services
+    D.student.schoolTypesInterested = schoolTypes
+    D.student.coursesInterested     = courses
+    D.student.heardFrom             = heardFrom
+    D.student.referralNote          = referralNote
+
+    cancelSection('intake')
+    msgEl.style.display = 'inline'
+    setTimeout(() => { msgEl.style.display = 'none' }, 3000)
+    try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {}
+    renderProfile()
+  } catch(err) {
+    btn.textContent = 'Error — try again'; btn.style.color = 'var(--red)'
+    console.error('saveIntakeSection error:', err)
+  } finally {
+    btn.disabled = false
+    if (btn.textContent === 'Saving…') { btn.textContent = 'Save'; btn.style.color = '' }
+  }
+}
+
 function renderProfile() {
   const p = D.student || {}
   const acads = D.academics || []
@@ -1657,7 +1801,8 @@ function renderProfile() {
     ${field('Primary Sport', p.primarySport)}
     ${field('Golf Handicap', 'See Golf tab →')}
     ${field('Scholarship Track', p.primarySport ? 'Active' : 'Not set')}
-  </div>`
+  </div>
+  ${notesBox('sport_notes', 'sportNotes', p.sportNotes, 'notes-sport')}`
   const s4edit = `<div class="prof-edit-grid">
     <div class="prof-edit-field"><label>Primary Sport</label>
       <select id="pe-sport">
@@ -1668,7 +1813,8 @@ function renderProfile() {
     <button class="btn-primary btn-sm" id="prof-savebtn-sport"
       onclick="saveSection('sport',{primary_sport:$id('pe-sport').value})">Save</button>
     <button class="btn-sm" onclick="cancelSection('sport')">Cancel</button>
-  </div>`
+  </div>
+  ${notesBox('sport_notes', 'sportNotes', p.sportNotes, 'notes-sport-edit')}`
 
   // ── Section 5: Academic Record (read only) ────────────────────────────────
   const gradeRows = acads.length
@@ -1683,13 +1829,137 @@ function renderProfile() {
   const s5read = `<div class="card" style="padding:0;overflow:hidden;margin-bottom:0">
     <table><thead><tr><th>Subject</th><th>Term</th><th>Type</th><th>Grade</th><th>Score</th><th>Date</th></tr></thead>
     <tbody>${gradeRows}</tbody></table>
-  </div>`
+  </div>
+  ${notesBox('academic_notes', 'academicNotes', p.academicNotes, 'notes-academic')}`
 
   // ── Section 6: Consultant Note (read only) ────────────────────────────────
   const s6read = p.consultantMessage
     ? `<div class="prof-voice"><div class="prof-voice-lbl">Note from ${p.consultant||'your consultant'}</div>
        <div class="prof-voice-text">${p.consultantMessage}</div></div>`
     : `<div style="color:var(--muted);font-size:13px;padding:4px 0">No message yet from your consultant.</div>`
+
+  // ── Section 7: Certificates & Achievements (read only) ────────────────────
+  const certCatLabel = {
+    english_test: 'English Tests', standardised_test: 'Standardised Tests',
+    sport: 'Sport', academic_award: 'Academic Awards',
+    extracurricular: 'Extracurricular', other: 'Other',
+  }
+  const certs = D.certifications || []
+  let s7read = ''
+  if (!certs.length) {
+    s7read = `<div style="color:var(--muted);font-size:13px;padding:4px 0">No certificates or achievements yet. Upload documents in the Documents tab to extract them automatically.</div>`
+  } else {
+    const byCat = {}
+    certs.forEach(c => {
+      const cat = c.category || 'other'
+      if (!byCat[cat]) byCat[cat] = []
+      byCat[cat].push(c)
+    })
+    s7read = Object.entries(byCat).map(([cat, items]) => `
+      <div style="margin-bottom:14px">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted2);margin-bottom:8px">${certCatLabel[cat] || cat}</div>
+        ${items.map(c => `
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border)">
+            <div>
+              <div style="font-size:13px;font-weight:500;color:var(--text)">${c.name}</div>
+              ${c.issuer    ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${c.issuer}</div>` : ''}
+              ${c.presenter ? `<div style="font-size:11px;color:var(--muted2);margin-top:1px">Presented by ${c.presenter}</div>` : ''}
+              ${c.notes     ? `<div style="font-size:11px;color:var(--muted2);margin-top:1px">${c.notes}</div>` : ''}
+            </div>
+            <div style="text-align:right;flex-shrink:0;margin-left:12px">
+              ${c.score || c.grade ? `<div style="font-size:13px;font-weight:600;color:var(--gold)">${c.score || c.grade}</div>` : ''}
+              ${c.date        ? `<div style="font-size:11px;color:var(--muted)">${fmtDate(c.date)}</div>` : ''}
+              ${c.expiry_date ? `<div style="font-size:10px;color:var(--muted2)">Expires ${fmtDate(c.expiry_date)}</div>` : ''}
+            </div>
+          </div>`).join('')}
+      </div>`).join('')
+  }
+  s7read += notesBox('cert_notes', 'certNotes', p.certNotes, 'notes-cert')
+
+  // ── Section 8: Enquiry Details ────────────────────────────────────────────
+  const SERVICES_OPTS = [
+    'Study in the UK', 'Study in Australia & New Zealand', 'Study in the USA', 'Study in Canada',
+    'Higher education tutoring', 'Summer Programmes', 'UK guardian services', 'Overseas student visas',
+  ]
+  const SCHOOL_TYPE_OPTS = [
+    'Boarding school', 'Private day school', 'Undergraduate (UG)',
+    'Foundation programme', 'Diploma programme', "Master's programme",
+  ]
+  const COURSE_OPTS = [
+    'UK secondary school entrance exam', 'Australian secondary school entrance exam',
+    'GCSE / A-Level / IB tutoring', 'Medical school prep', 'Health sciences prep',
+    'Law school prep', 'Oxbridge prep', 'Veterinary school prep', 'Other',
+  ]
+  const HEARD_OPTS = ['Facebook', 'Instagram', 'Google', 'YouTube', 'Email', 'Friend referral', 'Other']
+
+  const si  = p.servicesInterested    || []
+  const sti = p.schoolTypesInterested || []
+  const ci  = p.coursesInterested     || []
+
+  // Read view — show badges or dash
+  const tagList = (arr) => arr.length
+    ? arr.map(v => `<span class="badge badge-muted" style="margin:2px;font-size:11px">${v}</span>`).join('')
+    : '<span style="color:var(--muted2)">—</span>'
+
+  const s8read = `
+    <div class="prof-field" style="margin-bottom:12px">
+      <div class="prof-field-lbl">Services of interest</div>
+      <div style="margin-top:4px">${tagList(si)}</div>
+    </div>
+    <div class="prof-field" style="margin-bottom:12px">
+      <div class="prof-field-lbl">School / programme types</div>
+      <div style="margin-top:4px">${tagList(sti)}</div>
+    </div>
+    <div class="prof-field" style="margin-bottom:12px">
+      <div class="prof-field-lbl">Courses of interest</div>
+      <div style="margin-top:4px">${tagList(ci)}</div>
+    </div>
+    <div class="prof-grid-2">
+      ${field('How did you hear about us', p.heardFrom || '')}
+      ${p.heardFrom === 'Friend referral' ? field('Referral note', p.referralNote || '') : ''}
+    </div>`
+
+  // Edit view — checkbox grids
+  const checkboxGrid = (name, opts, selected) => `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin-bottom:4px">
+      ${opts.map(o => `
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:4px 0">
+          <input type="checkbox" name="${name}" value="${o}" ${selected.includes(o) ? 'checked' : ''}
+            style="width:15px;height:15px;accent-color:var(--gold);flex-shrink:0" />
+          ${o}
+        </label>`).join('')}
+    </div>`
+
+  const s8edit = `
+    <div class="prof-edit-field" style="grid-column:1/-1;margin-bottom:16px">
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:block;margin-bottom:8px">Services of interest</label>
+      ${checkboxGrid('pe-services', SERVICES_OPTS, si)}
+    </div>
+    <div class="prof-edit-field" style="grid-column:1/-1;margin-bottom:16px">
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:block;margin-bottom:8px">School / programme types</label>
+      ${checkboxGrid('pe-school-types', SCHOOL_TYPE_OPTS, sti)}
+    </div>
+    <div class="prof-edit-field" style="grid-column:1/-1;margin-bottom:16px">
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:block;margin-bottom:8px">Courses of interest</label>
+      ${checkboxGrid('pe-courses', COURSE_OPTS, ci)}
+    </div>
+    <div class="prof-edit-grid" style="margin-bottom:16px">
+      <div class="prof-edit-field">
+        <label>How did you hear about us</label>
+        <select id="pe-heard" onchange="document.getElementById('pe-referral-row').style.display=this.value==='Friend referral'?'block':'none'">
+          <option value="">Select…</option>
+          ${HEARD_OPTS.map(o => `<option ${p.heardFrom === o ? 'selected' : ''}>${o}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="prof-edit-field" id="pe-referral-row" style="grid-column:1/-1;${p.heardFrom === 'Friend referral' ? '' : 'display:none'}">
+      <label>Consultant referred by friend</label>
+      <input id="pe-referral" value="${p.referralNote || ''}" placeholder="e.g. Satit" />
+    </div>
+  <div class="prof-edit-actions">
+    <button class="btn-primary btn-sm" id="prof-savebtn-intake" onclick="saveIntakeSection()">Save</button>
+    <button class="btn-sm" onclick="cancelSection('intake')">Cancel</button>
+  </div>`
 
   const html = `
     <div class="comp-bar-wrap">
@@ -1709,99 +1979,310 @@ function renderProfile() {
       </div>
       <div style="font-size:11px;color:var(--muted);margin-top:8px">${filled} of ${total} fields complete · Fill in the sections below to help your consultant build the best plan for your child.</div>
     </div>
+
+    <!-- ── Enquiry Details — highlighted at top ── -->
+    <div style="border:2px solid var(--gold);border-radius:10px;background:rgba(184,150,46,0.07);padding:18px 20px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:.04em;text-transform:uppercase">Enquiry Details</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">Help your consultant understand exactly what you're looking for</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="prof-save-msg" id="prof-msg-intake">✓ Saved</span>
+          <button class="btn-edit" onclick="editSection('intake')" style="border-color:var(--gold);color:var(--gold)">Edit</button>
+        </div>
+      </div>
+      <div id="prof-read-intake">${s8read}</div>
+      <div class="prof-edit-form" id="prof-edit-intake" style="display:none">${s8edit}</div>
+    </div>
+
+    ${readOnlySec('Consultant Note', s6read)}
     ${secWrap('personal', '1. Personal Info', s1read, s1edit)}
     ${secWrap('school',   '2. School Info',   s2read, s2edit)}
     ${secWrap('goals',    '3. Goals & Destination', s3read, s3edit)}
     ${secWrap('sport',    '4. Sport Profile', s4read, s4edit)}
     ${readOnlySec('5. Academic Record', s5read)}
-    ${readOnlySec('6. Consultant Note', s6read)}`
+    ${readOnlySec('6. Certificates & Achievements', s7read)}`
 
   $id('profile-content').innerHTML = html
 }
 
 // ── Recommendations ───────────────────────────────────────────────────────────
 function renderRecommendations() {
-  const schoolRecs = [
-    {
-      name:'Bromsgrove School', tier:'Target', tierCls:'tier-target',
-      sub:'Worcestershire · £42,000/yr · Year 10 entry',
-      reason:"Best match overall. Golf scholarship potential reduces effective cost. CE Maths gap is closeable with 2× weekly tutoring. Bromsgrove's smaller boarding houses (60 students) suit Ping's profile. Application window closes November 2026."
-    },
-    {
-      name:'Millfield School', tier:'Strong Match', tierCls:'tier-strong',
-      sub:'Somerset · £47,000/yr · Sport-first intake',
-      reason:"Top sports school in the UK. Golf-first admissions route available. Slightly above budget but a scholarship brings it to £35–38k net. Recommend visit in November 2026."
-    },
-    {
-      name:'Cheltenham College', tier:'Consider', tierCls:'tier-consider',
-      sub:'Gloucestershire · £39,000/yr · Academic route',
-      reason:"Strong academics within budget. Less golf provision than Bromsgrove but excellent overall boarding. Include as a safety if Bromsgrove CE grades are borderline."
-    }
-  ]
+  const recs    = D.recommendations || []
+  const el      = $id('rec-content')
+  const isAgent = !window.location.search.includes('view=parent')
+  const s       = D.student || {}
 
-  const campRecs = [
-    {
-      name:'Bromsgrove Summer Golf Academy', tier:'Primary', tierCls:'tier-target',
-      sub:'July 2026 · 2 weeks · £2,800 · Bromsgrove School campus',
-      reason:"Dual benefit: golf coaching with the school's own pro, and a familiarisation week on campus before the Year 10 application. Highly recommended for Ping. Applications open February 2026."
-    },
-    {
-      name:'English Immersion — UK Residential', tier:'Supporting', tierCls:'tier-strong',
-      sub:'Aug 2026 · 3 weeks · Various UK schools',
-      reason:"B2 English level needs to reach C1 before the Bromsgrove interview (Jan 2027). A residential English programme is the fastest route. Satit has 3 programme options prepared."
-    }
-  ]
+  // Tier: derive from score if not set correctly (old algorithm set everything to strong_match)
+  function calcTier(r) {
+    const sc = r.score || 0
+    if (sc >= 85) return 'strong_match'
+    if (sc >= 70) return 'good_match'
+    return 'consider'
+  }
+  const tierLabel = { strong_match: 'Strong Match', good_match: 'Good Match', consider: 'Consider' }
+  const tierCls   = { strong_match: 'tier-target', good_match: 'tier-strong', consider: 'tier-consider' }
 
-  const tutRecs = [
-    {
-      name:'CE Mathematics — Gap Closure', tier:'Critical', tierCls:'tier-target',
-      sub:'Target: 70% · Current estimate: 58% · 18 months to exam',
-      reason:"12-point gap to Bromsgrove's required 70%. At 2 sessions per week, this is achievable by September 2026 with the right tutor. Satit recommends starting no later than April 2026."
-    },
-    {
-      name:'CE English Writing', tier:'Recommended', tierCls:'tier-strong',
-      sub:'Target: 65% · Current estimate: 61% · Focus: structured essays',
-      reason:"4-point gap — manageable but needs consistent practice. 1 session per week focusing on essay structure and CE-style comprehension. Can be combined with the English immersion camp."
-    }
-  ]
+  const approved = isAgent ? recs.filter(r => r.approved)  : recs
+  const pending  = isAgent ? recs.filter(r => !r.approved) : []
 
-  function recCards(items) {
-    return items.map(r => `<div class="rec-card">
-      <div class="rec-card-top">
-        <div>
-          <div class="rec-card-name">${r.name}</div>
-          <div class="rec-card-sub">${r.sub}</div>
-        </div>
-        <span class="rec-tier ${r.tierCls}">${r.tier}</span>
-      </div>
-      <div class="rec-reason">${r.reason}</div>
-    </div>`).join('')
+  // School details link using slug
+  function schoolLink(r) {
+    const slug = r.school_slug || r.school_name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')
+    return `https://linkeduth.netlify.app/schools/${slug}.html`
   }
 
-  const html = `
-    <div class="rec-section">
-      <div class="rec-hdr">
-        <div class="rec-hdr-title">School Recommendations</div>
-        <div class="rec-hdr-note">Based on Ping's academic profile, budget, sport, and target entry year. Ranked by fit and likelihood of offer.</div>
-      </div>
-      ${recCards(schoolRecs)}
-    </div>
-    <div class="rec-section">
-      <div class="rec-hdr">
-        <div class="rec-hdr-title">Summer Programmes 2026</div>
-        <div class="rec-hdr-note">Two programmes recommended — one for golf, one to accelerate English to C1 before the January interview window.</div>
-      </div>
-      ${recCards(campRecs)}
-    </div>
-    <div class="rec-section">
-      <div class="rec-hdr">
-        <div class="rec-hdr-title">Tutoring Plan</div>
-        <div class="rec-hdr-note">Subject gaps assessed against Bromsgrove's CE entry requirements. Both gaps are closeable within the available timeline.</div>
-      </div>
-      ${recCards(tutRecs)}
-    </div>`
+  // Rich reasons display — tags + consultant note paragraphs
+  function reasonsList(r) {
+    const tags     = r.match_reasons && r.match_reasons.length ? r.match_reasons : []
+    const noteText = r.consultant_note || ''
+    // Split consultant_note into sentences for bullets
+    const notePts  = noteText.split(/\.\s+/).filter(s => s.trim().length > 10).map(s => s.trim().replace(/\.$/,''))
+    // Build rich bullets from tags — expand generic tags into descriptive sentences
+    const tagExpanded = tags.map(tag => {
+      if (/fee|budget/i.test(tag))       return `Fee of £${r.fee ? Number(r.fee).toLocaleString() : '—'}/yr fits within the family's budget — no financial stretch required`
+      if (/golf/i.test(tag))             return `Golf programme available — school offers structured golf coaching and competitive opportunities`
+      if (/scholarship/i.test(tag))      return `Scholarship opportunities available — family should enquire about sport or academic scholarships to reduce fees`
+      if (/boarding/i.test(tag))         return `Full boarding environment matches the family's preference for an immersive residential experience`
+      if (/academic/i.test(tag))         return `Academic profile is appropriate for the student's current grade level and target entry requirements`
+      if (/sport/i.test(tag))            return `Strong sports provision matches the student's active profile and interest in competitive sport`
+      return tag
+    })
+    const bullets = [...tagExpanded, ...notePts]
+    if (!bullets.length) return '<div style="font-size:12px;color:var(--muted);font-style:italic">Re-run AI Recs for detailed reasoning.</div>'
+    return `
+      <div class="rec-reasons-title">Why this school</div>
+      <ul class="rec-reasons-list">${bullets.map(b => `<li>${b}</li>`).join('')}</ul>`
+  }
 
-  $id('rec-content').innerHTML = html
+  // Score badge
+  function scoreBadge(r) {
+    const sc   = r.score || 0
+    const tier = calcTier(r)
+    const col  = tier === 'strong_match' ? '#B8962E' : tier === 'good_match' ? '#27ae60' : '#888'
+    return `
+      <div style="text-align:right">
+        <div style="font-size:28px;font-weight:700;color:${col};line-height:1">${sc}</div>
+        <div style="font-size:10px;color:var(--muted);letter-spacing:.05em">/ 100 match score</div>
+      </div>`
+  }
+
+  function recCard(r, buttons) {
+    const tier = calcTier(r)
+    return `
+    <div class="rec-card" id="rec-${r.id}">
+      <div class="rec-card-inner">
+        <div class="rec-card-left">
+          <div>
+            <div class="rec-card-name">${r.school_name}</div>
+            <div class="rec-card-sub">${[r.region, r.fee ? '£'+Number(r.fee).toLocaleString()+'/yr' : null, r.school_type].filter(Boolean).join(' · ')}</div>
+          </div>
+          <span class="rec-tier ${tierCls[tier]}">${tierLabel[tier]}</span>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-top:auto">
+            ${buttons}
+            <a href="${schoolLink(r)}" target="_blank" class="rec-btn rec-btn-link" style="text-decoration:none;display:block;text-align:center">View School →</a>
+          </div>
+        </div>
+        <div class="rec-card-right">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+            <div style="flex:1">${reasonsList(r)}</div>
+            <div style="margin-left:20px;flex-shrink:0">${scoreBadge(r)}</div>
+          </div>
+        </div>
+      </div>
+    </div>`
+  }
+
+  // Student summary box for agent
+  function studentSummary() {
+    if (!isAgent) return ''
+    const budget   = s.budgetGBP ? `£${Number(s.budgetGBP).toLocaleString()}/yr` : 'not set'
+    const sport    = s.primarySport || 'not specified'
+    const goal     = s.goal || 'not specified'
+    const dest     = (s.destination || []).join(', ') || 'not set'
+    const entry    = s.targetYearGroup ? `${s.targetYearGroup} (${s.targetEntryYear || ''})` : 'not set'
+    const types    = (s.schoolTypesInterested || []).join(', ') || 'any'
+    const english  = s.englishLevel || 'not recorded'
+    const stage    = s.stage || ''
+    return `
+      <div style="background:rgba(184,150,46,.06);border:1px solid rgba(184,150,46,.25);border-radius:6px;padding:16px 20px;margin-bottom:20px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--gold);margin-bottom:10px">Student Profile Summary</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.8">
+          <strong>${s.studentName || 'Student'}</strong> is a ${s.nationality || 'Thai'} student currently in
+          <strong>${s.currentYearGroup || '—'}</strong> at ${s.currentSchool || '—'} (${s.curriculum || 'IGCSE'}).
+          They are looking for <strong>${types}</strong> in <strong>${dest}</strong> for
+          <strong>${entry}</strong> entry, with a budget of <strong>${budget}</strong>.
+          Primary sport: <strong>${sport}</strong>. English level: <strong>${english}</strong>.
+          ${goal ? `<br>Goal: <em>${goal}</em>` : ''}
+          ${stage ? `<br>Current stage: <strong>${stage}</strong>.` : ''}
+        </div>
+      </div>`
+  }
+
+  const agentToolbar = isAgent ? `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--text)">School Recommendations</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px">Approve what parents see · Delete unwanted · Move to Applying when ready</div>
+      </div>
+      <button id="run-recs-btn" onclick="runRecs()" class="rec-btn rec-btn-dark" style="white-space:nowrap;padding:8px 16px">↻ Re-run Recommendations</button>
+    </div>
+    ${studentSummary()}
+    <div class="rec-search-row">
+      <input id="rec-search-input" class="rec-search-input" placeholder="Search and add a school by name..." list="rec-school-list" autocomplete="off"/>
+      <datalist id="rec-school-list"></datalist>
+      <button onclick="addSchoolManually()" class="rec-btn rec-btn-gold" style="width:auto;padding:9px 18px;white-space:nowrap">+ Add School</button>
+    </div>` : ''
+
+  const parentHeader = !isAgent ? `
+    <div class="rec-hdr" style="margin-bottom:20px">
+      <div class="rec-hdr-title">School Recommendations</div>
+      <div class="rec-hdr-note">Personally reviewed and selected by your consultant based on your child's profile, budget, sport, and goals.</div>
+    </div>` : ''
+
+  if (!recs.length && !isAgent) {
+    el.innerHTML = `<div class="rec-section">${parentHeader}<div style="text-align:center;padding:60px 20px"><div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px">No recommendations yet</div><div style="font-size:13px;color:var(--muted)">Your consultant will send personalised recommendations shortly.</div></div></div>`
+    return
+  }
+
+  let html = `<div class="rec-section">${agentToolbar}${parentHeader}`
+
+  if (approved.length) {
+    if (isAgent) html += `<p class="rec-section-label">Approved — Visible to Parents (${approved.length})</p>`
+    html += approved.map(r => recCard(r, isAgent ? `
+      <button onclick="moveToApplying('${r.id}')" class="rec-btn rec-btn-dark" style="color:#fff">Move to Applying</button>
+      <button onclick="deleteRec('${r.id}')" class="rec-btn rec-btn-danger">Remove</button>` : '')).join('')
+  }
+
+  if (isAgent && pending.length) {
+    if (approved.length) html += `<hr class="rec-divider">`
+    html += `<p class="rec-section-label">Pending Review (${pending.length})</p>`
+    html += pending.map(r => recCard(r, `
+      <button onclick="approveRec('${r.id}')" class="rec-btn rec-btn-gold">Show to Parent</button>
+      <button onclick="deleteRec('${r.id}')" class="rec-btn rec-btn-danger">Delete</button>`)).join('')
+  }
+
+  if (isAgent && !recs.length) {
+    html += `<div style="text-align:center;padding:40px 20px"><div style="font-size:14px;color:var(--muted)">No recommendations yet. Add a school manually above.</div></div>`
+  }
+
+  html += `</div>`
+  el.innerHTML = html
+  if (isAgent) loadSchoolDatalist()
+}
+
+async function approveRec(id) {
+  const card = document.querySelector(`#rec-${id}`)
+  const btns = card ? card.querySelectorAll('button') : []
+  btns.forEach(b => b.disabled = true)
+  try {
+    const res = await fetch('/api/approve-recommendations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': 'linkedu-admin-2026' },
+      body: JSON.stringify({ student_id: D.student.id, approvals: [{ school_id: id, approved: true, consultant_note: null }] })
+    })
+    if (!res.ok) throw new Error(await res.text())
+    const rec = (D.recommendations || []).find(r => r.id === id)
+    if (rec) rec.approved = true
+    renderRecommendations()
+  } catch(e) { btns.forEach(b => b.disabled = false); alert('Error: ' + e.message) }
+}
+
+async function deleteRec(id) {
+  if (!confirm('Remove this recommendation?')) return
+  try {
+    const res = await fetch('/api/delete-recommendation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': 'linkedu-admin-2026' },
+      body: JSON.stringify({ id })
+    })
+    if (!res.ok) throw new Error(await res.text())
+    D.recommendations = (D.recommendations || []).filter(r => r.id !== id)
+    renderRecommendations()
+  } catch(e) { alert('Error: ' + e.message) }
+}
+
+async function moveToApplying(rec_id) {
+  const btn = document.querySelector(`#rec-${rec_id} .rec-btn-dark`)
+  if (btn) { btn.textContent = 'Moving...'; btn.disabled = true }
+  try {
+    const res = await fetch('/api/move-to-applying', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': 'linkedu-admin-2026' },
+      body: JSON.stringify({ rec_id })
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'Failed')
+    if (btn) { btn.textContent = 'Added to Schools ✓'; btn.style.background = '#2d6a2d'; btn.style.color = '#fff' }
+  } catch(e) {
+    if (btn) { btn.textContent = 'Move to Applying'; btn.disabled = false }
+    alert(e.message === 'Already in applying list' ? 'Already in the Schools tab.' : 'Error: ' + e.message)
+  }
+}
+
+async function runRecs() {
+  const btn = $id('run-recs-btn')
+  if (!btn) return
+  btn.textContent = 'Running...'
+  btn.disabled = true
+  try {
+    const res = await fetch('/api/generate-recommendations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': 'linkedu-admin-2026' },
+      body: JSON.stringify({ student_id: D.student.id })
+    })
+    const data = await res.json()
+    if (data.error) { alert('Error: ' + data.error); return }
+
+    // Reload recommendations from Supabase and re-render
+    const reload = await fetch('/api/student', { headers: { 'Authorization': 'Bearer ' + window._token } })
+    const fresh = await reload.json()
+    D.recommendations = fresh.recommendations || []
+    renderRecommendations()
+    btn.textContent = `↻ Re-run Recommendations`
+  } catch(e) {
+    alert('Error: ' + e.message)
+  } finally {
+    btn.disabled = false
+  }
+}
+
+// Load school names from schools.json into datalist for search
+async function loadSchoolDatalist() {
+  try {
+    const res  = await fetch('/data/schools.json')
+    const list = await res.json()
+    const dl   = $id('rec-school-list')
+    if (dl) dl.innerHTML = list.map(s => `<option value="${s.name}">`).join('')
+  } catch(e) { /* silent — datalist is a nice-to-have */ }
+}
+
+async function addSchoolManually() {
+  const input = $id('rec-search-input')
+  const name  = (input ? input.value : '').trim()
+  if (!name) { alert('Please enter a school name.'); return }
+  const btn = document.querySelector('.rec-search-row .rec-btn-gold')
+  if (btn) { btn.textContent = 'Adding...'; btn.disabled = true }
+  try {
+    const res = await fetch('/api/add-recommendation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': 'linkedu-admin-2026' },
+      body: JSON.stringify({ student_id: D.student.id, school_name: name, consultant_note: '', tier: 'consider' })
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'Failed')
+    if (input) input.value = ''
+    if (btn) { btn.textContent = '+ Add School'; btn.disabled = false }
+    // Reload recommendations
+    const reload = await fetch('/api/student', { headers: { 'Authorization': `Bearer ${window._token}` } })
+    const fresh  = await reload.json()
+    D.recommendations = fresh.recommendations || D.recommendations
+    renderRecommendations()
+  } catch(e) {
+    if (btn) { btn.textContent = '+ Add School'; btn.disabled = false }
+    alert('Error: ' + e.message)
+  }
 }
 
 // ── Golf Storage (computeRoundStats inline) ────────────────────────────────
@@ -2340,94 +2821,154 @@ async function renderCompare() {
 
 // ── Render all ────────────────────────────────────────────────────────────────
 // ── Documents ─────────────────────────────────────────────────────────────────
+function toggleChecklist(key) {
+  const studentId = D && D.student && D.student.id
+  if (!studentId) return
+  const storageKey = `portal_checklist_${studentId}`
+  let ticks = {}
+  try { ticks = JSON.parse(localStorage.getItem(storageKey) || '{}') } catch(e) {}
+  ticks[key] = !ticks[key]
+  localStorage.setItem(storageKey, JSON.stringify(ticks))
+  renderDocuments()
+}
+
 function renderDocuments() {
   const el = $id('documents-content')
-  const docs = D.documents || []
+  const extractions = D.extractions || []
+  const certs = D.certifications || []
+  const academics = D.academics || []
 
-  const docStatusBadge = s => {
-    const map = { submitted: 'badge-amber', approved: 'badge-green', reviewed: 'badge-gold', verified: 'badge-green', missing: 'badge-red', rejected: 'badge-red', expired: 'badge-red' }
-    return `<span class="badge ${map[s] || 'badge-muted'}">${s || 'pending'}</span>`
+  // Load manual ticks from localStorage
+  const studentId = D && D.student && D.student.id
+  let manualTicks = {}
+  if (studentId) {
+    try { manualTicks = JSON.parse(localStorage.getItem(`portal_checklist_${studentId}`) || '{}') } catch(e) {}
   }
 
-  let html = `<div class="card">
-    <div class="card-title">Documents</div>`
+  // ── Section 1: Recommended Documents checklist ────────────────────────────
+  const recommended = [
+    { key: 'passport',      label: 'Passport / ID' },
+    { key: 'school_report', label: 'School Report' },
+    { key: 'english_cert',  label: 'English Certificate (IELTS / TOEFL / Cambridge)' },
+    { key: 'achievement',   label: 'Achievement / Sport Certificate' },
+    { key: 'reference',     label: 'Reference Letter' },
+  ]
 
-  if (!docs.length) {
-    html += `<div class="empty">No documents on file yet.</div>`
-  } else {
-    html += docs.map(d => `
-      <div class="doc-item">
-        <div class="doc-icon ${d.status === 'verified' ? 'submitted' : d.status === 'rejected' ? 'missing' : 'pending'}"></div>
-        <div class="doc-title">${d.title || '—'}</div>
-        <div class="doc-meta">${d.due_date || d.dueDate ? 'Due ' + fmtDate(d.due_date || d.dueDate) : ''} ${d.required_by ? '· '+d.required_by : ''}</div>
-        ${docStatusBadge(d.status)}
-        ${d.file_url || d.fileLink ? `<a href="${d.file_url || d.fileLink}" target="_blank" style="font-size:11px;color:var(--gold)">View</a>` : ''}
+  // Smarter auto-detection: check doc_types AND what was actually extracted
+  const extractedTypes = new Set(extractions.map(e => e.doc_type))
+  const certCategories = new Set(certs.map(c => c.category))
+
+  function isAutoDetected(key) {
+    switch (key) {
+      case 'passport':      return extractedTypes.has('passport')
+      case 'school_report': return extractedTypes.has('school_report') || academics.length > 0
+      case 'english_cert':  return extractedTypes.has('english_cert') || certCategories.has('english_test')
+      case 'achievement':   return extractedTypes.has('achievement') || extractedTypes.has('standardised_test')
+                                || certCategories.has('sport') || certCategories.has('academic_award') || certCategories.has('extracurricular')
+      case 'reference':     return extractedTypes.has('reference')
+      default:              return false
+    }
+  }
+
+  const checklistRows = recommended.map(r => {
+    const auto   = isAutoDetected(r.key)
+    const manual = !auto && manualTicks[r.key]
+    const done   = auto || manual
+
+    if (auto) {
+      // Auto-detected — locked tick, can't untick
+      return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="width:22px;height:22px;border-radius:50%;background:#27ae60;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <span style="color:#fff;font-size:13px">✓</span>
+        </div>
+        <div style="font-size:13px;font-weight:500;color:var(--text)">${r.label}</div>
+        <span class="badge badge-green" style="margin-left:auto;font-size:10px">Uploaded</span>
+      </div>`
+    } else {
+      // Manual tick — clickable toggle
+      return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="toggleChecklist('${r.key}')">
+        <div style="width:22px;height:22px;border-radius:50%;background:${manual ? '#B8962E22' : 'var(--surface3)'};border:2px solid ${manual ? 'var(--gold)' : 'var(--border)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s">
+          ${manual ? '<span style="color:var(--gold);font-size:13px;font-weight:600">✓</span>' : ''}
+        </div>
+        <div style="font-size:13px;color:${manual ? 'var(--text)' : 'var(--muted)'};${manual ? 'font-weight:500' : ''}">${r.label}</div>
+        <span style="margin-left:auto;font-size:11px;color:${manual ? 'var(--gold)' : 'var(--muted2)'}">
+          ${manual ? 'Confirmed ✕' : 'Mark as done'}
+        </span>
+      </div>`
+    }
+  }).join('')
+
+  // ── Section 2: Extraction history ─────────────────────────────────────────
+  const docTypeLabel = { school_report:'School Report', english_cert:'English Cert', standardised_test:'Standardised Test', achievement:'Achievement', passport:'Passport', reference:'Reference', other:'Other' }
+
+  const extractionRows = extractions.length
+    ? extractions.map(e => `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.doc_name || 'Unnamed document'}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${docTypeLabel[e.doc_type] || e.doc_type || 'Other'} · ${fmtDate(e.extracted_at)}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          ${e.grades_saved > 0 ? `<span class="badge badge-gold" style="font-size:10px">${e.grades_saved} grade${e.grades_saved !== 1 ? 's' : ''}</span>` : ''}
+          ${e.certs_saved > 0 ? `<span class="badge badge-green" style="font-size:10px">${e.certs_saved} cert${e.certs_saved !== 1 ? 's' : ''}</span>` : ''}
+          ${e.grades_saved === 0 && e.certs_saved === 0 ? `<span class="badge badge-muted" style="font-size:10px">Profile data</span>` : ''}
+        </div>
       </div>`).join('')
-  }
+    : `<div style="color:var(--muted);font-size:13px;padding:12px 0">No documents uploaded yet. Use the form below to upload your first document.</div>`
 
-  html += `</div>
+  let html = `
+  <!-- ── 1. Recommended Documents ──────────────────────────────────────── -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title">Recommended Documents</div>
+    <p style="color:var(--muted);font-size:12px;margin:0 0 12px">Upload these documents to give your consultant a complete picture. Each one helps us build a stronger application.</p>
+    ${checklistRows}
+  </div>
 
-  <!-- ── Smart Upload: PDF → AI Extract ───────────────────── -->
-  <div class="card" style="margin-top:16px">
-    <div class="card-title">Upload School Report</div>
-    <p style="color:var(--muted);font-size:13px;margin-bottom:20px">Upload a PDF school report and we'll automatically extract grades and fill your profile.</p>
+  <!-- ── 2. Extraction History ─────────────────────────────────────────── -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title">Uploaded Documents</div>
+    ${extractionRows}
+  </div>
+
+  <!-- ── 3. Upload & Extract ───────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title">Upload & Extract</div>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:20px">Upload any PDF document — school report, English certificate, passport, achievement letter. We'll extract the relevant data automatically.</p>
+
+    <div class="form-field" style="margin-bottom:14px">
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);display:block;margin-bottom:6px">Document Name</label>
+      <input type="text" id="doc-name-input" placeholder="e.g. Rose — School Report Grade 8" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--surface2);color:var(--text);box-sizing:border-box" />
+    </div>
     <div class="form-field" style="margin-bottom:16px">
       <label style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);display:block;margin-bottom:6px">Select PDF</label>
       <input type="file" id="report-file-input" accept=".pdf" style="font-size:13px;color:var(--text)" />
     </div>
-    <button class="btn-submit" id="extract-btn" onclick="uploadAndExtract()" style="margin-bottom:12px">Extract from Report</button>
+    <button class="btn-submit" id="extract-btn" onclick="uploadAndExtract()" style="margin-bottom:12px">Extract from Document</button>
     <div class="form-msg" id="extract-msg"></div>
 
     <!-- Confirmation card — hidden until extraction done -->
     <div id="extract-preview" style="display:none;margin-top:20px;border:1px solid var(--border);border-radius:8px;padding:20px;background:var(--surface2)">
       <div style="font-size:13px;font-weight:600;margin-bottom:14px;color:var(--text)">Review Extracted Data</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Profile fields found:</div>
+
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Document info found:</div>
       <div id="extract-profile-preview" style="margin-bottom:16px;font-size:13px;color:var(--text)"></div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Grades found:</div>
-      <div id="extract-grades-preview" style="margin-bottom:18px"></div>
+
+      <div id="extract-grades-section" style="display:none">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Grades found:</div>
+        <div id="extract-grades-preview" style="margin-bottom:14px"></div>
+      </div>
+
+      <div id="extract-certs-section" style="display:none">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Certificates / Achievements found:</div>
+        <div id="extract-certs-preview" style="margin-bottom:18px"></div>
+      </div>
+
       <div style="display:flex;gap:10px">
         <button class="btn-submit" id="confirm-extract-btn" onclick="confirmExtracted()">Save to Profile</button>
         <button onclick="cancelExtract()" style="background:none;border:1px solid var(--border);border-radius:4px;padding:8px 16px;font-size:13px;cursor:pointer;color:var(--muted)">Cancel</button>
       </div>
       <div class="form-msg" id="confirm-msg"></div>
     </div>
-  </div>
-
-  <!-- ── Manual document submission ───────────────────────── -->
-  <div class="upload-form" style="margin-top:16px">
-    <h3>Submit a Document Link</h3>
-    <div class="form-row">
-      <div class="form-field">
-        <label>Document title</label>
-        <input type="text" id="doc-title" placeholder="e.g. School Report" />
-      </div>
-      <div class="form-field">
-        <label>Type</label>
-        <select id="doc-type">
-          <option value="">Select type</option>
-          <option>School Report</option>
-          <option>Passport</option>
-          <option>English Certificate</option>
-          <option>Recommendation Letter</option>
-          <option>Personal Statement</option>
-          <option>Other</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-row full">
-      <div class="form-field">
-        <label>File link (Google Drive / Dropbox)</label>
-        <input type="url" id="doc-link" placeholder="https://..." />
-      </div>
-    </div>
-    <div class="form-row full">
-      <div class="form-field">
-        <label>Notes</label>
-        <textarea id="doc-notes" rows="3" placeholder="Any notes for your consultant..."></textarea>
-      </div>
-    </div>
-    <button class="btn-submit" onclick="submitDoc()">Submit Document</button>
-    <div class="form-msg" id="doc-msg"></div>
   </div>`
 
   el.innerHTML = html
@@ -2435,11 +2976,22 @@ function renderDocuments() {
 
 // Holds last extracted data for confirm step
 let _lastExtracted = null
+let _lastDocName = ''
+let _lastFileHash = ''
+
+async function hashFile(base64) {
+  const binary = atob(base64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  const hashBuf = await crypto.subtle.digest('SHA-256', bytes)
+  return Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2,'0')).join('')
+}
 
 async function uploadAndExtract() {
-  const input = $id('report-file-input')
-  const btn   = $id('extract-btn')
-  const msg   = $id('extract-msg')
+  const input   = $id('report-file-input')
+  const nameIn  = $id('doc-name-input')
+  const btn     = $id('extract-btn')
+  const msg     = $id('extract-msg')
   const preview = $id('extract-preview')
 
   if (!input || !input.files || !input.files[0]) {
@@ -2451,22 +3003,28 @@ async function uploadAndExtract() {
     msg.className = 'form-msg error'; msg.textContent = 'Only PDF files are supported.'; return
   }
   if (file.size > 3_000_000) {
-    msg.className = 'form-msg error'; msg.textContent = 'File too large. Please keep reports under 3MB.'; return
+    msg.className = 'form-msg error'; msg.textContent = 'File too large. Please keep documents under 3MB.'; return
   }
 
+  // Use typed name or fall back to filename (strip extension)
+  _lastDocName = (nameIn && nameIn.value.trim()) || file.name.replace(/\.pdf$/i, '')
+
   btn.disabled = true; btn.textContent = 'Extracting…'
-  msg.className = 'form-msg'; msg.textContent = 'Reading report with AI — this takes about 10 seconds…'
+  msg.className = 'form-msg'; msg.textContent = 'Reading document with AI — this takes about 10 seconds…'
   preview.style.display = 'none'
   _lastExtracted = null
+  _lastFileHash = ''
 
   try {
-    // Read file as base64
     const base64 = await new Promise((resolve, reject) => {
       const reader = new FileReader()
-      reader.onload = () => resolve(reader.result.split(',')[1]) // strip data:application/pdf;base64,
+      reader.onload = () => resolve(reader.result.split(',')[1])
       reader.onerror = reject
       reader.readAsDataURL(file)
     })
+
+    // Hash the file for duplicate detection
+    _lastFileHash = await hashFile(base64)
 
     const { data: { session } } = await sb.auth.getSession()
     if (!session) { msg.className='form-msg error'; msg.textContent='Not logged in.'; return }
@@ -2474,30 +3032,41 @@ async function uploadAndExtract() {
     const res = await fetch('/api/parse-report', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pdfBase64: base64, fileName: file.name })
+      body: JSON.stringify({ pdfBase64: base64, fileName: file.name, fileHash: _lastFileHash })
     })
     const json = await res.json()
+
+    // Handle duplicate
+    if (res.status === 409) {
+      msg.className = 'form-msg error'
+      msg.textContent = json.message || 'This document has already been uploaded.'
+      btn.disabled = false; btn.textContent = 'Extract from Document'
+      return
+    }
+
     if (!res.ok) throw new Error(json.error || 'Extraction failed')
 
     const e = json.extracted
     _lastExtracted = e
 
-    // Show profile fields found
+    // Show document info found
     const profileLines = []
-    if (e.studentName) profileLines.push(`<b>Name:</b> ${e.studentName}`)
-    if (e.dob)         profileLines.push(`<b>Date of birth:</b> ${e.dob}`)
-    if (e.school)      profileLines.push(`<b>School:</b> ${e.school}`)
-    if (e.yearGroup)   profileLines.push(`<b>Year group:</b> ${e.yearGroup}`)
-    if (e.curriculum)  profileLines.push(`<b>Curriculum:</b> ${e.curriculum}`)
-    if (e.term)        profileLines.push(`<b>Term:</b> ${e.term}`)
-    if (e.academicYear)profileLines.push(`<b>Academic year:</b> ${e.academicYear}`)
+    if (e.docType)      profileLines.push(`<b>Document type:</b> ${e.docType.replace(/_/g,' ')}`)
+    if (e.studentName)  profileLines.push(`<b>Name:</b> ${e.studentName}`)
+    if (e.dob)          profileLines.push(`<b>Date of birth:</b> ${e.dob}`)
+    if (e.school)       profileLines.push(`<b>School:</b> ${e.school}`)
+    if (e.yearGroup)    profileLines.push(`<b>Year group:</b> ${e.yearGroup}`)
+    if (e.curriculum)   profileLines.push(`<b>Curriculum:</b> ${e.curriculum}`)
+    if (e.term)         profileLines.push(`<b>Term:</b> ${e.term}`)
+    if (e.academicYear) profileLines.push(`<b>Academic year:</b> ${e.academicYear}`)
 
     $id('extract-profile-preview').innerHTML = profileLines.length
       ? profileLines.join('<br>')
-      : '<span style="color:var(--muted)">No profile fields found</span>'
+      : '<span style="color:var(--muted)">No document info found</span>'
 
     // Show grades table
     const grades = e.grades || []
+    const gradesSection = $id('extract-grades-section')
     if (grades.length) {
       const rows = grades.map(g => `
         <tr>
@@ -2514,18 +3083,41 @@ async function uploadAndExtract() {
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>`
+      gradesSection.style.display = 'block'
     } else {
-      $id('extract-grades-preview').innerHTML = '<span style="color:var(--muted);font-size:12px">No grades found in this document</span>'
+      gradesSection.style.display = 'none'
+    }
+
+    // Show certifications
+    const certs = e.certifications || []
+    const certsSection = $id('extract-certs-section')
+    if (certs.length) {
+      const certRows = certs.map(c => `
+        <div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:12px">
+          <div style="font-weight:500;color:var(--text)">${c.name}</div>
+          <div style="color:var(--muted);margin-top:2px">
+            ${c.issuer ? c.issuer + (c.presenter || c.score || c.grade || c.date ? ' · ' : '') : ''}${c.presenter ? 'Presented by ' + c.presenter + (c.score || c.grade || c.date ? ' · ' : '') : ''}${c.score || c.grade || ''}${c.date ? ' · ' + c.date : ''}
+          </div>
+        </div>`).join('')
+      $id('extract-certs-preview').innerHTML = certRows
+      certsSection.style.display = 'block'
+    } else {
+      certsSection.style.display = 'none'
     }
 
     preview.style.display = 'block'
-    msg.className = 'form-msg ok'; msg.textContent = `Found ${grades.length} subject${grades.length!==1?'s':''} — review below and confirm to save.`
+    const summary = [
+      grades.length ? `${grades.length} grade${grades.length!==1?'s':''}` : '',
+      certs.length  ? `${certs.length} certificate${certs.length!==1?'s':''}` : '',
+    ].filter(Boolean).join(', ')
+    msg.className = 'form-msg ok'
+    msg.textContent = (summary ? `Found ${summary}` : 'Document read') + ' — review below and confirm to save.'
 
   } catch (err) {
     msg.className = 'form-msg error'; msg.textContent = err.message || 'Extraction failed.'
     console.error('uploadAndExtract error:', err)
   } finally {
-    btn.disabled = false; btn.textContent = 'Extract from Report'
+    btn.disabled = false; btn.textContent = 'Extract from Document'
   }
 }
 
@@ -2533,6 +3125,8 @@ function cancelExtract() {
   $id('extract-preview').style.display = 'none'
   $id('extract-msg').textContent = ''
   _lastExtracted = null
+  _lastDocName = ''
+  _lastFileHash = ''
 }
 
 async function confirmExtracted() {
@@ -2546,51 +3140,67 @@ async function confirmExtracted() {
     const { data: { session } } = await sb.auth.getSession()
     const e = _lastExtracted
 
-    // Build profile updates (only fields we have values for)
+    // Build profile updates (only fill empty fields)
     const profileUpdates = {}
-    if (e.studentName && !D.student.studentName) profileUpdates.student_name = e.studentName
-    if (e.dob         && !D.student.dob)         profileUpdates.dob = e.dob
-    if (e.school      && !D.student.currentSchool) profileUpdates.current_school = e.school
-    if (e.yearGroup   && !D.student.currentYearGroup) profileUpdates.current_year_group = e.yearGroup
-    if (e.curriculum  && !D.student.curriculum)   profileUpdates.curriculum = e.curriculum
+    if (e.studentName && !D.student.studentName)          profileUpdates.student_name        = e.studentName
+    if (e.dob         && !D.student.dob)                  profileUpdates.dob                 = e.dob
+    if (e.school      && !D.student.currentSchool)        profileUpdates.current_school      = e.school
+    if (e.yearGroup   && !D.student.currentYearGroup)     profileUpdates.current_year_group  = e.yearGroup
+    if (e.curriculum  && !D.student.curriculum)           profileUpdates.curriculum          = e.curriculum
 
     const res = await fetch('/api/save-academics', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         grades:         e.grades || [],
+        certifications: e.certifications || [],
         term:           e.term,
         academicYear:   e.academicYear,
         profileUpdates,
+        docName:        _lastDocName || 'Uploaded document',
+        docType:        e.docType || 'other',
+        rawJson:        e,
+        fileHash:       _lastFileHash || null,
       })
     })
     const json = await res.json()
     if (!res.ok) throw new Error(json.error || 'Save failed')
 
     // Update local D.student with any profile fills
-    if (profileUpdates.student_name)    D.student.studentName    = profileUpdates.student_name
-    if (profileUpdates.dob)             D.student.dob            = profileUpdates.dob
-    if (profileUpdates.current_school)  D.student.currentSchool  = profileUpdates.current_school
-    if (profileUpdates.current_year_group) D.student.currentYearGroup = profileUpdates.current_year_group
-    if (profileUpdates.curriculum)      D.student.curriculum     = profileUpdates.curriculum
+    if (profileUpdates.student_name)        D.student.studentName       = profileUpdates.student_name
+    if (profileUpdates.dob)                 D.student.dob               = profileUpdates.dob
+    if (profileUpdates.current_school)      D.student.currentSchool     = profileUpdates.current_school
+    if (profileUpdates.current_year_group)  D.student.currentYearGroup  = profileUpdates.current_year_group
+    if (profileUpdates.curriculum)          D.student.curriculum        = profileUpdates.curriculum
 
-    // Reload academics from server
+    // Refresh all data from server (academics, certifications, extractions)
     const refreshRes = await fetch('/api/student', { headers: { Authorization: `Bearer ${session.access_token}` } })
     if (refreshRes.ok) {
       const fresh = await refreshRes.json()
-      D.academics = fresh.academics || D.academics
+      D.academics      = fresh.academics      || D.academics
+      D.certifications = fresh.certifications || D.certifications || []
+      D.extractions    = fresh.extractions    || D.extractions    || []
       try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {}
     }
 
+    const gs = json.gradesSaved || 0
+    const cs = json.certsSaved  || 0
+    const parts = [
+      gs > 0 ? `${gs} grade${gs!==1?'s':''}` : '',
+      cs > 0 ? `${cs} certificate${cs!==1?'s':''}` : '',
+    ].filter(Boolean).join(' and ')
+
     msg.className = 'form-msg ok'
-    msg.textContent = `Saved ${json.inserted} grade${json.inserted!==1?'s':''} successfully!`
+    msg.textContent = `Saved ${parts || 'document info'} successfully!`
     _lastExtracted = null
+    _lastDocName = ''
     $id('extract-preview').style.display = 'none'
     $id('extract-msg').className = 'form-msg ok'
-    $id('extract-msg').textContent = `${json.inserted} grades saved to your profile.`
+    $id('extract-msg').textContent = parts ? `${parts} saved.` : 'Document info saved.'
 
-    // Re-render profile to show new academics + updated completion
+    // Re-render profile and documents
     renderProfile()
+    renderDocuments()
 
   } catch (err) {
     msg.className = 'form-msg error'; msg.textContent = err.message || 'Save failed.'
@@ -2656,6 +3266,8 @@ sb.auth.onAuthStateChange(async (event, session) => {
           D = cD; golfRounds = D.golfRounds || []; userRole = D.role || 'parent'
           $id('header-name').textContent = (D && D.student && (D.student.preferredName || D.student.studentName)) || 'Parent'
           renderAll()
+          $id('loading').classList.remove('show')
+          $id('loading').style.display = 'none'
           $id('app').style.display = 'flex'
           $id('app').classList.add('visible')
           // Refresh in background silently
@@ -2668,8 +3280,6 @@ sb.auth.onAuthStateChange(async (event, session) => {
         }
       }
     } catch(e) {}
-
-    $id('loading').classList.add('show')
 
     try {
       const [dataRes] = await Promise.all([
@@ -2688,13 +3298,13 @@ sb.auth.onAuthStateChange(async (event, session) => {
       $id('header-name').textContent = (D && D.student && (D.student.preferredName || D.student.studentName)) || 'Parent'
       renderAll()
 
-      $id('loading').classList.remove('show')
+      $id('loading').style.display = 'none'
       $id('app').style.display = 'flex'
       $id('app').classList.add('visible')
 
     } catch (err) {
       console.error('Load error:', err)
-      $id('loading').classList.remove('show')
+      $id('loading').style.display = 'none'
       resetAuthForm()
       $id('auth-screen').style.display = 'flex'
       const errEl = $id('auth-error')
@@ -2704,7 +3314,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
     }
 
   } else {
-    $id('loading').classList.remove('show')
+    $id('loading').style.display = 'none'
     $id('auth-screen').style.display = 'flex'
   }
 })
