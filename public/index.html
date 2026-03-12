@@ -3752,11 +3752,15 @@ async function updateSchoolStatus(schoolId, newStatus) {
       body: JSON.stringify({ student_school_id: schoolId, application_status: newStatus })
     })
     if (!res.ok) { const j = await res.json(); throw new Error(j.error) }
-    // Update locally
-    const sc = (D.schools || []).find(s => s.id === schoolId)
-    if (sc) sc.application_status = newStatus
-    renderSchools()
-    renderJourney()
+    // Reload fresh data so cache reflects the change
+    const { data: { session } } = await sb.auth.getSession()
+    if (session) {
+      const fresh = await loadData(session.access_token)
+      D = fresh; golfRounds = D.golfRounds || []
+      try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {}
+      renderSchools()
+      renderJourney()
+    }
   } catch(e) { alert('Could not update status: ' + e.message) }
 }
 
