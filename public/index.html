@@ -759,22 +759,32 @@
       font-size: 12px; outline: none; margin-top: 8px; resize: vertical; }
     .sa-latest-update-edit:focus { border-color: var(--gold); }
     /* Journey urgency bands */
-    .jny-band { margin-bottom: 28px; }
-    .jny-band-hdr { font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em;
-      color: var(--gold); padding-bottom: 8px; border-bottom: 1px solid var(--border);
-      margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-    .jny-band-hdr .jny-band-accent { display: inline-block; width: 3px; height: 14px;
-      border-radius: 2px; flex-shrink: 0; }
-    .jny-row { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0;
-      border-bottom: 1px solid rgba(0,0,0,0.05); flex-wrap: wrap; }
-    .jny-row:last-child { border-bottom: none; }
-    .jny-school { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
-      color: var(--gold); min-width: 90px; flex-shrink: 0; padding-top: 2px; }
-    .jny-title { font-size: 13px; color: var(--text); }
-    .jny-date-lbl { font-size: 14px; color: #eee; font-weight: 500; white-space: nowrap; }
-    .jny-days { font-size: 12px; font-weight: 700; white-space: nowrap; min-width: 60px; text-align: right; }
+    /* Journey vertical timeline spine */
+    .jny-spine { padding-left: 0; }
+    .jny-spine-item { display: flex; gap: 14px; position: relative; }
+    .jny-dot-col { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; width: 18px; }
+    .jny-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+    .jny-dot-line { flex: 1; width: 2px; background: #1e1e1e; min-height: 18px; }
+    .jny-dot-upcoming { background: var(--bg); border: 2px solid #444; }
+    .jny-dot-urgent   { background: #c0392b; border: 2px solid #c0392b; }
+    .jny-dot-soon     { background: #e67e22; border: 2px solid #e67e22; }
+    .jny-dot-done     { background: #2a2a2a; border: 2px solid #333; }
+    .jny-spine-body { flex: 1; padding-bottom: 18px; }
+    .jny-spine-school { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); }
+    .jny-spine-title { font-size: 13px; color: var(--text); margin-top: 2px; }
+    .jny-spine-meta { display: flex; align-items: center; gap: 10px; margin-top: 4px; flex-wrap: wrap; }
+    .jny-spine-date { font-size: 12px; color: #888; }
+    .jny-days-badge { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 10px; }
+    .jny-days-badge.urgent { background: rgba(192,57,43,0.18); color: #e74c3c; }
+    .jny-days-badge.soon   { background: rgba(230,126,34,0.15); color: #e67e22; }
+    .jny-days-badge.today  { background: rgba(192,57,43,0.28); color: #e74c3c; font-weight: 800; }
+    .jny-days-badge.ok     { background: rgba(255,255,255,0.04); color: #666; }
     .jny-cal-link { font-size: 11px; color: var(--gold); text-decoration: none; white-space: nowrap; }
     .jny-cal-link:hover { color: #daa520; }
+    .jny-month-div { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em;
+      color: var(--gold); padding: 18px 0 10px 32px; }
+    .jny-month-div:first-child { padding-top: 4px; }
+    details.jny-completed { margin-top: 16px; }
     details.jny-completed summary { cursor: pointer; font-size: 11px; color: var(--muted);
       text-transform: uppercase; letter-spacing: 0.1em; padding: 8px 0; list-style: none; }
     details.jny-completed summary::before { content: '+ '; color: var(--gold); }
@@ -956,11 +966,9 @@
     .sa-tl-note-input { width: 100%; background: #1a1a1a; border: 1px solid #444; border-radius: 3px; padding: 6px 8px; color: #eee; font-family: 'Inter', sans-serif; font-size: 12px; outline: none; resize: vertical; }
     .sa-tl-note-input:focus { border-color: var(--gold); }
 
-    /* ── Fix 5: Journey row updates ─────────────────────────── */
-    .jny-row-done { opacity: 0.6; }
-    .jny-row-done .jny-title { color: var(--green); }
-    .jny-update { font-size: 11px; color: #27ae60; margin-top: 2px; font-style: italic; }
-    .jny-row-main { flex: 1; min-width: 0; }
+    .jny-update { font-size: 11px; color: #27ae60; margin-top: 3px; font-style: italic; }
+    .jny-spine-item.done .jny-spine-title { color: #444; }
+    .jny-spine-item.done .jny-spine-school { color: #444; }
 
   </style>
 </head>
@@ -1503,142 +1511,154 @@ function renderJourney() {
     html += `</div>`
   }
 
-  // ── School Timeline urgency bands ─────────────────────────────────────────
-  const PIPELINE_LABELS = ['Researching','Applied','Interview','Offer','Visit','Accepted','VISA','TB Test','Guardianship','Enrolled']
-  const STAGE_TITLE_MAP  = ['Started researching','Application submitted','Interview scheduled','Offer received','Visit booked','Place accepted','VISA application','TB test booked','Guardianship arranged','Enrolled']
-  const stsMap = { researching:0, applied:1, interview:2, offer:3, visit:4, accepted:5, visa:6, tb_test:7, guardianship:8, enrolled:9, rejected:-1 }
+  // ── School Timeline — vertical spine ──────────────────────────────────────
+  const stsMapJ = { researching:0, applied:1, interview:2, offer:3, visit:4, accepted:5, visa:6, tb_test:7, guardianship:8, enrolled:9 }
+  const BASE_STAGES_J = [
+    { key:'researching',  title:'Begin Research',          months:-11 },
+    { key:'applied',      title:'Submit Application',      months:-8  },
+    { key:'interview',    title:'Interview',               months:-7  },
+    { key:'offer',        title:'Receive Offer',           months:-6  },
+    { key:'visit',        title:'Visit School',            months:-5  },
+    { key:'accepted',     title:'Accept Place',            months:-4  },
+    { key:'visa',         title:'Apply for VISA',          months:-3  },
+    { key:'tb_test',      title:'TB Test',                 months:-2  },
+    { key:'guardianship', title:'Arrange Guardianship',    months:-1  },
+    { key:'enrolled',     title:'Enrolled',                months:0   },
+  ]
 
   const allSchoolItems = []
   ;(D.schools || []).forEach(sc => {
-    const stage = stsMap[sc.application_status] ?? 0
-    const schoolShort = (sc.school_name || '').split(' ')[0].toUpperCase()
+    const curStage  = stsMapJ[sc.application_status] ?? 0
+    const schoolName = sc.school_name || ''
+    const tYear = parseInt(D.student.targetEntryYear) || new Date().getFullYear() + 2
+    const eDate = new Date(`${tYear}-09-01`)
 
-    // School deadline
+    // Deadline
     if (sc.deadline) {
-      const d = daysUntil(sc.deadline)
       allSchoolItems.push({
-        schoolName: schoolShort,
+        schoolName,
         title: 'Application Deadline',
         date: sc.deadline,
-        notes: '',
-        days: d,
-        calUrl: calendarLink('Application Deadline — ' + sc.school_name, sc.deadline, '', D.student.parentEmail),
+        days: daysUntil(sc.deadline),
+        latestUpdate: null,
+        calUrl: calendarLink('Application Deadline — ' + schoolName, sc.deadline, '', D.student.parentEmail),
       })
     }
 
-    // Base timeline items with auto-dates
-    const tYear = parseInt(D.student.targetEntryYear) || new Date().getFullYear() + 2
-    const eDate = new Date(`${tYear}-09-01`)
-    const BASE_STAGES_J = [
-      { key:'researching', title:'Begin Research', months:-11 },
-      { key:'applied', title:'Submit Application', months:-8 },
-      { key:'interview', title:'Interview', months:-7 },
-      { key:'offer', title:'Receive Offer', months:-6 },
-      { key:'visit', title:'Visit School', months:-5 },
-      { key:'accepted', title:'Accept Place', months:-4 },
-      { key:'visa', title:'Apply for VISA', months:-3 },
-      { key:'tb_test', title:'TB Test', months:-2 },
-      { key:'guardianship', title:'Arrange Guardianship', months:-1 },
-      { key:'enrolled', title:'Enrolled', months:0 },
-    ]
-    const stsMapJ = { researching:0, applied:1, interview:2, offer:3, visit:4, accepted:5, visa:6, tb_test:7, guardianship:8, enrolled:9 }
-    const curStage = stsMapJ[sc.application_status] ?? 0
-
+    // Base pipeline stages (upcoming only — past ones are "done")
     BASE_STAGES_J.forEach(s => {
       const stageIdx = stsMapJ[s.key] ?? 0
-      if (stageIdx <= curStage) return  // skip already done stages
-
-      // Check if DB has a confirmed date for this stage
       const dbBase = (sc.timeline_items || []).find(i => i.item_type === 'base' && i.notes && i.notes.includes(`stage:${s.key}`))
       const d = new Date(eDate)
       d.setMonth(d.getMonth() + s.months)
       const dateStr = dbBase ? dbBase.date : d.toISOString().slice(0, 10)
       if (!dateStr) return
-
       const days = daysUntil(dateStr)
+      const isDone = stageIdx <= curStage
       allSchoolItems.push({
-        schoolName: schoolShort,
+        schoolName,
         title: s.title,
         date: dateStr,
-        notes: dbBase ? '' : '(suggested)',
-        days,
-        calUrl: calendarLink(s.title + ' — ' + sc.school_name, dateStr, '', D.student.parentEmail),
+        days: isDone ? (days < 0 ? days : -(stageIdx + 1) * 100) : days,
+        isDone,
+        latestUpdate: isDone && sc.latest_update ? sc.latest_update : null,
+        calUrl: calendarLink(s.title + ' — ' + schoolName, dateStr, '', D.student.parentEmail),
       })
     })
 
-    // Custom timeline items from DB
+    // Custom timeline items
     ;(sc.timeline_items || []).filter(i => i.item_type === 'custom').forEach(item => {
       if (!item.date) return
-      const d = daysUntil(item.date)
       allSchoolItems.push({
-        schoolName: schoolShort,
+        schoolName,
         title: item.title,
         date: item.date,
-        notes: item.notes || '',
-        days: d,
+        days: daysUntil(item.date),
+        isDone: daysUntil(item.date) < 0,
+        latestUpdate: null,
         calUrl: calendarLink(item.title, item.date, item.notes || '', D.student.parentEmail),
       })
     })
   })
 
-  allSchoolItems.sort((a,b) => a.days - b.days)
+  // Sort: upcoming by date ascending, done items by date descending (most recent first)
+  const upcoming  = allSchoolItems.filter(i => !i.isDone).sort((a,b) => new Date(a.date) - new Date(b.date))
+  const completed = allSchoolItems.filter(i =>  i.isDone).sort((a,b) => new Date(b.date) - new Date(a.date))
 
-  const thisWeek   = allSchoolItems.filter(i => i.days !== null && i.days >= 0 && i.days <= 7)
-  const twoWeeks   = allSchoolItems.filter(i => i.days !== null && i.days >= 8 && i.days <= 14)
-  const comingUp   = allSchoolItems.filter(i => i.days !== null && i.days >= 15)
-  const completed  = allSchoolItems.filter(i => i.days !== null && i.days < 0)
-
-  function fmtDayLabel(dateStr) {
+  function fmtSpineDate(dateStr) {
     if (!dateStr) return ''
-    const d = new Date(dateStr)
-    return d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' })
+    const d = new Date(dateStr + 'T00:00:00')
+    return d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })
+  }
+  function monthKey(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00')
+    return d.toLocaleDateString('en-GB', { month:'long', year:'numeric' }).toUpperCase()
   }
 
-  function jnyRow(item) {
-    const daysLbl = item.days < 0 ? `${Math.abs(item.days)}d ago` : item.days === 0 ? 'Today' : `in ${item.days}d`
-    const col = item.days < 0 ? 'var(--muted)' : item.days <= 7 ? 'var(--red)' : item.days <= 14 ? 'var(--amber)' : 'var(--green)'
-    const isDone = item.days < 0
-
-    // Find latest update for this school
-    const schoolData = (D.schools || []).find(s => (s.school_name || '').split(' ')[0].toUpperCase() === item.schoolName)
-    const latestUpdate = schoolData && schoolData.latest_update
-      ? `<div class="jny-update">${schoolData.latest_update}</div>` : ''
-
-    return `<div class="jny-row ${isDone ? 'jny-row-done' : ''}">
-      <span class="jny-school">${item.schoolName}</span>
-      <div class="jny-row-main">
-        <span class="jny-title">${isDone ? '&#10003; ' : ''}${item.title}</span>
-        ${latestUpdate}
+  function spineItem(item, isLast) {
+    const days = item.days
+    let dotCls = 'jny-dot-upcoming'
+    let badgeCls = 'ok', badgeLbl = ''
+    if (item.isDone) {
+      dotCls = 'jny-dot-done'
+    } else if (days === 0) {
+      dotCls = 'jny-dot-urgent'; badgeCls = 'today'; badgeLbl = 'Today'
+    } else if (days <= 7) {
+      dotCls = 'jny-dot-urgent'; badgeCls = 'urgent'; badgeLbl = `${days}d`
+    } else if (days <= 14) {
+      dotCls = 'jny-dot-soon'; badgeCls = 'soon'; badgeLbl = `${days}d`
+    } else if (days <= 30) {
+      dotCls = 'jny-dot-upcoming'; badgeCls = 'ok'; badgeLbl = `${days}d`
+    }
+    const titleStyle = item.isDone ? 'style="color:#444"' : ''
+    const prefix = item.isDone ? '&#10003; ' : ''
+    const updateHtml = item.latestUpdate ? `<div class="jny-update">${item.latestUpdate}</div>` : ''
+    const badgeHtml = badgeLbl ? `<span class="jny-days-badge ${badgeCls}">${badgeLbl}</span>` : ''
+    return `<div class="jny-spine-item${item.isDone ? ' done' : ''}">
+      <div class="jny-dot-col">
+        <div class="jny-dot ${dotCls}"></div>
+        ${!isLast ? '<div class="jny-dot-line"></div>' : ''}
       </div>
-      <span class="jny-date-lbl">${fmtDayLabel(item.date)}</span>
-      <span class="jny-days" style="color:${col}">${daysLbl}</span>
-      <a class="jny-cal-link" href="${item.calUrl}" target="_blank">+ Cal</a>
+      <div class="jny-spine-body">
+        <div class="jny-spine-school">${item.schoolName}</div>
+        <div class="jny-spine-title" ${titleStyle}>${prefix}${item.title}</div>
+        ${updateHtml}
+        <div class="jny-spine-meta">
+          <span class="jny-spine-date">${fmtSpineDate(item.date)}</span>
+          ${badgeHtml}
+          <a class="jny-cal-link" href="${item.calUrl}" target="_blank">+ Cal</a>
+        </div>
+      </div>
     </div>`
   }
 
-  function band(items, label, accentColor) {
+  function buildSpine(items) {
     if (!items.length) return ''
-    return `<div class="jny-band">
-      <div class="jny-band-hdr">
-        <span class="jny-band-accent" style="background:${accentColor}"></span>
-        ${label}
-      </div>
-      ${items.map(jnyRow).join('')}
-    </div>`
+    let out = '<div class="jny-spine">'
+    let lastMonth = ''
+    items.forEach((item, idx) => {
+      const mk = item.date ? monthKey(item.date) : ''
+      if (mk && mk !== lastMonth) {
+        out += `<div class="jny-month-div">${mk}</div>`
+        lastMonth = mk
+      }
+      out += spineItem(item, idx === items.length - 1)
+    })
+    out += '</div>'
+    return out
   }
 
   const completedHtml = completed.length
-    ? `<details class="jny-completed"><summary>Completed (${completed.length})</summary>
-        <div style="margin-top:8px">${completed.slice().reverse().map(jnyRow).join('')}</div>
+    ? `<details class="jny-completed">
+        <summary>Completed (${completed.length})</summary>
+        <div style="margin-top:8px">${buildSpine(completed)}</div>
        </details>`
     : ''
 
-  const anyItems = thisWeek.length || twoWeeks.length || comingUp.length || completed.length
+  const anyItems = upcoming.length || completed.length
   if (anyItems) {
     html += `<div class="section-title" style="margin-top:28px">School Timeline</div>`
-    html += band(thisWeek, 'This Week', '#c0392b')
-    html += band(twoWeeks, 'Within 2 Weeks', 'var(--amber)')
-    html += band(comingUp, 'Coming Up', 'var(--muted2)')
+    html += buildSpine(upcoming)
     html += completedHtml
   }
 
