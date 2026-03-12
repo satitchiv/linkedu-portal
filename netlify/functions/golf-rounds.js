@@ -64,18 +64,29 @@ exports.handler = async (event) => {
     // POST — save a round
     if (event.httpMethod === 'POST') {
       const body = JSON.parse(event.body || '{}')
-      const { notion_student_id, ...roundData } = body
+      const { notion_student_id, student_id: bodyStudentId, ...roundData } = body
+
+      // Resolve target student — prefer UUID, fall back to notion_student_id
+      const targetStudentUUID = bodyStudentId || profile.student_id || null
+      const targetNotionId = notion_student_id || profile.notion_student_id || null
 
       // Non-analysts can only save for themselves
-      const targetStudentId = notion_student_id || profile.notion_student_id
-      if (profile.role !== 'analyst' && targetStudentId !== profile.notion_student_id) {
-        return { statusCode: 403, headers, body: JSON.stringify({ error: 'Forbidden' }) }
+      if (profile.role !== 'analyst') {
+        const ownUUID = profile.student_id
+        const ownNotion = profile.notion_student_id
+        if (targetStudentUUID && targetStudentUUID !== ownUUID) {
+          return { statusCode: 403, headers, body: JSON.stringify({ error: 'Forbidden' }) }
+        }
+        if (!targetStudentUUID && targetNotionId !== ownNotion) {
+          return { statusCode: 403, headers, body: JSON.stringify({ error: 'Forbidden' }) }
+        }
       }
 
       const { data, error } = await supabase
         .from('golf_rounds')
         .insert({
-          notion_student_id: targetStudentId,
+          student_id:        targetStudentUUID,
+          notion_student_id: targetNotionId,
           entered_by_id: user.id,
           entered_by_role: profile.role,
           ...roundData

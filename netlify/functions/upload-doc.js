@@ -1,10 +1,8 @@
 // POST /api/upload-doc
-// Parent submits a document link — saves to Supabase + creates Notion record
+// Parent submits a document link — saves to Supabase only
 
-const { Client } = require('@notionhq/client')
 const { createClient } = require('@supabase/supabase-js')
 
-const notion = new Client({ auth: process.env.NOTION_KEY })
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -47,11 +45,11 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'doc_title is required' }) }
     }
 
-    // Save to Supabase
     const { error: sbError } = await supabase
       .from('document_submissions')
       .insert({
-        notion_student_id: profile.notion_student_id,
+        student_id:        profile.student_id || null,
+        notion_student_id: profile.notion_student_id || null,
         doc_title,
         doc_link,
         doc_notes,
@@ -61,23 +59,6 @@ exports.handler = async (event) => {
       })
 
     if (sbError) throw sbError
-
-    // Also create record in Notion documents DB
-    try {
-      await notion.pages.create({
-        parent: { database_id: process.env.NOTION_DB_DOCUMENTS },
-        properties: {
-          'Document Title': { title: [{ text: { content: doc_title } }] },
-          'Status':         { select: { name: 'Uploaded' } },
-          'File Link':      doc_link ? { url: doc_link } : undefined,
-          'Notes':          doc_notes ? { rich_text: [{ text: { content: doc_notes } }] } : undefined,
-          'Student':        { relation: [{ id: profile.notion_student_id }] },
-        }
-      })
-    } catch (notionErr) {
-      // Notion write failed but Supabase succeeded — log and continue
-      console.warn('Notion doc create failed (non-fatal):', notionErr.message)
-    }
 
     return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) }
 

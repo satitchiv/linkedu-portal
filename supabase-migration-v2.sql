@@ -1,4 +1,13 @@
--- ── Migration v2: Parent contact, school card enrichment, timeline ─────────
+-- ── Migration v2: Parent contact, school card enrichment, timeline, Notion cleanup ─────────
+
+-- notion_student_id kept on students for backward compatibility with golf rounds
+ALTER TABLE students ADD COLUMN IF NOT EXISTS notion_student_id TEXT;
+
+-- document_submissions: add student_id UUID alongside legacy notion_student_id
+ALTER TABLE document_submissions ADD COLUMN IF NOT EXISTS student_id UUID REFERENCES students(id) ON DELETE SET NULL;
+
+-- golf_rounds: add student_id UUID alongside legacy notion_student_id
+ALTER TABLE golf_rounds ADD COLUMN IF NOT EXISTS student_id UUID REFERENCES students(id) ON DELETE SET NULL;
 
 -- Parent contact fields on students table
 ALTER TABLE students ADD COLUMN IF NOT EXISTS parent_name TEXT;
