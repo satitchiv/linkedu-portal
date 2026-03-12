@@ -1426,13 +1426,7 @@ function renderOverview() {
     </div>
   </div>`
 
-  // ── Consultant message ──────────────────────────────────────────────────────
-  const msgHtml = student.consultantMessage
-    ? `<div class="ov-consultant-msg">
-        <div class="ov-msg-label">Message from ${student.consultant || 'your consultant'}</div>
-        <div class="ov-msg-text">${student.consultantMessage}</div>
-       </div>`
-    : ''
+  const msgHtml = ''
 
   // ── Right Now — most urgent ─────────────────────────────────────────────────
   const top = allEvents[0]
