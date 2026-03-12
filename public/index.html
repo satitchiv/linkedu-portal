@@ -6,7 +6,7 @@
   <title>LinkedU Parent Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
@@ -987,26 +987,77 @@
     .jny-update { font-size: 11px; color: #27ae60; margin-top: 3px; font-style: italic; }
     .jny-spine-item.done .jny-spine-title { color: #444; }
     .jny-spine-item.done .jny-spine-school { color: #444; }
-    /* Schools at a Glance */
-    .jny-glance { margin: 10px 0 24px; }
-    .jny-glance-header { display: flex; align-items: center; gap: 12px; padding-bottom: 6px; border-bottom: 1px solid #1e1e1e; margin-bottom: 2px; }
-    .jny-glance-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid #161616; }
-    .jny-glance-row:last-child { border-bottom: none; }
-    .jny-glance-name { font-size: 13px; color: var(--gold); width: 160px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .jny-glance-name-ph { width: 160px; flex-shrink: 0; }
-    .jny-glance-pipe { display: flex; align-items: center; flex: 1; min-width: 0; }
-    .jny-gp-step { display: flex; align-items: center; flex: 1; }
-    .jny-gp-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-    .jny-gp-dot.gp-done   { background: var(--gold); }
-    .jny-gp-dot.gp-active { background: var(--gold); box-shadow: 0 0 0 3px rgba(184,150,46,0.22); }
-    .jny-gp-dot.gp-up     { background: #1e1e1e; border: 1.5px solid #333; }
-    .jny-gp-line { flex: 1; height: 1px; background: #252525; min-width: 2px; }
-    .jny-glance-stage { font-size: 10px; color: var(--gold); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; width: 74px; flex-shrink: 0; text-align: right; }
-    .jny-glance-stage-ph { width: 74px; flex-shrink: 0; }
-    .jny-gp-abbr-row { gap: 0; }
-    .jny-gp-abbr { flex: 1; font-size: 9px; color: #444; text-align: center; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; }
+    /* Schools at a Glance — table design */
+    .glance-wrap { background: var(--bg); padding: 0; overflow-x: auto; margin: 10px 0 24px; }
+    .glance-table { width: 100%; border-collapse: collapse; min-width: 600px; }
+    .glance-table th { font-size: 8px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted2); padding: 0 0 18px; text-align: center; }
+    .glance-table th:first-child { text-align: left; width: 200px; }
+    .glance-table th:last-child { text-align: right; min-width: 80px; }
+    .glance-table tr { border-bottom: 1px solid var(--border); }
+    .glance-table tr:last-child { border-bottom: none; }
+    .glance-school-name { font-family: 'Cormorant Garamond', serif; font-size: 15px; font-weight: 500; color: var(--text); padding: 15px 0; padding-right: 20px; white-space: nowrap; }
+    .glance-stage-cell { text-align: center; padding: 15px 4px; position: relative; }
+    .glance-stage-cell::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--border); transform: translateY(-50%); z-index: 0; }
+    .glance-stage-cell:first-of-type::before { left: 50%; }
+    .glance-stage-cell:last-of-type::before { display: none; }
+    .glance-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; position: relative; z-index: 1; background: var(--surface3); vertical-align: middle; }
+    .glance-dot.done { background: var(--gold); }
+    .glance-dot.current { background: var(--text); width: 14px; height: 14px; box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px rgba(26,26,26,0.15); }
+    .glance-dot.future { background: var(--surface3); }
+    .glance-stage-badge { font-size: 8px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); text-align: right; padding: 15px 0; white-space: nowrap; }
     /* Abandoned school card */
     .sa-card.abandoned { opacity: 0.45; border-color: #1a1a1a; }
+
+    /* ── Journey v2 — bold countdown timeline ───────────── */
+    .jny2-wrap { background: var(--surface); border-radius: 4px; padding: 32px; margin-top: 16px; }
+    .jny2-month { display: flex; align-items: center; gap: 12px; margin: 24px 0 4px; }
+    .jny2-month span { font-size: 9px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); white-space: nowrap; }
+    .jny2-month::after { content: ''; flex: 1; height: 1px; background: rgba(184,150,46,0.2); }
+    .jny2-item { display: grid; grid-template-columns: 56px 1fr 64px; gap: 16px; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--border); position: relative; }
+    .jny2-item:first-of-type { border-top: 1px solid var(--border); }
+    .jny2-item.done { opacity: 0.45; }
+    .jny2-item.now { background: rgba(184,150,46,0.04); margin: 0 -32px; padding: 16px 32px; border-top: 1px solid rgba(184,150,46,0.25); border-bottom: 1px solid rgba(184,150,46,0.25); }
+    .sa-timeline-always .jny2-item.now { margin: 0 -20px; padding: 16px 20px; }
+    .jny2-num { font-family: 'Playfair Display', serif; font-size: 30px; font-weight: 700; line-height: 1; color: rgba(26,26,26,0.1); text-align: center; }
+    .jny2-item.now .jny2-num { color: var(--gold); font-size: 34px; }
+    .jny2-item.done .jny2-num { font-size: 18px; color: rgba(26,26,26,0.12); }
+    .jny2-school { font-size: 9px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--gold); margin-bottom: 3px; }
+    .jny2-item.done .jny2-school { color: var(--muted2); }
+    .jny2-action { font-family: 'Playfair Display', serif; font-size: 16px; color: var(--text); line-height: 1.2; margin-bottom: 3px; }
+    .jny2-item.done .jny2-action { text-decoration: line-through; color: var(--muted); }
+    .jny2-item.now .jny2-action { font-size: 18px; }
+    .jny2-date-row { font-size: 11px; color: var(--muted2); font-variant-numeric: tabular-nums; }
+    .jny2-item.now .jny2-date-row { color: var(--muted); }
+    .jny2-count { text-align: right; }
+    .jny2-days { font-family: 'Space Mono', monospace; font-size: 22px; font-weight: 700; color: rgba(26,26,26,0.12); line-height: 1; display: block; }
+    .jny2-item.now .jny2-days { color: var(--text); font-size: 26px; }
+    .jny2-item.done .jny2-days { font-size: 12px; color: rgba(26,26,26,0.1); }
+    .jny2-lbl { font-size: 9px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted2); display: block; margin-top: 3px; }
+    .jny2-item.now .jny2-lbl { color: var(--gold); }
+    .jny2-now-badge { display: inline-block; background: var(--text); color: var(--cream); font-size: 8px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 3px 8px; border-radius: 2px; margin-left: 8px; vertical-align: middle; position: relative; top: -1px; }
+    .jny2-actions { margin-top: 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+    /* ── School kanban — 4-col grid ─────────────────────── */
+    .sa-kbn-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; padding: 16px 16px 20px; }
+    @media (max-width: 700px) { .sa-kbn-grid { grid-template-columns: 1fr 1fr; } }
+    .sa-kbn-col-head { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--muted2); padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid var(--border); }
+    .sa-kbn-col-head.active { color: var(--gold); border-bottom-color: var(--gold); }
+    .sa-kbn-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 12px 12px 10px; margin-bottom: 8px; position: relative; overflow: hidden; }
+    .sa-kbn-card.done { opacity: 0.35; }
+    .sa-kbn-card.now { border-color: var(--gold); background: rgba(184,150,46,0.04); }
+    .sa-kbn-card.now::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--gold); border-radius: 4px 0 0 4px; }
+    .sa-kbn-school { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); margin-bottom: 4px; line-height: 1.3; }
+    .sa-kbn-card.done .sa-kbn-school { color: var(--muted2); }
+    .sa-kbn-action { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 6px; line-height: 1.3; }
+    .sa-kbn-card.done .sa-kbn-action { text-decoration: line-through; color: var(--muted2); }
+    .sa-kbn-date { font-size: 10px; color: var(--muted2); font-variant-numeric: tabular-nums; }
+    .sa-kbn-card.now .sa-kbn-date { color: var(--gold); font-weight: 500; }
+    .sa-kbn-card.done .sa-kbn-date { color: var(--muted2); }
+    .sa-kbn-badge-done { display: inline-block; font-size: 9px; background: var(--surface3); color: var(--muted2); border-radius: 2px; padding: 1px 6px; margin-top: 4px; letter-spacing: 1px; text-transform: uppercase; }
+    .sa-kbn-badge-now { display: inline-block; font-size: 9px; background: var(--gold); color: #fff; border-radius: 2px; padding: 2px 7px; margin-top: 4px; letter-spacing: 1px; text-transform: uppercase; font-weight: 700; }
+    .sa-kbn-analyst { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-start; }
+    .sa-timeline-always details summary { user-select: none; }
+    .sa-timeline-always details[open] summary span { display: inline-block; transform: rotate(90deg); }
 
   </style>
 </head>
@@ -1538,34 +1589,26 @@ function renderJourney() {
   const glanceRows = activeSchools.map(sc => {
     const cur = GLANCE_MAP[sc.application_status] ?? 0
     const curLabel = GLANCE_STAGES[cur] ? GLANCE_STAGES[cur].abbr : sc.application_status
-    const dots = GLANCE_STAGES.map((s, i) => {
-      const cls = i < cur ? 'gp-done' : i === cur ? 'gp-active' : 'gp-up'
-      const isLast = i === GLANCE_STAGES.length - 1
-      return `<div class="jny-gp-step">
-        <div class="jny-gp-dot ${cls}"></div>
-        ${!isLast ? '<div class="jny-gp-line"></div>' : ''}
-      </div>`
+    const stageCells = GLANCE_STAGES.map((s, i) => {
+      const dotCls = i < cur ? 'done' : i === cur ? 'current' : 'future'
+      return `<td class="glance-stage-cell"><span class="glance-dot ${dotCls}"></span></td>`
     }).join('')
-    return `<div class="jny-glance-row">
-      <div class="jny-glance-name">${sc.school_name}</div>
-      <div class="jny-glance-pipe">${dots}</div>
-      <div class="jny-glance-stage">${curLabel}</div>
-    </div>`
+    return `<tr>
+      <td class="glance-school-name">${sc.school_name}</td>
+      ${stageCells}
+      <td class="glance-stage-badge">${curLabel}</td>
+    </tr>`
   }).join('')
 
-  const abbrRow = GLANCE_STAGES.map(s =>
-    `<div class="jny-gp-abbr">${s.abbr}</div>`
-  ).join('')
+  const headerCells = GLANCE_STAGES.map(s => `<th>${s.abbr}</th>`).join('')
 
   let html = `<div class="section-title">Schools at a Glance</div>
-    <div class="jny-glance">
+    <div class="glance-wrap">
       ${activeSchools.length
-        ? `<div class="jny-glance-header">
-             <div class="jny-glance-name-ph"></div>
-             <div class="jny-glance-pipe jny-gp-abbr-row">${abbrRow}</div>
-             <div class="jny-glance-stage-ph"></div>
-           </div>
-           ${glanceRows}`
+        ? `<table class="glance-table">
+             <thead><tr><th></th>${headerCells}<th></th></tr></thead>
+             <tbody>${glanceRows}</tbody>
+           </table>`
         : '<div class="empty">No schools yet.</div>'}
     </div>`
 
@@ -1656,25 +1699,13 @@ function renderJourney() {
     return d.toLocaleDateString('en-GB', { month:'long', year:'numeric' }).toUpperCase()
   }
 
-  function spineItem(item, isLast) {
+  function spineItem(item, isLast, isNow) {
+    const effectiveDone = item.isDone
+    const cardCls = effectiveDone ? ' done' : isNow ? ' now' : ''
     const days = item.days
-    let dotCls = 'jny-dot-upcoming'
-    let badgeCls = 'ok', badgeLbl = ''
-    if (item.isDone) {
-      dotCls = 'jny-dot-done'
-    } else if (days === 0) {
-      dotCls = 'jny-dot-urgent'; badgeCls = 'today'; badgeLbl = 'Today'
-    } else if (days <= 7) {
-      dotCls = 'jny-dot-urgent'; badgeCls = 'urgent'; badgeLbl = `${days}d`
-    } else if (days <= 14) {
-      dotCls = 'jny-dot-soon'; badgeCls = 'soon'; badgeLbl = `${days}d`
-    } else if (days <= 30) {
-      dotCls = 'jny-dot-upcoming'; badgeCls = 'ok'; badgeLbl = `${days}d`
-    }
-    const titleStyle = item.isDone ? 'style="color:#444"' : ''
-    const prefix = item.isDone ? '&#10003; ' : ''
-    const updateHtml = item.latestUpdate ? `<div class="jny-update">${item.latestUpdate}</div>` : ''
-    const badgeHtml = badgeLbl ? `<span class="jny-days-badge ${badgeCls}">${badgeLbl}</span>` : ''
+    const dateStr = item.date ? fmtSpineDate(item.date) : '—'
+    const daysStr = days !== null && !effectiveDone ? ` · ${days}d` : ''
+    const updateHtml = item.latestUpdate ? `<div class="jny-update" style="font-size:10px;margin-top:3px">${item.latestUpdate}</div>` : ''
 
     let markDoneBtn = ''
     if (isAnalystView && !item.isDone) {
@@ -1685,53 +1716,48 @@ function renderJourney() {
       }
     }
 
-    return `<div class="jny-spine-item${item.isDone ? ' done' : ''}">
-      <div class="jny-dot-col">
-        <div class="jny-dot ${dotCls}"></div>
-        ${!isLast ? '<div class="jny-dot-line"></div>' : ''}
-      </div>
-      <div class="jny-spine-body">
-        <div class="jny-spine-school">${item.schoolName}</div>
-        <div class="jny-spine-title" ${titleStyle}>${prefix}${item.title}</div>
-        ${updateHtml}
-        <div class="jny-spine-meta">
-          <span class="jny-spine-date">${fmtSpineDate(item.date)}</span>
-          ${badgeHtml}
-          <a class="jny-cal-link" href="${item.calUrl}" target="_blank">+ Cal</a>
-          ${markDoneBtn}
-        </div>
+    const badge = effectiveDone
+      ? `<div class="sa-kbn-badge-done">&#10003; Done</div>`
+      : isNow ? `<div class="sa-kbn-badge-now">Action Required</div>` : ''
+
+    return `<div class="sa-kbn-card${cardCls}">
+      <div class="sa-kbn-school">${item.schoolName}</div>
+      <div class="sa-kbn-action">${item.title}</div>
+      ${updateHtml}
+      <div class="sa-kbn-date">${dateStr}${daysStr}</div>
+      ${badge}
+      <div class="sa-kbn-analyst">
+        <a class="jny-cal-link" href="${item.calUrl}" target="_blank">+ Cal</a>
+        ${markDoneBtn}
       </div>
     </div>`
   }
 
-  function buildSpine(items) {
-    if (!items.length) return ''
-    let out = '<div class="jny-spine">'
-    let lastMonth = ''
-    items.forEach((item, idx) => {
-      const mk = item.date ? monthKey(item.date) : ''
-      if (mk && mk !== lastMonth) {
-        out += `<div class="jny-month-div">${mk}</div>`
-        lastMonth = mk
-      }
-      out += spineItem(item, idx === items.length - 1)
-    })
-    out += '</div>'
-    return out
+  function buildSpine(upcomingItems, completedItems) {
+    const allItems = [...upcomingItems, ...completedItems]
+    if (!allItems.length) return ''
+    const kbnNow      = upcomingItems.filter(i => i.days !== null && i.days <= 30)
+    const kbnUpcoming = upcomingItems.filter(i => i.days !== null && i.days > 30 && i.days <= 90)
+    const kbnFinal    = upcomingItems.filter(i => i.days === null || i.days > 90)
+    const kbnCol = (label, items, isNow) => {
+      const head = `<div class="sa-kbn-col-head${isNow ? ' active' : ''}">${label}</div>`
+      const cards = items.length
+        ? items.map(item => spineItem(item, false, isNow)).join('')
+        : `<div style="font-size:11px;color:var(--muted2);padding:8px 0">—</div>`
+      return `<div>${head}${cards}</div>`
+    }
+    return `<div class="sa-kbn-grid">
+      ${kbnCol('Completed', completedItems, false)}
+      ${kbnCol('Up Next · 0–30d', kbnNow, true)}
+      ${kbnCol('Upcoming · 1–3mo', kbnUpcoming, false)}
+      ${kbnCol('Final Steps · 3mo+', kbnFinal, false)}
+    </div>`
   }
-
-  const completedHtml = completed.length
-    ? `<details class="jny-completed">
-        <summary>Completed (${completed.length})</summary>
-        <div style="margin-top:8px">${buildSpine(completed)}</div>
-       </details>`
-    : ''
 
   const anyItems = upcoming.length || completed.length
   if (anyItems) {
     html += `<div class="section-title" style="margin-top:28px">School Timeline</div>`
-    html += buildSpine(upcoming)
-    html += completedHtml
+    html += buildSpine(upcoming, completed)
   }
 
   $id('journey-content').innerHTML = html
@@ -1890,25 +1916,18 @@ function renderSchools() {
         return new Date(a.date) - new Date(b.date)
       })
 
-    function renderTlItem(item) {
-      const dDays = item.date ? daysUntil(item.date) : null
+    function renderKbnCard(item) {
       const effectiveDone = item.isDone || item.item_type === 'custom_done'
-
-      let dotCls, dotColor
-      if (effectiveDone)      { dotCls = 'sa-tl-dot-done';     dotColor = 'var(--gold)' }
-      else if (item.isActive) { dotCls = 'sa-tl-dot-active';   dotColor = 'var(--gold)' }
-      else                    { dotCls = 'sa-tl-dot-upcoming';  dotColor = 'var(--border)' }
-
-      const urgColor = dDays === null ? 'var(--muted)' : dDays < 0 ? 'var(--muted)' : dDays <= 7 ? 'var(--red)' : dDays <= 14 ? 'var(--amber)' : 'var(--muted)'
-      const daysLabel = dDays === null ? '' : dDays < 0 ? `${Math.abs(dDays)}d ago` : dDays === 0 ? 'Today' : `in ${dDays}d`
-
-      const dateDisplay = item.date
-        ? `<span class="sa-tl-date ${item.isSuggested ? 'sa-tl-date-suggested' : ''}">${fmtDate(item.date)}</span>`
-        + (daysLabel ? `<span class="sa-tl-days" style="color:${urgColor}">${daysLabel}</span>` : '')
-        : '<span class="sa-tl-date sa-tl-date-suggested">Date TBC</span>'
+      const isNow = item.isActive && !effectiveDone
+      const itemCls = effectiveDone ? ' done' : isNow ? ' now' : ''
+      const dDays = item.date ? daysUntil(item.date) : null
+      const numDisplay = effectiveDone ? '&#10003;' : (dDays !== null ? dDays : '—')
+      const daysDisplay = effectiveDone ? '—' : (dDays !== null ? dDays : '—')
+      const lbl = effectiveDone ? 'Done' : isNow ? 'days left' : 'days'
+      const nowBadge = isNow ? `<span class="jny2-now-badge">Now</span>` : ''
 
       const calBtn = item.date
-        ? `<a class="jny-cal-link" href="${calendarLink(item.title + (sc.school_name ? ' — ' + sc.school_name : ''), item.date, item.notes || '', D.student.parentEmail)}" target="_blank">+ Calendar</a>`
+        ? `<a class="jny-cal-link" href="${calendarLink(item.title + (sc.school_name ? ' — ' + sc.school_name : ''), item.date, item.notes || '', D.student.parentEmail)}" target="_blank">+ Cal</a>`
         : ''
 
       let analystControls = ''
@@ -1935,22 +1954,13 @@ function renderSchools() {
         }
       }
 
-      const suggestedNote = item.isSuggested && isAnalystView
-        ? `<span style="font-size:10px;color:var(--muted2);font-style:italic">suggested — click Edit to confirm</span>`
-        : ''
-
-      // Consultant note (strip stage tag)
       const consultantNote = item.notes && !item.isSuggested
         ? `<div class="sa-tl-note consultant-note">${item.notes.replace(/stage:\w+/g,'').trim()}</div>`
         : ''
-
-      // Parent note
-      const parentNoteText = item.parent_note || ''
-      const parentNoteHtml = parentNoteText
-        ? `<div class="sa-tl-note parent-note">Parent: ${parentNoteText}</div>`
+      const parentNoteHtml = item.parent_note
+        ? `<div class="sa-tl-note parent-note">Parent: ${item.parent_note}</div>`
         : ''
 
-      // Add/edit note button (only if item has a DB id)
       const canAddNote = !!item.id
       const addNoteHtml = canAddNote ? `
         <div id="note-form-${item.id}" style="display:none;margin-top:6px">
@@ -1964,35 +1974,71 @@ function renderSchools() {
           ${(isAnalystView ? item.notes : item.parent_note) ? 'Edit note' : '+ Add note'}
         </button>` : (item.isBase ? `<span style="font-size:10px;color:var(--muted2);font-style:italic">Confirm date first to add notes</span>` : '')
 
-      return `<div class="sa-tl-item ${item.isActive ? 'sa-tl-item-active' : ''} ${effectiveDone ? 'sa-tl-item-done' : ''}">
-        <div class="sa-tl-dot-col">
-          <div class="${dotCls}" style="border-color:${dotColor};${effectiveDone ? 'background:'+dotColor : ''}"></div>
-          <div class="sa-tl-connector"></div>
+      const suggestedNote = item.isSuggested && isAnalystView
+        ? `<em style="font-size:10px;color:var(--muted2)">suggested — click Edit to confirm</em>`
+        : ''
+
+      const actionsHtml = (calBtn || analystControls || addNoteHtml)
+        ? `<div class="jny2-actions">${calBtn}${analystControls}${addNoteHtml}</div>`
+        : ''
+
+      return `<div class="jny2-item${itemCls}">
+        <div class="jny2-num">${numDisplay}</div>
+        <div class="jny2-body">
+          <div class="jny2-school">${item.isBase ? (item.stageKey || '').replace(/_/g,' ').toUpperCase() : 'CUSTOM'}</div>
+          <div class="jny2-action">${item.title}${nowBadge}</div>
+          ${suggestedNote}${consultantNote}${parentNoteHtml}
+          <div class="jny2-date-row">${item.date ? fmtDate(item.date) : 'Date TBC'}</div>
+          ${actionsHtml}
         </div>
-        <div class="sa-tl-body">
-          <div class="sa-tl-head-row">
-            ${dateDisplay}
-            <span class="sa-tl-title ${item.isActive ? 'sa-tl-title-active' : ''}">${item.title}</span>
-            ${item.isActive ? '<span class="sa-tl-now-badge">Now</span>' : ''}
-            ${!item.isBase ? '<span class="sa-tl-custom-badge">Custom</span>' : ''}
-          </div>
-          ${suggestedNote}
-          ${consultantNote}${parentNoteHtml}
-          <div class="sa-tl-actions">${calBtn}${analystControls}${addNoteHtml}</div>
+        <div class="jny2-count">
+          <span class="jny2-days">${daysDisplay}</span>
+          <span class="jny2-lbl">${lbl}</span>
         </div>
       </div>`
     }
 
+    function schoolMonthKey(dateStr) {
+      const d = new Date(dateStr + 'T00:00:00')
+      return d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }).toUpperCase()
+    }
+
     const effectiveDoneItem = i => i.isDone || i.item_type === 'custom_done'
-    const pendingTlItems = allTlItems.filter(i => !effectiveDoneItem(i))
-    const doneTlItems    = allTlItems.filter(i =>  effectiveDoneItem(i))
-    const doneCollapseHtml = doneTlItems.length
-      ? `<details class="jny-completed" style="margin:4px 20px 12px">
-           <summary>Completed (${doneTlItems.length})</summary>
-           <div style="padding:4px 0">${doneTlItems.map(renderTlItem).join('')}</div>
+    const pendingScItems = allTlItems.filter(i => !effectiveDoneItem(i))
+    const doneScItems    = allTlItems.filter(i =>  effectiveDoneItem(i))
+
+    let pendingHtml = ''
+    let lastPendingMonth = ''
+    pendingScItems.forEach(item => {
+      const mk = item.date ? schoolMonthKey(item.date) : ''
+      if (mk && mk !== lastPendingMonth) {
+        pendingHtml += `<div class="jny2-month"><span>${mk}</span></div>`
+        lastPendingMonth = mk
+      }
+      pendingHtml += renderKbnCard(item)
+    })
+
+    let doneHtml = ''
+    let lastDoneMonth = ''
+    doneScItems.forEach(item => {
+      const mk = item.date ? schoolMonthKey(item.date) : ''
+      if (mk && mk !== lastDoneMonth) {
+        doneHtml += `<div class="jny2-month"><span>${mk}</span></div>`
+        lastDoneMonth = mk
+      }
+      doneHtml += renderKbnCard(item)
+    })
+
+    const doneSection = doneScItems.length
+      ? `<details class="jny-completed" style="margin-top:8px">
+           <summary style="font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted2);cursor:pointer;padding:6px 0;list-style:none;display:flex;align-items:center;gap:6px">
+             <span>&#9654;</span> Completed (${doneScItems.length})
+           </summary>
+           <div style="margin-top:4px">${doneHtml}</div>
          </details>`
       : ''
-    const tlRows = pendingTlItems.map(renderTlItem).join('') + doneCollapseHtml
+
+    const tlRows = `<div class="jny2-wrap" style="padding:16px 20px">${pendingHtml}${doneSection}</div>`
 
     const addForm = isAnalystView ? `
       <div class="sa-tl-add-form">
@@ -2054,7 +2100,7 @@ function renderSchools() {
       </div>
       <div class="sa-timeline-always">
         <div class="sa-sec-lbl" style="padding:14px 20px 10px">Timeline</div>
-        <div class="sa-tl-list">${tlRows}</div>
+        ${tlRows}
         ${addForm}
       </div>
       ${checklistHtml}
@@ -2120,48 +2166,17 @@ function renderServices() {
 
   const activeSet = new Set(svcs.map(s => s.trim()))
 
-  // Active services
-  const activeHtml = svcs.length
-    ? svcs.map(s => {
-        const def = SERVICE_DEFS[s.trim()] || { desc: 'Included in your package.' }
-        return `<div class="svc-card svc-active">
-          <div class="svc-name">${s}</div>
-          <div class="svc-desc">${def.desc}</div>
-        </div>`
-      }).join('')
-    : `<div class="empty">No active services listed yet. Contact your consultant.</div>`
+  // Both analyst and parent: show the 5 core services, highlight which are active
+  const serviceCards = PARENT_SERVICES.map(s => {
+    const def = SERVICE_DEFS[s] || { desc: '' }
+    const isActive = activeSet.has(s)
+    return `<div class="svc-card ${isActive ? 'svc-active' : 'svc-inactive'}">
+      <div class="svc-name">${s}</div>
+      <div class="svc-desc">${def.desc}</div>
+    </div>`
+  }).join('')
 
-  // Analyst: show all inactive services as add-ons
-  // Parent: no add-ons section — just show their 5 services as active/inactive cards
-  let addOnHtml = ''
-  if (isAnalystView) {
-    const addOnKeys = Object.keys(SERVICE_DEFS).filter(k => !activeSet.has(k))
-    addOnHtml = addOnKeys.length
-      ? `<div class="section-title" style="margin-top:28px">Available Add-ons</div>
-         ${addOnKeys.map(s => `<div class="svc-card svc-inactive">
-           <div class="svc-name">${s}</div>
-           <div class="svc-desc">${SERVICE_DEFS[s].desc}</div>
-         </div>`).join('')}
-         <div style="margin-top:18px">
-           <a href="https://line.me/R/ti/p/@linkedu" target="_blank" class="btn-sm btn-sm-primary">Enquire about add-ons →</a>
-         </div>`
-      : ''
-  } else {
-    // Parent: show all 5 services, highlight which are active
-    const parentCards = PARENT_SERVICES.map(s => {
-      const def = SERVICE_DEFS[s] || { desc: '' }
-      const isActive = activeSet.has(s)
-      return `<div class="svc-card ${isActive ? 'svc-active' : 'svc-inactive'}">
-        <div class="svc-name">${s}</div>
-        <div class="svc-desc">${def.desc}</div>
-      </div>`
-    }).join('')
-    addOnHtml = `<div class="section-title" style="margin-top:28px">Our Services</div>${parentCards}`
-  }
-
-  const html = isAnalystView
-    ? `<div class="section-title">Your Package</div>${activeHtml}${addOnHtml}`
-    : addOnHtml
+  const html = `<div class="section-title">Our Services</div>${serviceCards}`
   $id('services-content').innerHTML = html
 }
 
