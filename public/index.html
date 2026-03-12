@@ -1029,6 +1029,10 @@ let golfRounds = []
 let currentTab = 'overview'
 let userRole = 'parent'
 
+// Analyst view = no ?view=parent in URL. Used to gate consultant-only controls.
+const isAnalystView = !window.location.search.includes('view=parent')
+if (isAnalystView) window._adminSecret = 'linkedu-admin-2026'
+
 // ── Utilities ───────────────────────────────────────────────────────────────
 function $id(id) { return document.getElementById(id) }
 
@@ -1672,7 +1676,7 @@ function renderSchools() {
       const calBtn = (item.date && !item.isBase)
         ? `<a class="jny-cal-link" href="${calendarLink(item.title, item.date, item.notes || '', D.student.parentEmail)}" target="_blank">+ Calendar</a>`
         : ''
-      const delBtn = (D.role === 'analyst' && !item.isBase)
+      const delBtn = (isAnalystView && !item.isBase)
         ? `<button class="btn-sm" style="font-size:10px;padding:3px 8px;color:var(--red);border-color:rgba(192,57,43,.3)" onclick="deleteTimelineItem('${item.id}','${schoolId}')">Delete</button>`
         : ''
       return `<div class="sa-tl-item">
@@ -1686,7 +1690,7 @@ function renderSchools() {
       </div>`
     }).join('')
 
-    const addForm = D.role === 'analyst' ? `
+    const addForm = isAnalystView ? `
       <div class="sa-tl-add-form">
         <div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);margin-bottom:10px">Add Timeline Item</div>
         <div class="tl-form-row">
@@ -1702,7 +1706,7 @@ function renderSchools() {
 
     // Checklist section (analyst only)
     let checklistHtml = ''
-    if (D.role === 'analyst') {
+    if (isAnalystView) {
       const checkItems = sc.checklist || []
       const checkRows = checkItems.map((item, idx) => {
         const checked = item.done ? 'checked' : ''
@@ -2293,7 +2297,7 @@ function renderProfile() {
 function renderRecommendations() {
   const recs    = D.recommendations || []
   const el      = $id('rec-content')
-  const isAgent = !window.location.search.includes('view=parent')
+  const isAgent = isAnalystView
   const s       = D.student || {}
 
   // Tier: derive from score if not set correctly (old algorithm set everything to strong_match)
@@ -3683,7 +3687,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
         if (parsed.golfRounds !== undefined) { localStorage.removeItem('portal_cache'); throw new Error('old cache') }
         const { D: cD, ts } = parsed
         if (Date.now() - ts < 30 * 60 * 1000) {
-          D = cD; golfRounds = D.golfRounds || []; userRole = D.role || 'parent'; if (D.role === 'analyst') window._adminSecret = 'linkedu-admin-2026'
+          D = cD; golfRounds = D.golfRounds || []; userRole = D.role || 'parent'; if (isAnalystView) window._adminSecret = 'linkedu-admin-2026'
           $id('header-name').textContent = (D && D.student && (D.student.preferredName || D.student.studentName)) || 'Parent'
           renderAll()
           $id('loading').classList.remove('show')
@@ -3692,7 +3696,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
           $id('app').classList.add('visible')
           // Refresh in background silently
           loadData(session.access_token).then(fresh => {
-            D = fresh; golfRounds = D.golfRounds || []; userRole = D.role || 'parent'; if (D.role === 'analyst') window._adminSecret = 'linkedu-admin-2026'
+            D = fresh; golfRounds = D.golfRounds || []; userRole = D.role || 'parent'; if (isAnalystView) window._adminSecret = 'linkedu-admin-2026'
             try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {}
             renderAll()
           }).catch(() => {})
@@ -3709,7 +3713,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
       D = dataRes
       userRole = D.role || 'parent'
       golfRounds = D.golfRounds || []
-      if (D.role === 'analyst') window._adminSecret = 'linkedu-admin-2026'
+      if (isAnalystView) window._adminSecret = 'linkedu-admin-2026'
 
       // Cache for instant reload
       try {
