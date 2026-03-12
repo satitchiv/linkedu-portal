@@ -1032,9 +1032,9 @@
     <button class="tab-btn active" onclick="showTab('overview')">Overview</button>
     <button class="tab-btn" onclick="showTab('journey')">Journey</button>
     <button class="tab-btn" onclick="showTab('schools')">Schools</button>
+    <button class="tab-btn" onclick="showTab('recommendations')">Recommendations</button>
     <button class="tab-btn" onclick="showTab('golf')">Golf</button>
     <button class="tab-btn" onclick="showTab('services')">Services</button>
-    <button class="tab-btn" onclick="showTab('recommendations')">Recommendations</button>
     <button class="tab-btn" onclick="showTab('documents')">Documents</button>
     <button class="tab-btn" onclick="showTab('profile')">Profile</button>
   </div>
@@ -1361,7 +1361,7 @@ const SHORTLISTED_SCHOOLS = [
 // ── Tab switching ─────────────────────────────────────────────────────────────
 function showTab(name) {
   currentTab = name
-  const tabs = ['overview','journey','schools','golf','services','recommendations','documents','profile']
+  const tabs = ['overview','journey','schools','recommendations','golf','services','documents','profile']
   document.querySelectorAll('.tab-btn').forEach((b, i) => {
     b.classList.toggle('active', tabs[i] === name)
   })
