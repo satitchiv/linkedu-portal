@@ -1053,7 +1053,7 @@
     <button class="tab-btn" onclick="showTab('recommendations')">Recommendations</button>
     <button class="tab-btn" onclick="showTab('golf')">Golf</button>
     <button class="tab-btn" id="tab-btn-services" onclick="showTab('services')">Services</button>
-    <button class="tab-btn" onclick="showTab('documents')">Documents</button>
+    <button class="tab-btn" id="tab-btn-documents" onclick="showTab('documents')">Documents</button>
     <button class="tab-btn" onclick="showTab('profile')">Profile</button>
   </div>
   <div id="main">
@@ -1112,6 +1112,7 @@ let userRole = 'parent'
 // Analyst view = no ?view=parent in URL. Used to gate consultant-only controls.
 const isAnalystView = !window.location.search.includes('view=parent')
 if (isAnalystView) window._adminSecret = 'linkedu-admin-2026'
+if (!isAnalystView) { const docBtn = document.getElementById('tab-btn-documents'); if (docBtn) docBtn.style.display = 'none' }
 
 // ── Utilities ───────────────────────────────────────────────────────────────
 function $id(id) { return document.getElementById(id) }
@@ -2106,17 +2107,21 @@ function renderSchools() {
 function renderServices() {
   const svcs = (D.student && D.student.servicesActive) ? D.student.servicesActive : []
 
-  // Known service definitions — description + which stage they apply
+  // Known service definitions
   const SERVICE_DEFS = {
-    'School Consultation':    { desc: 'Personalised school shortlisting, application strategy, and consultant support throughout the admissions process.', icon: '—' },
-    'Academic Consultation':  { desc: 'Academic profiling, subject guidance, and preparation for entrance assessments.', icon: '—' },
-    'Golf Pathway':           { desc: 'Golf academy shortlisting, scholarship identification, and coaching pathway planning for student athletes.', icon: '—' },
-    'Interview Coaching':     { desc: 'One-on-one mock interviews, body language coaching, and feedback sessions before school interviews.', icon: '—' },
-    'VISA Support':           { desc: 'Tier 4 student visa application guidance, document checklist, and submission support.', icon: '—' },
-    'Document Preparation':   { desc: 'Review and preparation of personal statements, school reports, and supporting documents.', icon: '—' },
-    'Guardianship Arrangement':{ desc: 'Identifying and arranging a UK-based guardian as required by UK boarding schools.', icon: '—' },
-    'TB Test Coordination':   { desc: 'Booking and coordination of the mandatory tuberculosis test for UK student visa applicants.', icon: '—' },
+    'Education Consultation': { desc: 'Personalised school shortlisting, application strategy, and consultant support throughout the admissions process.' },
+    'Golf Pathway':           { desc: 'Golf academy shortlisting, scholarship identification, and coaching pathway planning for student athletes.' },
+    'Academic Pathways':      { desc: 'Academic profiling, subject guidance, and preparation for entrance assessments.' },
+    'Camps':                  { desc: 'Summer and holiday camp recommendations, bookings, and coordination for language, sport, and enrichment programmes.' },
+    'Interview Coaching':     { desc: 'One-on-one mock interviews, body language coaching, and feedback sessions before school interviews.' },
+    'VISA Support':           { desc: 'Tier 4 student visa application guidance, document checklist, and submission support.' },
+    'Document Preparation':   { desc: 'Review and preparation of personal statements, school reports, and supporting documents.' },
+    'Guardianship Arrangement':{ desc: 'Identifying and arranging a UK-based guardian as required by UK boarding schools.' },
+    'TB Test Coordination':   { desc: 'Booking and coordination of the mandatory tuberculosis test for UK student visa applicants.' },
   }
+
+  // Parent view: only show the 4 core services as possible add-ons
+  const PARENT_ADDONS = ['Education Consultation', 'Golf Pathway', 'Academic Pathways', 'Camps']
 
   const activeSet = new Set(svcs.map(s => s.trim()))
 
@@ -2134,11 +2139,14 @@ function renderServices() {
       }).join('')
     : `<div class="empty">No active services listed yet. Contact your consultant.</div>`
 
-  // Potential add-ons (defined but not active)
-  const addOns = Object.keys(SERVICE_DEFS).filter(k => !activeSet.has(k))
-  const addOnHtml = addOns.length
+  // Add-ons: analyst sees all undefined services, parent sees only the 4 core ones not yet active
+  const addOnKeys = isAnalystView
+    ? Object.keys(SERVICE_DEFS).filter(k => !activeSet.has(k))
+    : PARENT_ADDONS.filter(k => !activeSet.has(k))
+
+  const addOnHtml = addOnKeys.length
     ? `<div class="section-title" style="margin-top:28px">Available Add-ons</div>
-       ${addOns.map(s => `<div class="svc-card svc-inactive">
+       ${addOnKeys.map(s => `<div class="svc-card svc-inactive">
          <div class="svc-head">
            <div class="svc-name" style="color:var(--muted)">${s}</div>
            <span class="svc-badge svc-badge-off">Not included</span>
@@ -2762,7 +2770,7 @@ function renderRecommendations() {
         <div class="rec-card-right">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
             <div style="flex:1">${reasonsList(r)}</div>
-            <div style="margin-left:20px;flex-shrink:0">${scoreBadge(r)}</div>
+            ${isAgent ? `<div style="margin-left:20px;flex-shrink:0">${scoreBadge(r)}</div>` : ''}
           </div>
         </div>
       </div>
