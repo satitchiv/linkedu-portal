@@ -713,22 +713,32 @@
     .sa-timeline-panel { display: none; border-top: 1px solid var(--border);
       background: #181818; padding: 18px 22px; }
     .sa-timeline-panel.open { display: block; }
-    .sa-tl-item { display: flex; gap: 14px; align-items: flex-start;
-      padding: 10px 0; border-bottom: 1px solid #1f1f1f; }
+    .sa-timeline-always { border-top: 1px solid var(--border); }
+    .sa-tl-list { padding: 0 20px 14px; }
+    .sa-tl-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid #1a1a1a; }
     .sa-tl-item:last-child { border-bottom: none; }
-    .sa-tl-dot-col { display: flex; flex-direction: column; align-items: center; padding-top: 2px; }
-    .sa-tl-dot-done { width: 10px; height: 10px; border-radius: 50%;
-      background: var(--gold); flex-shrink: 0; }
-    .sa-tl-dot-upcoming { width: 10px; height: 10px; border-radius: 50%;
-      background: transparent; border: 2px solid var(--muted2); flex-shrink: 0; }
-    .sa-tl-dot-custom { width: 10px; height: 10px; border-radius: 50%;
-      background: #4a6fa5; flex-shrink: 0; }
-    .sa-tl-body { flex: 1; }
-    .sa-tl-date { font-size: 14px; color: #eee; font-weight: 500; margin-bottom: 1px; }
+    .sa-tl-item-active .sa-tl-title { color: var(--gold); font-weight: 600; }
+    .sa-tl-item-done { opacity: 0.55; }
+    .sa-tl-dot-col { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; padding-top: 2px; }
+    .sa-tl-dot-done, .sa-tl-dot-active, .sa-tl-dot-upcoming { width: 10px; height: 10px; border-radius: 50%; border: 2px solid; flex-shrink: 0; }
+    .sa-tl-connector { width: 1px; flex: 1; background: #222; margin: 3px 0; min-height: 16px; }
+    .sa-tl-body { flex: 1; min-width: 0; }
+    .sa-tl-head-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 3px; }
+    .sa-tl-date { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; }
+    .sa-tl-date-suggested { color: var(--muted2); font-style: italic; font-weight: 400; }
+    .sa-tl-days { font-size: 11px; color: var(--muted); }
     .sa-tl-title { font-size: 13px; color: var(--text); }
+    .sa-tl-title-active { color: var(--gold) !important; }
     .sa-tl-notes { font-size: 11px; color: var(--muted); margin-top: 2px; line-height: 1.5; }
     .sa-tl-actions { display: flex; gap: 8px; align-items: center; margin-top: 4px; flex-wrap: wrap; }
-    .sa-tl-add-form { margin-top: 16px; padding-top: 14px; border-top: 1px solid #222; }
+    .sa-tl-edit-row { display: none; align-items: center; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+    .sa-tl-date-input { background: #1a1a1a; border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 12px; padding: 3px 7px; }
+    .sa-tl-edit-btn { font-size: 10px; color: var(--muted); background: none; border: none; cursor: pointer; padding: 0; text-decoration: underline; }
+    .sa-tl-edit-btn:hover { color: var(--gold); }
+    .sa-tl-now-badge { font-size: 9px; background: var(--gold); color: #111; border-radius: 3px; padding: 1px 5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+    .sa-tl-custom-badge { font-size: 9px; background: #222; color: var(--muted); border-radius: 3px; padding: 1px 5px; }
+    .sa-status-select { background: #1a1a1a; border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 12px; padding: 4px 8px; cursor: pointer; }
+    .sa-tl-add-form { margin-top: 16px; padding: 14px 20px; border-top: 1px solid #222; }
     .sa-tl-add-form .tl-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
     .sa-tl-add-form .tl-form-field label { display: block; font-size: 10px; text-transform: uppercase;
       letter-spacing: 0.1em; color: var(--muted); margin-bottom: 4px; }
@@ -1492,8 +1502,48 @@ function renderJourney() {
       })
     }
 
+    // Base timeline items with auto-dates
+    const tYear = parseInt(D.student.targetEntryYear) || new Date().getFullYear() + 2
+    const eDate = new Date(`${tYear}-09-01`)
+    const BASE_STAGES_J = [
+      { key:'researching', title:'Begin Research', months:-11 },
+      { key:'applied', title:'Submit Application', months:-8 },
+      { key:'interview', title:'Interview', months:-7 },
+      { key:'offer', title:'Receive Offer', months:-6 },
+      { key:'visit', title:'Visit School', months:-5 },
+      { key:'accepted', title:'Accept Place', months:-4 },
+      { key:'visa', title:'Apply for VISA', months:-3 },
+      { key:'tb_test', title:'TB Test', months:-2 },
+      { key:'guardianship', title:'Arrange Guardianship', months:-1 },
+      { key:'enrolled', title:'Enrolled', months:0 },
+    ]
+    const stsMapJ = { researching:0, applied:1, interview:2, offer:3, visit:4, accepted:5, visa:6, tb_test:7, guardianship:8, enrolled:9 }
+    const curStage = stsMapJ[sc.application_status] ?? 0
+
+    BASE_STAGES_J.forEach(s => {
+      const stageIdx = stsMapJ[s.key] ?? 0
+      if (stageIdx <= curStage) return  // skip already done stages
+
+      // Check if DB has a confirmed date for this stage
+      const dbBase = (sc.timeline_items || []).find(i => i.item_type === 'base' && i.notes && i.notes.includes(`stage:${s.key}`))
+      const d = new Date(eDate)
+      d.setMonth(d.getMonth() + s.months)
+      const dateStr = dbBase ? dbBase.date : d.toISOString().slice(0, 10)
+      if (!dateStr) return
+
+      const days = daysUntil(dateStr)
+      allSchoolItems.push({
+        schoolName: schoolShort,
+        title: s.title,
+        date: dateStr,
+        notes: dbBase ? '' : '(suggested)',
+        days,
+        calUrl: calendarLink(s.title + ' — ' + sc.school_name, dateStr, '', D.student.parentEmail),
+      })
+    })
+
     // Custom timeline items from DB
-    ;(sc.timeline_items || []).forEach(item => {
+    ;(sc.timeline_items || []).filter(i => i.item_type === 'custom').forEach(item => {
       if (!item.date) return
       const d = daysUntil(item.date)
       allSchoolItems.push({
@@ -1647,21 +1697,59 @@ function renderSchools() {
       updateHtml = `<div style="font-size:12px;color:var(--muted);margin-top:8px">No update yet.</div>`
     }
 
-    // Timeline items
+    // ── Auto-calculated base timeline ─────────────────────────────────────────
     const schoolId = sc.id
-    const customItems = sc.timeline_items || []
+    const targetYear = parseInt(D.student.targetEntryYear) || new Date().getFullYear() + 2
+    const enrollDate = new Date(`${targetYear}-09-01`)
 
-    // Base stage items auto-generated from pipeline
-    const baseItems = []
-    const stageLabels = ['Started researching', 'Application submitted', 'Interview scheduled', 'Offer received', 'Visit booked', 'Place accepted', 'VISA application', 'TB test booked', 'Guardianship arranged', 'Enrolled']
-    for (let i = 0; i < PIPELINE.length; i++) {
-      if (i < stage) {
-        baseItems.push({ title: stageLabels[i] || PIPELINE[i], date: null, notes: null, isBase: true, isDone: true })
-      }
+    const BASE_STAGES = [
+      { key: 'researching',   title: 'Begin Research',           months: -11 },
+      { key: 'applied',       title: 'Submit Application',       months: -8  },
+      { key: 'interview',     title: 'Interview',                months: -7  },
+      { key: 'offer',         title: 'Receive Offer',            months: -6  },
+      { key: 'visit',         title: 'Visit School',             months: -5  },
+      { key: 'accepted',      title: 'Accept Place',             months: -4  },
+      { key: 'visa',          title: 'Apply for VISA',           months: -3  },
+      { key: 'tb_test',       title: 'TB Test',                  months: -2  },
+      { key: 'guardianship',  title: 'Arrange Guardianship',     months: -1  },
+      { key: 'enrolled',      title: 'Enrolled',                 months:  0  },
+    ]
+
+    function suggestedDate(monthsOffset) {
+      const d = new Date(enrollDate)
+      d.setMonth(d.getMonth() + monthsOffset)
+      return d.toISOString().slice(0, 10)
     }
 
+    const customItems = (sc.timeline_items || []).filter(i => i.item_type === 'custom')
+    const dbBaseItems = (sc.timeline_items || []).filter(i => i.item_type === 'base')
+
+    function getDbBase(stageKey) {
+      return dbBaseItems.find(i => i.notes && i.notes.includes(`stage:${stageKey}`)) || null
+    }
+
+    const stageMap = { researching:0, applied:1, interview:2, offer:3, visit:4, accepted:5, visa:6, tb_test:7, guardianship:8, enrolled:9 }
+
+    const baseTimeline = BASE_STAGES.map(s => {
+      const dbItem = getDbBase(s.key)
+      const stageIdx = stageMap[s.key] ?? 0
+      const isDone = stageIdx < stage
+      const isActive = stageIdx === stage
+      return {
+        id: dbItem ? dbItem.id : null,
+        stageKey: s.key,
+        title: s.title,
+        date: dbItem ? dbItem.date : suggestedDate(s.months),
+        notes: dbItem ? (dbItem.notes || '').replace(`stage:${s.key}`, '').trim() : '',
+        isBase: true,
+        isDone,
+        isActive,
+        isSuggested: !dbItem,
+      }
+    })
+
     const allTlItems = [
-      ...baseItems,
+      ...baseTimeline,
       ...customItems.slice().sort((a,b) => {
         if (!a.date && !b.date) return 0
         if (!a.date) return 1
@@ -1671,37 +1759,85 @@ function renderSchools() {
     ]
 
     const tlRows = allTlItems.map(item => {
-      const dotCls = item.isBase ? 'sa-tl-dot-done' : 'sa-tl-dot-custom'
-      const dateDisplay = item.date ? fmtDate(item.date) : ''
-      const calBtn = (item.date && !item.isBase)
-        ? `<a class="jny-cal-link" href="${calendarLink(item.title, item.date, item.notes || '', D.student.parentEmail)}" target="_blank">+ Calendar</a>`
+      const dDays = item.date ? daysUntil(item.date) : null
+
+      let dotCls, dotColor
+      if (item.isDone)        { dotCls = 'sa-tl-dot-done';     dotColor = 'var(--gold)' }
+      else if (item.isActive) { dotCls = 'sa-tl-dot-active';   dotColor = 'var(--gold)' }
+      else                    { dotCls = 'sa-tl-dot-upcoming';  dotColor = 'var(--border)' }
+
+      const urgColor = dDays === null ? 'var(--muted)' : dDays < 0 ? 'var(--muted)' : dDays <= 7 ? 'var(--red)' : dDays <= 14 ? 'var(--amber)' : 'var(--muted)'
+      const daysLabel = dDays === null ? '' : dDays < 0 ? `${Math.abs(dDays)}d ago` : dDays === 0 ? 'Today' : `in ${dDays}d`
+
+      const dateDisplay = item.date
+        ? `<span class="sa-tl-date ${item.isSuggested ? 'sa-tl-date-suggested' : ''}">${fmtDate(item.date)}</span>`
+        + (daysLabel ? `<span class="sa-tl-days" style="color:${urgColor}">${daysLabel}</span>` : '')
+        : '<span class="sa-tl-date sa-tl-date-suggested">Date TBC</span>'
+
+      const calBtn = item.date
+        ? `<a class="jny-cal-link" href="${calendarLink(item.title + (sc.school_name ? ' — ' + sc.school_name : ''), item.date, item.notes || '', D.student.parentEmail)}" target="_blank">+ Calendar</a>`
         : ''
-      const delBtn = (isAnalystView && !item.isBase)
-        ? `<button class="btn-sm" style="font-size:10px;padding:3px 8px;color:var(--red);border-color:rgba(192,57,43,.3)" onclick="deleteTimelineItem('${item.id}','${schoolId}')">Delete</button>`
+
+      let analystControls = ''
+      if (isAnalystView) {
+        if (item.isBase) {
+          analystControls = `
+            <div class="sa-tl-edit-row" id="tl-edit-${sc.id}-${item.stageKey}" style="display:none">
+              <input type="date" class="sa-tl-date-input" id="tl-edit-date-${sc.id}-${item.stageKey}" value="${item.date || ''}" />
+              <input type="text" class="sa-tl-date-input" id="tl-edit-notes-${sc.id}-${item.stageKey}" placeholder="Notes..." value="${item.notes || ''}" style="flex:1" />
+              <button class="btn-sm btn-sm-primary" style="font-size:10px" onclick="saveBaseItem('${sc.id}','${item.stageKey}','${item.id || ''}')">Save</button>
+              <button class="btn-sm" style="font-size:10px" onclick="document.getElementById('tl-edit-${sc.id}-${item.stageKey}').style.display='none'">Cancel</button>
+            </div>
+            <button class="sa-tl-edit-btn" onclick="document.getElementById('tl-edit-${sc.id}-${item.stageKey}').style.display='flex';this.style.display='none'" id="tl-editbtn-${sc.id}-${item.stageKey}">Edit date</button>`
+        } else {
+          analystControls = `<button class="btn-sm" style="font-size:10px;padding:2px 7px;color:var(--red);border-color:rgba(192,57,43,.3)" onclick="deleteTimelineItem('${item.id}','${sc.id}')">Delete</button>`
+        }
+      }
+
+      const suggestedNote = item.isSuggested && isAnalystView
+        ? `<span style="font-size:10px;color:var(--muted2);font-style:italic">suggested — click Edit to confirm</span>`
         : ''
-      return `<div class="sa-tl-item">
-        <div class="sa-tl-dot-col"><div class="${dotCls}"></div></div>
+
+      return `<div class="sa-tl-item ${item.isActive ? 'sa-tl-item-active' : ''} ${item.isDone ? 'sa-tl-item-done' : ''}">
+        <div class="sa-tl-dot-col">
+          <div class="${dotCls}" style="border-color:${dotColor};${item.isDone ? 'background:'+dotColor : ''}"></div>
+          <div class="sa-tl-connector"></div>
+        </div>
         <div class="sa-tl-body">
-          ${dateDisplay ? `<div class="sa-tl-date">${dateDisplay}</div>` : ''}
-          <div class="sa-tl-title">${item.title}</div>
-          ${item.notes ? `<div class="sa-tl-notes">${item.notes}</div>` : ''}
-          ${calBtn || delBtn ? `<div class="sa-tl-actions">${calBtn}${delBtn}</div>` : ''}
+          <div class="sa-tl-head-row">
+            ${dateDisplay}
+            <span class="sa-tl-title ${item.isActive ? 'sa-tl-title-active' : ''}">${item.title}</span>
+            ${item.isActive ? '<span class="sa-tl-now-badge">Now</span>' : ''}
+            ${!item.isBase ? '<span class="sa-tl-custom-badge">Custom</span>' : ''}
+          </div>
+          ${suggestedNote}
+          ${item.notes && !item.isSuggested ? `<div class="sa-tl-notes">${item.notes}</div>` : ''}
+          <div class="sa-tl-actions">${calBtn}${analystControls}</div>
         </div>
       </div>`
     }).join('')
 
+    const statusOptions = ['researching','applied','interview','offer','visit','accepted','visa','tb_test','guardianship','enrolled','rejected']
+    const statusDropdown = isAnalystView ? `
+      <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px">
+        <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Stage:</span>
+        <select class="sa-status-select" onchange="updateSchoolStatus('${sc.id}',this.value)">
+          ${statusOptions.map(s => `<option value="${s}" ${sc.application_status===s?'selected':''}>${s.replace('_',' ').replace(/\b\w/g,c=>c.toUpperCase())}</option>`).join('')}
+        </select>
+      </div>` : ''
+
     const addForm = isAnalystView ? `
       <div class="sa-tl-add-form">
-        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);margin-bottom:10px">Add Timeline Item</div>
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);margin-bottom:10px">Add Custom Item</div>
         <div class="tl-form-row">
-          <div class="tl-form-field"><label>Title</label><input id="tl-title-${schoolId}" placeholder="e.g. Interview confirmed" /></div>
-          <div class="tl-form-field"><label>Date</label><input type="date" id="tl-date-${schoolId}" /></div>
+          <div class="tl-form-field"><label>Title</label><input id="tl-title-${sc.id}" placeholder="e.g. Summer camp visit" /></div>
+          <div class="tl-form-field"><label>Date</label><input type="date" id="tl-date-${sc.id}" /></div>
         </div>
         <div class="tl-form-row" style="grid-template-columns:1fr">
-          <div class="tl-form-field"><label>Notes (optional)</label><input id="tl-notes-${schoolId}" placeholder="Additional details..." /></div>
+          <div class="tl-form-field"><label>Notes (optional)</label><input id="tl-notes-${sc.id}" placeholder="Details..." /></div>
         </div>
-        <button class="btn-sm btn-sm-primary" onclick="addTimelineItem('${schoolId}','${sc.id}')">Save Item</button>
-        <span id="tl-msg-${schoolId}" style="font-size:12px;color:var(--green);margin-left:8px;display:none">Saved</span>
+        <button class="btn-sm btn-sm-primary" onclick="addTimelineItem('${sc.id}','${sc.id}')">Save Item</button>
+        <span id="tl-msg-${sc.id}" style="font-size:12px;color:var(--green);margin-left:8px;display:none">Saved</span>
       </div>` : ''
 
     // Checklist section (analyst only)
@@ -1748,15 +1884,15 @@ function renderSchools() {
         </div>
         ${updateHtml}
       </div>
-      <div class="sa-timeline-panel" id="tl-panel-${schoolId}">
-        <div class="sa-sec-lbl" style="margin-bottom:12px">Timeline</div>
-        ${tlRows || '<div style="font-size:12px;color:var(--muted)">No timeline items yet.</div>'}
+      <div class="sa-timeline-always">
+        <div class="sa-sec-lbl" style="padding:14px 20px 10px">Timeline</div>
+        <div class="sa-tl-list">${tlRows}</div>
         ${addForm}
       </div>
+      ${statusDropdown}
       ${checklistHtml}
       <div class="sa-actions">
         <a href="https://line.me/R/ti/p/@linkedu" target="_blank" class="btn-sm btn-sm-primary">Ask Consultant</a>
-        <button class="btn-sm" onclick="toggleTimeline('${schoolId}')">View Timeline</button>
       </div>
     </div>`
   }).join('')
@@ -3544,6 +3680,22 @@ function toggleTimeline(schoolId) {
   panel.classList.toggle('open')
 }
 
+async function updateSchoolStatus(schoolId, newStatus) {
+  try {
+    const res = await fetch('/api/update-school-status', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': window._adminSecret || '' },
+      body: JSON.stringify({ student_school_id: schoolId, application_status: newStatus })
+    })
+    if (!res.ok) { const j = await res.json(); throw new Error(j.error) }
+    // Update locally
+    const sc = (D.schools || []).find(s => s.id === schoolId)
+    if (sc) sc.application_status = newStatus
+    renderSchools()
+    renderJourney()
+  } catch(e) { alert('Could not update status: ' + e.message) }
+}
+
 function calendarLink(title, date, notes, parentEmail) {
   if (!date) return '#'
   // Format date as YYYYMMDD for Google Calendar
@@ -3618,6 +3770,60 @@ async function deleteTimelineItem(itemId, schoolId) {
     }
   } catch(err) {
     alert('Could not delete: ' + err.message)
+  }
+}
+
+async function saveBaseItem(schoolId, stageKey, existingId) {
+  const dateEl  = document.getElementById(`tl-edit-date-${schoolId}-${stageKey}`)
+  const notesEl = document.getElementById(`tl-edit-notes-${schoolId}-${stageKey}`)
+  const editRow = document.getElementById(`tl-edit-${schoolId}-${stageKey}`)
+  const editBtn = document.getElementById(`tl-editbtn-${schoolId}-${stageKey}`)
+  if (!dateEl) return
+
+  const sc = (D.schools || []).find(s => s.id === schoolId)
+  if (!sc) return
+
+  try {
+    const body = {
+      student_school_id: schoolId,
+      student_id: D.student.id,
+      title: stageKey.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()),
+      date: dateEl.value || null,
+      notes: (notesEl.value || '') + (notesEl.value ? ' ' : '') + `stage:${stageKey}`,
+      item_type: 'base',
+    }
+
+    let res
+    if (existingId && existingId !== 'null' && existingId !== '') {
+      res = await fetch('/api/school-timeline', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': window._adminSecret || '' },
+        body: JSON.stringify({ id: existingId, date: body.date, notes: body.notes })
+      })
+    } else {
+      res = await fetch('/api/school-timeline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': window._adminSecret || '' },
+        body: JSON.stringify(body)
+      })
+    }
+
+    if (!res.ok) { const j = await res.json(); throw new Error(j.error || 'Save failed') }
+
+    if (editRow) editRow.style.display = 'none'
+    if (editBtn) editBtn.style.display = 'inline'
+
+    // Refresh and re-render
+    const { data: { session } } = await sb.auth.getSession()
+    if (session) {
+      const fresh = await loadData(session.access_token)
+      D = fresh; golfRounds = D.golfRounds || []
+      try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {}
+      renderSchools()
+      renderJourney()
+    }
+  } catch(err) {
+    alert('Could not save: ' + err.message)
   }
 }
 

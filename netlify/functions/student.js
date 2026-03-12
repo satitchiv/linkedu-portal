@@ -58,6 +58,7 @@ exports.handler = async (event) => {
       studentRes,
       academicsRes,
       schoolsRes,
+      timelineItemsRes,
       milestonesRes,
       documentsRes,
       golfRes,
@@ -65,12 +66,16 @@ exports.handler = async (event) => {
     ] = await Promise.all([
       supabase.from('students').select('*').eq('id', studentId).single(),
       supabase.from('student_academics').select('*').eq('student_id', studentId).order('date', { ascending: false }),
-      supabase.from('student_schools').select('*, school_timeline_items(*)').eq('student_id', studentId).order('priority'),
+      supabase.from('student_schools').select('*').eq('student_id', studentId).order('priority'),
+      supabase.from('school_timeline_items').select('*').eq('student_id', studentId).order('date', { ascending: true, nullsFirst: false }),
       supabase.from('student_milestones').select('*').eq('student_id', studentId).order('date'),
       supabase.from('student_documents').select('*').eq('student_id', studentId).order('due_date'),
       supabase.from('golf_rounds').select('*').eq('student_id', studentId).order('date', { ascending: false }),
       supabase.from('student_recommendations').select('*').eq('student_id', studentId).order('score', { ascending: false }),
     ])
+
+    // Merge timeline items onto schools
+    const timelineItems = timelineItemsRes.data || []
 
     const s = studentRes.data || {}
 
@@ -111,8 +116,7 @@ exports.handler = async (event) => {
         })),
         schools:    (schoolsRes.data || []).map(school => ({
           ...school,
-          timeline_items: school.school_timeline_items || [],
-          school_timeline_items: undefined,
+          timeline_items: timelineItems.filter(item => item.student_school_id === school.id),
         })),
         milestones:      milestonesRes.data || [],
         documents:       documentsRes.data  || [],
