@@ -2479,7 +2479,7 @@ async function moveToApplying(rec_id) {
     const res = await fetch('/api/move-to-applying', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': 'linkedu-admin-2026' },
-      body: JSON.stringify({ rec_id })
+      body: JSON.stringify({ recommendation_id: rec_id, student_id: D.student.id })
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error || 'Failed')

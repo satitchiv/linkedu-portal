@@ -38,7 +38,7 @@ exports.handler = async (event) => {
 
     // Fetch the recommendation row
     const { data: rec, error: recErr } = await supabase
-      .from('school_recommendations')
+      .from('student_recommendations')
       .select('*')
       .eq('id', recommendation_id)
       .single()
