@@ -413,6 +413,14 @@
     .service-card.active { border-left-color: var(--gold); }
     .service-name { font-size: 14px; font-weight: 500; flex: 1; }
     .service-status { font-size: 11px; color: var(--muted); }
+    .svc-card { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 16px 20px; margin-bottom: 10px; }
+    .svc-active { border-left: 3px solid var(--gold); }
+    .svc-inactive { border-left: 3px solid #222; opacity: 0.6; }
+    .svc-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+    .svc-name { font-size: 14px; font-weight: 600; color: #eee; }
+    .svc-desc { font-size: 12px; color: #888; line-height: 1.55; }
+    .svc-badge { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; padding: 2px 8px; border-radius: 3px; background: rgba(184,150,46,.15); color: var(--gold); white-space: nowrap; }
+    .svc-badge-off { background: #1a1a1a; color: #555; }
 
     /* ── Golf ──────────────────────────────────────────── */
     .round-card {
@@ -590,6 +598,16 @@
     }
   
     /* ── Overview cockpit ──────────────────────────────── */
+    /* Overview student header */
+    .ov-student-header { display: flex; align-items: center; gap: 16px; margin-bottom: 6px; }
+    .ov-photo { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); flex-shrink: 0; }
+    .ov-photo-placeholder { width: 52px; height: 52px; border-radius: 50%; background: #1e1e1e; border: 2px solid var(--gold); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: var(--gold); }
+    .ov-student-name { font-size: 20px; font-weight: 700; color: var(--gold); }
+    .ov-student-meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
+    .ov-student-goal { font-size: 12px; color: #888; margin-top: 4px; font-style: italic; }
+    .ov-consultant-msg { background: #161616; border-left: 3px solid var(--gold); border-radius: 4px; padding: 14px 18px; margin: 16px 0 8px; }
+    .ov-msg-label { font-size: 10px; text-transform: uppercase; letter-spacing: .12em; color: var(--gold); margin-bottom: 6px; }
+    .ov-msg-text { font-size: 13px; color: #ccc; line-height: 1.6; }
     .ov-rightnow {
       background: var(--surface); border: 1px solid var(--border);
       border-left: 3px solid var(--gold); border-radius: 4px;
@@ -1371,140 +1389,134 @@ function showTab(name) {
 
 // ── Overview (cockpit) ────────────────────────────────────────────────────────
 function renderOverview() {
-  const ms = D.milestones || []
-  const docs = D.documents || []
+  const docs    = D.documents || []
+  const student = D.student   || {}
+  const schools = (D.schools  || []).filter(s => s.application_status !== 'abandoned')
 
-  // Build all urgent items from real data: milestones + school deadlines
+  // ── Urgent items from real data: school deadlines + timeline items ──────────
   const allEvents = []
-  ;(D.schools || []).forEach(sc => {
+  schools.forEach(sc => {
     const d = daysUntil(sc.deadline)
-    if (d !== null && d >= 0) {
-      allEvents.push({ days: d, label: 'Application Deadline', date: sc.deadline,
-        school: sc.school_name, owner: 'Both', type: 'deadline', tab: 'schools' })
-    }
-  })
-  ms.forEach(m => {
-    const s = (m.status || '').toLowerCase()
-    if (s.includes('complete') || s.includes('done')) return
-    const d = daysUntil(m.date)
-    if (d !== null && d >= 0) {
-      allEvents.push({ days: d, label: m.title, date: m.date,
-        school: null, owner: 'Both', type: m.type || 'milestone', tab: 'journey' })
-    }
+    if (d !== null && d >= 0)
+      allEvents.push({ days: d, label: 'Application Deadline', date: sc.deadline, school: sc.school_name, tab: 'schools' })
+    // upcoming timeline items
+    ;(sc.timeline_items || []).forEach(item => {
+      if (!item.date || item.item_type === 'custom_done') return
+      const td = daysUntil(item.date)
+      if (td !== null && td >= 0)
+        allEvents.push({ days: td, label: item.title, date: item.date, school: sc.school_name, tab: 'journey' })
+    })
   })
   allEvents.sort((a,b) => a.days - b.days)
 
-  const top = allEvents[0]
-  let zone1 = ''
-  if (top) {
-    const col = urgColour(top.days)
-    const ownCls = top.owner === 'Both' ? 'own-both' : top.owner === 'Satit' ? 'own-satit' : 'own-parent'
-    const ownerNote = {
-      Parent: 'This requires your action.',
-      Satit: 'Satit is handling this — no action needed from you yet.',
-      Both: 'This requires action from both you and Satit.'
-    }[top.owner] || ''
-    zone1 = `<div class="ov-rightnow">
-      <div style="flex:1">
-        <div class="ov-rn-eyebrow">Most Urgent Right Now</div>
-        ${top.school ? `<div style="font-size:10px;color:var(--muted2);margin-bottom:5px;letter-spacing:.06em">${top.school.toUpperCase()}</div>` : ''}
-        <div class="ov-rn-title">${top.label}</div>
-        <div class="ov-rn-owner">${ownerNote}</div>
-      </div>
-      <div class="ov-rn-right">
-        <div class="ov-rn-days" style="color:${col}">${top.days}</div>
-        <div class="ov-rn-days-lbl">days away</div>
-        <div class="ov-rn-date">${fmtDate(top.date)}</div>
-        <span class="ov-owner-badge ${ownCls}">${top.owner}</span>
-      </div>
-    </div>`
-  }
+  // ── Student header ──────────────────────────────────────────────────────────
+  const displayName = student.preferredName || student.studentName || '—'
+  const photoHtml = student.photoUrl
+    ? `<img src="${student.photoUrl}" class="ov-photo" />`
+    : `<div class="ov-photo-placeholder">${displayName.charAt(0).toUpperCase()}</div>`
 
-  // Zone 2 — status board
-  const nextSchoolEv = (D.schools || [])
-    .filter(s => s.deadline && daysUntil(s.deadline) >= 0)
+  const metaParts = [student.currentSchool, student.currentYearGroup ? `Year ${student.currentYearGroup}` : '', student.targetEntryYear ? `Entry ${student.targetEntryYear}` : ''].filter(Boolean)
+  const headerHtml = `<div class="ov-student-header">
+    ${photoHtml}
+    <div class="ov-student-info">
+      <div class="ov-student-name">${displayName}</div>
+      <div class="ov-student-meta">${metaParts.join(' · ')}</div>
+      ${student.goal ? `<div class="ov-student-goal">${student.goal}</div>` : ''}
+    </div>
+  </div>`
+
+  // ── Consultant message ──────────────────────────────────────────────────────
+  const msgHtml = student.consultantMessage
+    ? `<div class="ov-consultant-msg">
+        <div class="ov-msg-label">Message from ${student.consultant || 'your consultant'}</div>
+        <div class="ov-msg-text">${student.consultantMessage}</div>
+       </div>`
+    : ''
+
+  // ── Right Now — most urgent ─────────────────────────────────────────────────
+  const top = allEvents[0]
+  const zone1 = top ? `<div class="ov-rightnow">
+    <div style="flex:1">
+      <div class="ov-rn-eyebrow">Most Urgent Right Now</div>
+      ${top.school ? `<div style="font-size:10px;color:var(--muted2);margin-bottom:5px;letter-spacing:.06em">${top.school.toUpperCase()}</div>` : ''}
+      <div class="ov-rn-title">${top.label}</div>
+    </div>
+    <div class="ov-rn-right">
+      <div class="ov-rn-days" style="color:${urgColour(top.days)}">${top.days}</div>
+      <div class="ov-rn-days-lbl">days away</div>
+      <div class="ov-rn-date">${fmtDate(top.date)}</div>
+    </div>
+  </div>` : ''
+
+  // ── Status board ────────────────────────────────────────────────────────────
+  const nextDeadline = schools.filter(s => s.deadline && daysUntil(s.deadline) >= 0)
     .sort((a,b) => daysUntil(a.deadline) - daysUntil(b.deadline))[0]
-  const schoolNext = nextSchoolEv
-    ? `${nextSchoolEv.school_name.split(' ')[0]} deadline in ${daysUntil(nextSchoolEv.deadline)}d`
+  const schoolSub = nextDeadline
+    ? `${nextDeadline.school_name.split(' ')[0]} deadline in ${daysUntil(nextDeadline.deadline)}d`
     : 'No upcoming deadlines'
+
+  const { pct, filled, total } = computeCompletion(student)
+  const profCol = pct >= 90 ? 'var(--green)' : pct >= 70 ? 'var(--gold)' : 'var(--amber)'
+
+  const doneDocs  = docs.filter(d => (d.status||'').toLowerCase().includes('verif')).length
+  const totalDocs = docs.length || 0
+  const docCol    = totalDocs === 0 ? 'var(--muted)' : doneDocs === totalDocs ? 'var(--green)' : 'var(--amber)'
+  const docSub    = totalDocs === 0 ? 'No documents yet' : `${doneDocs} of ${totalDocs} verified`
+
+  // Highest stage reached across all schools
+  const stageOrder = ['researching','applied','interview','offer','visit','accepted','visa','tb_test','guardianship','enrolled']
+  const stageLabels = { researching:'Researching', applied:'Applied', interview:'Interview', offer:'Offer', visit:'Visiting', accepted:'Accepted', visa:'VISA', tb_test:'TB Test', guardianship:'Guardianship', enrolled:'Enrolled' }
+  const highestStage = schools.reduce((best, sc) => {
+    const idx = stageOrder.indexOf(sc.application_status)
+    return idx > stageOrder.indexOf(best) ? sc.application_status : best
+  }, 'researching')
 
   const zone2 = `<div class="ov-status-board">
     <div class="ov-sb-card" onclick="showTab('schools')">
       <div class="ov-sb-label">Schools</div>
-      <div class="ov-sb-value">${(D.schools||[]).length} shortlisted</div>
-      <div class="ov-sb-sub">${schoolNext}</div>
+      <div class="ov-sb-value">${schools.length} active</div>
+      <div class="ov-sb-sub">${schoolSub}</div>
       <div class="ov-sb-link">View tracker →</div>
-    </div>
-    <div class="ov-sb-card ov-sb-alert" onclick="showTab('profile')">
-      <div class="ov-sb-label">UKISET</div>
-      <div class="ov-sb-value" style="color:var(--red)">Not taken</div>
-      <div class="ov-sb-sub" style="color:var(--red)">Overdue — book now</div>
-      <div class="ov-sb-link">See profile →</div>
     </div>
     <div class="ov-sb-card" onclick="showTab('profile')">
       <div class="ov-sb-label">Profile</div>
-      <div class="ov-sb-value" style="color:${(()=>{const {pct}=computeCompletion(D.student||{});return pct>=90?'var(--green)':pct>=70?'var(--gold)':'var(--amber)'})()}">${computeCompletion(D.student||{}).pct}% complete</div>
-      <div class="ov-sb-sub">${computeCompletion(D.student||{}).filled} of ${computeCompletion(D.student||{}).total} fields filled</div>
+      <div class="ov-sb-value" style="color:${profCol}">${pct}% complete</div>
+      <div class="ov-sb-sub">${filled} of ${total} fields filled</div>
       <div class="ov-sb-link">Complete profile →</div>
     </div>
-    <div class="ov-sb-card" onclick="showTab('recommendations')">
-      <div class="ov-sb-label">Recommendations</div>
-      <div class="ov-sb-value" style="color:var(--amber)">View</div>
-      <div class="ov-sb-sub">Schools, tutoring & camps</div>
-      <div class="ov-sb-link">See all →</div>
+    <div class="ov-sb-card" onclick="showTab('documents')">
+      <div class="ov-sb-label">Documents</div>
+      <div class="ov-sb-value" style="color:${docCol}">${doneDocs}/${totalDocs || '—'}</div>
+      <div class="ov-sb-sub">${docSub}</div>
+      <div class="ov-sb-link">View documents →</div>
+    </div>
+    <div class="ov-sb-card" onclick="showTab('journey')">
+      <div class="ov-sb-label">Highest Stage</div>
+      <div class="ov-sb-value" style="color:var(--gold)">${stageLabels[highestStage] || '—'}</div>
+      <div class="ov-sb-sub">${schools.length ? `Across ${schools.length} school${schools.length>1?'s':''}` : 'No schools yet'}</div>
+      <div class="ov-sb-link">See journey →</div>
     </div>
   </div>`
 
-  // Zone 3 — what's next
-  const top3 = allEvents.slice(0, 3)
-  const wn3 = top3.map(item => {
-    const col = urgColour(item.days)
-    const src = item.school ? item.school.split(' ')[0].toUpperCase() : 'MILESTONE'
-    return `<div class="ov-wn-row" onclick="showTab('${item.tab}')">
-      <div class="ov-wn-body">
-        <div class="ov-wn-lbl">${item.label}</div>
-        <div class="ov-wn-src">${src} · ${fmtDate(item.date)}</div>
-      </div>
-      <div class="ov-wn-days" style="color:${col}">${item.days}d</div>
-    </div>`
-  }).join('')
-
-  // Stage progress
-  const stageNames = ['Discovery','Profiling','Roadmap','Preparation','Transition']
-  const curStage = 3 // Preparation
-  const stagePips = stageNames.map((name, i) => {
-    const cls = i < curStage ? 'done' : i === curStage ? 'current' : ''
-    const lblCls = i === curStage ? 'current' : ''
-    return `<div class="stage-step">
-      <div style="display:flex;align-items:center;width:100%">
-        <div class="stage-pip ${cls}"></div>
-        <div class="sa-pip-line"></div>
-      </div>
-      <div class="stage-name ${lblCls}">${name}</div>
-    </div>`
-  }).join('')
-
-  const doneMs = ms.filter(m => (m.status||'').toLowerCase().includes('complete')).length
-  const totalMs = ms.length || 13
-  const doneDocs = docs.filter(d => (d.status||'').toLowerCase().includes('verif')).length
+  // ── What's Next — top 3 ─────────────────────────────────────────────────────
+  const wn3 = allEvents.slice(0, 3).map(item => `<div class="ov-wn-row" onclick="showTab('${item.tab}')">
+    <div class="ov-wn-body">
+      <div class="ov-wn-lbl">${item.label}</div>
+      <div class="ov-wn-src">${item.school ? item.school.split(' ')[0].toUpperCase() : 'GENERAL'} · ${fmtDate(item.date)}</div>
+    </div>
+    <div class="ov-wn-days" style="color:${urgColour(item.days)}">${item.days}d</div>
+  </div>`).join('')
 
   const html = `
-    <div class="section-title" style="margin-bottom:18px">Right Now</div>
-    ${zone1}
+    ${headerHtml}
+    ${msgHtml}
+    <div class="section-title" style="margin-bottom:18px;margin-top:24px">Right Now</div>
+    ${zone1 || '<div class="empty">No upcoming deadlines.</div>'}
     <div class="section-title" style="margin-bottom:18px">Status Board</div>
     ${zone2}
     <div class="ov-wn-card">
-      <div class="ov-wn-hdr">What's Next — Top 3 Across All Areas</div>
+      <div class="ov-wn-hdr">What's Next — Top 3</div>
       ${wn3 || '<div style="padding:14px 20px;color:var(--muted);font-size:13px">No upcoming items</div>'}
-    </div>
-    <div class="section-title" style="margin-bottom:18px">Journey Progress</div>
-    <div class="stage-progress">
-      <div class="stage-steps">${stagePips}</div>
-      <div class="prog-bar"><div class="prog-fill" style="width:${Math.round(curStage/5*100)}%"></div></div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted)">
-        <span>Stage ${curStage + 1} of 5 — ${stageNames[curStage]}</span>
-        <span>${doneMs}/${totalMs} milestones · ${doneDocs}/${docs.length || 7} documents ready</span>
-      </div>
     </div>`
 
   $id('overview-content').innerHTML = html
@@ -2092,16 +2104,53 @@ function renderSchools() {
 
 // ── Services ──────────────────────────────────────────────────────────────────
 function renderServices() {
-  const svcs = D.student && D.student.servicesActive ? D.student.servicesActive : []
-  let html = `<div class="section-title">Your Services</div>`
-  if (!svcs.length) {
-    html += `<div class="empty">No active services. Contact your consultant to learn more.</div>`
-  } else {
-    html += `<div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted2);margin-bottom:10px">Active</div>`
-    svcs.forEach(s => {
-      html += `<div class="service-card active"><div class="service-name">${s}</div>${statusBadge('Active')}</div>`
-    })
+  const svcs = (D.student && D.student.servicesActive) ? D.student.servicesActive : []
+
+  // Known service definitions — description + which stage they apply
+  const SERVICE_DEFS = {
+    'School Consultation':    { desc: 'Personalised school shortlisting, application strategy, and consultant support throughout the admissions process.', icon: '—' },
+    'Academic Consultation':  { desc: 'Academic profiling, subject guidance, and preparation for entrance assessments.', icon: '—' },
+    'Golf Pathway':           { desc: 'Golf academy shortlisting, scholarship identification, and coaching pathway planning for student athletes.', icon: '—' },
+    'Interview Coaching':     { desc: 'One-on-one mock interviews, body language coaching, and feedback sessions before school interviews.', icon: '—' },
+    'VISA Support':           { desc: 'Tier 4 student visa application guidance, document checklist, and submission support.', icon: '—' },
+    'Document Preparation':   { desc: 'Review and preparation of personal statements, school reports, and supporting documents.', icon: '—' },
+    'Guardianship Arrangement':{ desc: 'Identifying and arranging a UK-based guardian as required by UK boarding schools.', icon: '—' },
+    'TB Test Coordination':   { desc: 'Booking and coordination of the mandatory tuberculosis test for UK student visa applicants.', icon: '—' },
   }
+
+  const activeSet = new Set(svcs.map(s => s.trim()))
+
+  // Active services
+  const activeHtml = svcs.length
+    ? svcs.map(s => {
+        const def = SERVICE_DEFS[s.trim()] || { desc: 'Included in your package.' }
+        return `<div class="svc-card svc-active">
+          <div class="svc-head">
+            <div class="svc-name">${s}</div>
+            <span class="svc-badge">Active</span>
+          </div>
+          <div class="svc-desc">${def.desc}</div>
+        </div>`
+      }).join('')
+    : `<div class="empty">No active services listed yet. Contact your consultant.</div>`
+
+  // Potential add-ons (defined but not active)
+  const addOns = Object.keys(SERVICE_DEFS).filter(k => !activeSet.has(k))
+  const addOnHtml = addOns.length
+    ? `<div class="section-title" style="margin-top:28px">Available Add-ons</div>
+       ${addOns.map(s => `<div class="svc-card svc-inactive">
+         <div class="svc-head">
+           <div class="svc-name" style="color:var(--muted)">${s}</div>
+           <span class="svc-badge svc-badge-off">Not included</span>
+         </div>
+         <div class="svc-desc" style="color:#444">${SERVICE_DEFS[s].desc}</div>
+       </div>`).join('')}
+       <div style="margin-top:18px">
+         <a href="https://line.me/R/ti/p/@linkedu" target="_blank" class="btn-sm btn-sm-primary">Enquire about add-ons →</a>
+       </div>`
+    : ''
+
+  const html = `<div class="section-title">Your Package</div>${activeHtml}${addOnHtml}`
   $id('services-content').innerHTML = html
 }
 
