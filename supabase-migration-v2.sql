@@ -36,3 +36,6 @@ CREATE TABLE IF NOT EXISTS school_timeline_items (
   item_type TEXT DEFAULT 'custom',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Per-item notes for parents (consultant uses notes field, parent uses parent_note)
+ALTER TABLE school_timeline_items ADD COLUMN IF NOT EXISTS parent_note TEXT;

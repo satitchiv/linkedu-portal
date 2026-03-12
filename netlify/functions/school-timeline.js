@@ -1,7 +1,7 @@
 // /api/school-timeline
 // GET    ?student_school_id=xxx  — returns all timeline items for that school (JWT required)
 // POST   { student_school_id, student_id, title, date, notes, item_type } — insert (admin only)
-// PATCH  { id, title, date, notes } — update item (admin only)
+// PATCH  { id, title, date, notes, parent_note } — update item (admin: all fields; JWT: parent_note only)
 // DELETE { id } — delete item (admin only)
 
 const { createClient } = require('@supabase/supabase-js')
@@ -45,7 +45,63 @@ exports.handler = async (event) => {
     return { statusCode: 200, headers, body: JSON.stringify({ items: data || [] }) }
   }
 
-  // ── POST / PATCH / DELETE: require X-Admin-Secret ─────────────────────────
+  // ── PATCH: admin can update all fields; parent JWT can only update parent_note ──
+  if (method === 'PATCH') {
+    try {
+      const body = JSON.parse(event.body || '{}')
+      const { id, title, date, notes, parent_note } = body
+      if (!id) return { statusCode: 400, headers, body: JSON.stringify({ error: 'id is required' }) }
+
+      const secret = event.headers['x-admin-secret'] || event.headers['X-Admin-Secret']
+      const isAdmin = secret && secret === process.env.ADMIN_SECRET
+
+      if (isAdmin) {
+        // Admin: allow updating all fields
+        const updates = {}
+        if (title       !== undefined) updates.title       = title
+        if (date        !== undefined) updates.date        = date || null
+        if (notes       !== undefined) updates.notes       = notes || null
+        if (parent_note !== undefined) updates.parent_note = parent_note || null
+
+        const { data, error } = await supabase
+          .from('school_timeline_items')
+          .update(updates)
+          .eq('id', id)
+          .select()
+          .single()
+
+        if (error) { console.error('school-timeline PATCH admin error:', error); throw error }
+        return { statusCode: 200, headers, body: JSON.stringify({ ok: true, item: data }) }
+      }
+
+      // Try JWT auth for parent_note only
+      const token = (event.headers.authorization || '').replace('Bearer ', '')
+      if (!token) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) }
+
+      const { data: { user }, error: authErr } = await supabase.auth.getUser(token)
+      if (authErr || !user) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Invalid token' }) }
+
+      if (parent_note === undefined) {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'parent_note is required for parent updates' }) }
+      }
+
+      const { data, error } = await supabase
+        .from('school_timeline_items')
+        .update({ parent_note: parent_note || null })
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) { console.error('school-timeline PATCH parent error:', error); throw error }
+      return { statusCode: 200, headers, body: JSON.stringify({ ok: true, item: data }) }
+
+    } catch (err) {
+      console.error('school-timeline PATCH error:', err)
+      return { statusCode: 500, headers, body: JSON.stringify({ error: 'Server error', detail: err.message }) }
+    }
+  }
+
+  // ── POST / DELETE: require X-Admin-Secret ─────────────────────────────────
   const secret = event.headers['x-admin-secret'] || event.headers['X-Admin-Secret']
   if (!secret || secret !== process.env.ADMIN_SECRET) {
     return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) }
@@ -63,26 +119,6 @@ exports.handler = async (event) => {
       const { data, error } = await supabase
         .from('school_timeline_items')
         .insert({ student_school_id, student_id, title, date: date || null, notes: notes || null, item_type: item_type || 'custom' })
-        .select()
-        .single()
-
-      if (error) throw error
-      return { statusCode: 200, headers, body: JSON.stringify({ ok: true, item: data }) }
-    }
-
-    if (method === 'PATCH') {
-      const { id, title, date, notes } = body
-      if (!id) return { statusCode: 400, headers, body: JSON.stringify({ error: 'id is required' }) }
-
-      const updates = {}
-      if (title !== undefined) updates.title = title
-      if (date  !== undefined) updates.date  = date || null
-      if (notes !== undefined) updates.notes = notes || null
-
-      const { data, error } = await supabase
-        .from('school_timeline_items')
-        .update(updates)
-        .eq('id', id)
         .select()
         .single()
 
