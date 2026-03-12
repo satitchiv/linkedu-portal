@@ -1,11 +1,9 @@
 // GET /api/students-list
-// Returns all students from Notion — analysts only
+// Returns all students from Supabase — analysts only
 // Used by analyst golf entry app to populate student dropdown
 
-const { Client } = require('@notionhq/client')
 const { createClient } = require('@supabase/supabase-js')
 
-const notion = new Client({ auth: process.env.NOTION_KEY })
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -35,23 +33,28 @@ exports.handler = async (event) => {
       .eq('id', user.id)
       .single()
 
-    // Analysts only
     if (!profile || profile.role !== 'analyst') {
       return { statusCode: 403, headers, body: JSON.stringify({ error: 'Analysts only' }) }
     }
 
-    const res = await notion.databases.query({
-      database_id: process.env.NOTION_DB_STUDENTS,
-      sorts: [{ property: 'Student Name', direction: 'ascending' }]
-    })
+    const { data: students, error } = await supabase
+      .from('students')
+      .select('id, student_name, preferred_name, notion_student_id')
+      .order('student_name', { ascending: true })
 
-    const students = res.results.map(r => {
-      const p = r.properties
-      const name = p['Student Name']?.title?.map(t => t.plain_text).join('') || 'Unknown'
-      return { id: r.id, name }
-    })
+    if (error) throw error
 
-    return { statusCode: 200, headers, body: JSON.stringify({ students }) }
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        students: (students || []).map(s => ({
+          id: s.id,
+          notion_student_id: s.notion_student_id,
+          name: s.preferred_name || s.student_name || 'Unknown',
+        }))
+      })
+    }
 
   } catch (err) {
     console.error('students-list error:', err)
