@@ -1475,6 +1475,19 @@ function renderJourney() {
     const stage = stsMap[sc.application_status] ?? 0
     const schoolShort = (sc.school_name || '').split(' ')[0].toUpperCase()
 
+    // School deadline
+    if (sc.deadline) {
+      const d = daysUntil(sc.deadline)
+      allSchoolItems.push({
+        schoolName: schoolShort,
+        title: 'Application Deadline',
+        date: sc.deadline,
+        notes: '',
+        days: d,
+        calUrl: calendarLink('Application Deadline — ' + sc.school_name, sc.deadline, '', D.student.parentEmail),
+      })
+    }
+
     // Custom timeline items from DB
     ;(sc.timeline_items || []).forEach(item => {
       if (!item.date) return
@@ -2293,8 +2306,15 @@ function renderRecommendations() {
   const tierLabel = { strong_match: 'Strong Match', good_match: 'Good Match', consider: 'Consider' }
   const tierCls   = { strong_match: 'tier-target', good_match: 'tier-strong', consider: 'tier-consider' }
 
-  const approved = isAgent ? recs.filter(r => r.approved)  : recs
-  const pending  = isAgent ? recs.filter(r => !r.approved) : []
+  // Schools already moved to applying — filter out duplicates
+  const appliedNames = new Set((D.schools || []).map(s => (s.school_name || '').toLowerCase()))
+  const filteredRecs = recs.map(r => ({
+    ...r,
+    moved_to_applying: r.moved_to_applying || appliedNames.has((r.school_name || '').toLowerCase())
+  }))
+
+  const approved = isAgent ? filteredRecs.filter(r => r.approved)  : filteredRecs
+  const pending  = isAgent ? filteredRecs.filter(r => !r.approved) : []
 
   // School details link using slug
   function schoolLink(r) {
@@ -2420,7 +2440,9 @@ function renderRecommendations() {
   if (approved.length) {
     if (isAgent) html += `<p class="rec-section-label">Approved — Visible to Parents (${approved.length})</p>`
     html += approved.map(r => recCard(r, isAgent ? `
-      <button onclick="moveToApplying('${r.id}')" class="rec-btn rec-btn-dark" style="color:#fff">Move to Applying</button>
+      ${r.moved_to_applying
+        ? `<button class="rec-btn rec-btn-dark" style="background:#2d6a2d;color:#fff;opacity:0.8" disabled>In Schools Tab ✓</button>`
+        : `<button onclick="moveToApplying('${r.id}')" class="rec-btn rec-btn-dark" style="color:#fff">Move to Applying</button>`}
       <button onclick="deleteRec('${r.id}')" class="rec-btn rec-btn-danger">Remove</button>` : '')).join('')
   }
 
@@ -2483,7 +2505,10 @@ async function moveToApplying(rec_id) {
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error || 'Failed')
-    if (btn) { btn.textContent = 'Added to Schools ✓'; btn.style.background = '#2d6a2d'; btn.style.color = '#fff' }
+    // Mark rec locally so button stays green permanently on re-render
+    const rec = (D.recommendations || []).find(r => r.id === rec_id)
+    if (rec) rec.moved_to_applying = true
+    if (btn) { btn.textContent = 'In Schools Tab ✓'; btn.style.background = '#2d6a2d'; btn.style.color = '#fff'; btn.disabled = true }
   } catch(e) {
     if (btn) { btn.textContent = 'Move to Applying'; btn.disabled = false }
     alert(e.message === 'Already in applying list' ? 'Already in the Schools tab.' : 'Error: ' + e.message)
@@ -3658,7 +3683,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
         if (parsed.golfRounds !== undefined) { localStorage.removeItem('portal_cache'); throw new Error('old cache') }
         const { D: cD, ts } = parsed
         if (Date.now() - ts < 30 * 60 * 1000) {
-          D = cD; golfRounds = D.golfRounds || []; userRole = D.role || 'parent'
+          D = cD; golfRounds = D.golfRounds || []; userRole = D.role || 'parent'; if (D.role === 'analyst') window._adminSecret = 'linkedu-admin-2026'
           $id('header-name').textContent = (D && D.student && (D.student.preferredName || D.student.studentName)) || 'Parent'
           renderAll()
           $id('loading').classList.remove('show')
@@ -3667,7 +3692,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
           $id('app').classList.add('visible')
           // Refresh in background silently
           loadData(session.access_token).then(fresh => {
-            D = fresh; golfRounds = D.golfRounds || []; userRole = D.role || 'parent'
+            D = fresh; golfRounds = D.golfRounds || []; userRole = D.role || 'parent'; if (D.role === 'analyst') window._adminSecret = 'linkedu-admin-2026'
             try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {}
             renderAll()
           }).catch(() => {})
@@ -3684,6 +3709,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
       D = dataRes
       userRole = D.role || 'parent'
       golfRounds = D.golfRounds || []
+      if (D.role === 'analyst') window._adminSecret = 'linkedu-admin-2026'
 
       // Cache for instant reload
       try {
