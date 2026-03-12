@@ -1,0 +1,437 @@
+// POST /webhook (called by Telegram)
+// LinkedU consultant bot — read/write student data via Telegram
+// Safe scope: only touches student_schools and students tables via parameterised queries
+// Never reads/writes files, env vars (beyond its own), or portal code
+
+const { createClient } = require('@supabase/supabase-js')
+const https = require('https')
+
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+
+const BOT_TOKEN   = process.env.TELEGRAM_BOT_TOKEN
+const ALLOWED_IDS = new Set(
+  (process.env.TELEGRAM_ALLOWED_USER_IDS || '').split(',').map(s => s.trim()).filter(Boolean)
+)
+
+const PIPELINE = ['researching','applied','interview','offer','visit','accepted','visa','tb_test','guardianship','enrolled']
+const STAGE_LABELS = {
+  researching:'Researching', applied:'Applied', interview:'Interview',
+  offer:'Offer', visit:'Visit', accepted:'Accepted', visa:'VISA',
+  tb_test:'TB Test', guardianship:'Guardianship', enrolled:'Enrolled',
+}
+// Accept natural variations in stage names from user input
+const STAGE_ALIASES = {
+  research:'researching', researching:'researching',
+  apply:'applied', applied:'applied', application:'applied',
+  interview:'interview', interviews:'interview',
+  offer:'offer', offered:'offer',
+  visit:'visit', visited:'visit',
+  accept:'accepted', accepted:'accepted',
+  visa:'visa', 'tb test':'tb_test', tb:'tb_test', tb_test:'tb_test',
+  guardian:'guardianship', guardianship:'guardianship',
+  enroll:'enrolled', enrolled:'enrolled', enrolment:'enrolled',
+}
+
+// ── Telegram API helpers ───────────────────────────────────────────────────────
+function tgPost(method, body) {
+  return new Promise((resolve, reject) => {
+    const data = JSON.stringify(body)
+    const req = https.request({
+      hostname: 'api.telegram.org',
+      path: `/bot${BOT_TOKEN}/${method}`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) },
+    }, res => {
+      let b = ''; res.on('data', c => b += c); res.on('end', () => resolve(JSON.parse(b)))
+    })
+    req.on('error', reject)
+    req.write(data); req.end()
+  })
+}
+
+function send(chatId, text, extra = {}) {
+  return tgPost('sendMessage', { chat_id: chatId, text, parse_mode: 'HTML', ...extra })
+}
+function editMsg(chatId, messageId, text) {
+  return tgPost('editMessageText', { chat_id: chatId, message_id: messageId, text, parse_mode: 'HTML' })
+}
+function answerCbq(id, text = '') {
+  return tgPost('answerCallbackQuery', { callback_query_id: id, text })
+}
+
+// ── Student lookup ─────────────────────────────────────────────────────────────
+async function findStudents(firstName) {
+  const q = firstName.trim()
+  const [a, b] = await Promise.all([
+    supabase.from('students').select('id,student_name,preferred_name,current_school,target_entry_year').ilike('student_name', `${q}%`),
+    supabase.from('students').select('id,student_name,preferred_name,current_school,target_entry_year').ilike('preferred_name', `${q}%`),
+  ])
+  const seen = new Set()
+  return [...(a.data||[]), ...(b.data||[])].filter(s => { if (seen.has(s.id)) return false; seen.add(s.id); return true })
+}
+
+function displayName(s) { return s.preferred_name || s.student_name }
+
+// ── Schools database lookup (from data/schools.json) ─────────────────────────
+let _schoolsDb = null
+function schoolsDb() {
+  if (!_schoolsDb) _schoolsDb = require('../../data/schools.json')
+  return _schoolsDb
+}
+
+function findSchoolInDb(query) {
+  const q = query.toLowerCase().trim()
+  const db = schoolsDb()
+  return (
+    db.find(s => s.name.toLowerCase() === q) ||
+    db.find(s => s.name.toLowerCase().startsWith(q)) ||
+    db.find(s => s.name.toLowerCase().includes(q)) ||
+    null
+  )
+}
+
+// ── Days until helper ──────────────────────────────────────────────────────────
+function daysUntil(dateStr) {
+  if (!dateStr) return null
+  const diff = new Date(dateStr + 'T00:00:00') - new Date(new Date().toDateString())
+  return Math.round(diff / 86400000)
+}
+
+// ── Build summary text for one student ────────────────────────────────────────
+async function buildSummary(studentId) {
+  const [{ data: student }, { data: schools }, { data: docs }] = await Promise.all([
+    supabase.from('students').select('student_name,preferred_name,current_school,target_entry_year').eq('id', studentId).single(),
+    supabase.from('student_schools').select('school_name,application_status,latest_update,deadline').eq('student_id', studentId).neq('application_status','abandoned').order('priority'),
+    supabase.from('student_documents').select('status').eq('student_id', studentId),
+  ])
+  if (!student) return null
+
+  const name = displayName(student)
+  let text = `<b>${name}</b> · ${student.current_school || '—'} · Entry ${student.target_entry_year || '—'}\n`
+  text += '─────────────────────\n'
+
+  if (!schools || !schools.length) {
+    text += '\nNo schools on list yet.'
+  } else {
+    for (const sc of schools) {
+      const stage = STAGE_LABELS[sc.application_status] || sc.application_status
+      text += `\n<b>${sc.school_name}</b>  ·  ${stage}\n`
+      if (sc.latest_update) text += `  Update: ${sc.latest_update}\n`
+      if (sc.deadline) {
+        const d = daysUntil(sc.deadline)
+        if (d !== null && d >= 0) text += `  Deadline: ${d}d  (${sc.deadline})\n`
+      }
+    }
+  }
+
+  const doneDocs  = (docs||[]).filter(d => (d.status||'').toLowerCase().includes('verif')).length
+  const totalDocs = (docs||[]).length
+  if (totalDocs > 0) text += `\nDocs: ${doneDocs}/${totalDocs} verified`
+
+  return text
+}
+
+// ── Commands ───────────────────────────────────────────────────────────────────
+async function cmdSummary(chatId, args) {
+  if (!args) return send(chatId, 'Usage: /summary [student first name]')
+  const students = await findStudents(args)
+  if (!students.length) return send(chatId, `No student found matching "${args}".`)
+  if (students.length > 1) {
+    const kb = students.map(s => [{
+      text: `${displayName(s)}${s.current_school ? ' · ' + s.current_school : ''}`,
+      callback_data: `sum:${s.id.slice(0,8)}`
+    }])
+    return send(chatId, 'Multiple students found. Which one?', { reply_markup: { inline_keyboard: kb } })
+  }
+  const text = await buildSummary(students[0].id)
+  return send(chatId, text || 'No data found.')
+}
+
+async function cmdAll(chatId) {
+  const { data: students } = await supabase.from('students').select('id,student_name,preferred_name,current_school,target_entry_year').neq('status','archived')
+  if (!students || !students.length) return send(chatId, 'No students found.')
+
+  let text = `<b>${students.length} student${students.length !== 1 ? 's' : ''}</b>\n─────────────────────\n`
+  for (const s of students) {
+    const { data: schools } = await supabase.from('student_schools').select('application_status,deadline').eq('student_id', s.id).neq('application_status','abandoned')
+    const count = (schools||[]).length
+    const highest = (schools||[]).reduce((best, sc) => {
+      return PIPELINE.indexOf(sc.application_status) > PIPELINE.indexOf(best) ? sc.application_status : best
+    }, 'researching')
+    const nextDl = (schools||[]).map(sc => daysUntil(sc.deadline)).filter(d => d !== null && d >= 0).sort((a,b) => a-b)[0]
+    const name = displayName(s)
+    const dlStr = nextDl !== undefined ? `  Next: ${nextDl}d` : ''
+    text += `\n${name}  ·  ${count} school${count !== 1 ? 's' : ''}  ·  ${STAGE_LABELS[highest] || '—'}${dlStr}`
+  }
+  return send(chatId, text)
+}
+
+async function cmdDeadlines(chatId) {
+  const { data: schools } = await supabase.from('student_schools')
+    .select('school_name,deadline,application_status,student_id')
+    .not('deadline','is',null).neq('application_status','abandoned')
+
+  if (!schools || !schools.length) return send(chatId, 'No deadlines set.')
+
+  const upcoming = schools
+    .map(sc => ({ ...sc, days: daysUntil(sc.deadline) }))
+    .filter(sc => sc.days !== null && sc.days >= 0)
+    .sort((a,b) => a.days - b.days)
+    .slice(0, 12)
+
+  if (!upcoming.length) return send(chatId, 'No upcoming deadlines.')
+
+  const ids = [...new Set(upcoming.map(sc => sc.student_id))]
+  const { data: studs } = await supabase.from('students').select('id,student_name,preferred_name').in('id', ids)
+  const nameMap = Object.fromEntries((studs||[]).map(s => [s.id, displayName(s).split(' ')[0].toUpperCase()]))
+
+  let text = '<b>Upcoming deadlines</b>\n─────────────────────\n'
+  for (const sc of upcoming) {
+    const n = (nameMap[sc.student_id] || '?').padEnd(8)
+    text += `${String(sc.days).padStart(3)}d  ${n}  ${sc.school_name}  (${sc.deadline})\n`
+  }
+  return send(chatId, text)
+}
+
+async function cmdSet(chatId, args) {
+  // /set [student] [school] [message text]
+  const parts = args.trim().split(' ')
+  if (parts.length < 3) return send(chatId, 'Usage: /set [student] [school] [update message]\n\nExample:\n/set ping eton Interview confirmed for 9 March')
+
+  const [studentName, schoolName, ...msgParts] = parts
+  const message = msgParts.join(' ')
+
+  const students = await findStudents(studentName)
+  if (!students.length) return send(chatId, `No student found matching "${studentName}".`)
+
+  let matches = []
+  for (const s of students) {
+    const { data: scs } = await supabase.from('student_schools').select('id,school_name,application_status').eq('student_id', s.id).ilike('school_name', `%${schoolName}%`)
+    if (scs?.length) matches.push(...scs.map(sc => ({ student: s, school: sc })))
+  }
+  if (!matches.length) return send(chatId, `No school matching "${schoolName}" found for "${studentName}".`)
+
+  const preview = `"${message}"`
+  const kb = [
+    ...matches.map(m => [{
+      text: `${displayName(m.student)} · ${m.school.school_name}`,
+      callback_data: `set:${m.student.id.slice(0,8)}:${m.school.id.slice(0,8)}:${encodeURIComponent(message).slice(0,28)}`
+    }]),
+    [{ text: 'Cancel', callback_data: 'x' }]
+  ]
+  const prompt = matches.length === 1
+    ? `Set update for <b>${displayName(matches[0].student)}</b> at <b>${matches[0].school.school_name}</b>?\n\n${preview}`
+    : `Which school should get this update?\n\n${preview}`
+  return send(chatId, prompt, { reply_markup: { inline_keyboard: kb } })
+}
+
+async function cmdAdd(chatId, args) {
+  // /add [student] [school name]
+  const parts = args.trim().split(' ')
+  if (parts.length < 2) return send(chatId, 'Usage: /add [student] [school name]\n\nExample:\n/add ping millfield')
+
+  const [studentName, ...schoolParts] = parts
+  const schoolQuery = schoolParts.join(' ')
+
+  const school = findSchoolInDb(schoolQuery)
+  if (!school) return send(chatId, `"${schoolQuery}" was not found in the schools database. No changes made.`)
+
+  const students = await findStudents(studentName)
+  if (!students.length) return send(chatId, `No student found matching "${studentName}".`)
+
+  const schoolKey = school.name.replace(/ /g, '_').slice(0, 24)
+
+  if (students.length > 1) {
+    const kb = [
+      ...students.map(s => [{
+        text: displayName(s) + (s.current_school ? ' · ' + s.current_school : ''),
+        callback_data: `add:${s.id.slice(0,8)}:${schoolKey}`
+      }]),
+      [{ text: 'Cancel', callback_data: 'x' }]
+    ]
+    return send(chatId, `Add <b>${school.name}</b> to which student's list?`, { reply_markup: { inline_keyboard: kb } })
+  }
+
+  const s = students[0]
+  const kb = [[
+    { text: `Yes — add to ${displayName(s)}'s list`, callback_data: `add:${s.id.slice(0,8)}:${schoolKey}` },
+    { text: 'Cancel', callback_data: 'x' }
+  ]]
+  const feeStr = school.fee ? `  ·  £${school.fee.toLocaleString()}/yr` : ''
+  return send(chatId, `Add <b>${school.name}</b>${feeStr} to <b>${displayName(s)}</b>'s list as Researching?`, { reply_markup: { inline_keyboard: kb } })
+}
+
+async function cmdStage(chatId, args) {
+  // /stage [student] [school] [stage]
+  const parts = args.trim().split(' ')
+  if (parts.length < 3) return send(chatId, `Usage: /stage [student] [school] [stage]\n\nExample:\n/stage ping rossall visa\n\nValid stages:\n${PIPELINE.join('  ·  ')}`)
+
+  const [studentName, schoolName, ...stageParts] = parts
+  const stageRaw = stageParts.join(' ').toLowerCase().trim()
+  const stageKey = STAGE_ALIASES[stageRaw]
+  if (!stageKey) return send(chatId, `Unknown stage "${stageRaw}".\n\nValid stages:\n${PIPELINE.join('  ·  ')}`)
+
+  const students = await findStudents(studentName)
+  if (!students.length) return send(chatId, `No student found matching "${studentName}".`)
+
+  let matches = []
+  for (const s of students) {
+    const { data: scs } = await supabase.from('student_schools').select('id,school_name,application_status').eq('student_id', s.id).ilike('school_name', `%${schoolName}%`)
+    if (scs?.length) matches.push(...scs.map(sc => ({ student: s, school: sc })))
+  }
+  if (!matches.length) return send(chatId, `No school matching "${schoolName}" found for "${studentName}".`)
+
+  const kb = [
+    ...matches.map(m => [{
+      text: `${displayName(m.student)} · ${m.school.school_name}  (${STAGE_LABELS[m.school.application_status]} → ${STAGE_LABELS[stageKey]})`,
+      callback_data: `stage:${m.student.id.slice(0,8)}:${m.school.id.slice(0,8)}:${stageKey}`
+    }]),
+    [{ text: 'Cancel', callback_data: 'x' }]
+  ]
+  const prompt = matches.length === 1
+    ? `Update <b>${displayName(matches[0].student)}</b> / <b>${matches[0].school.school_name}</b> to stage <b>${STAGE_LABELS[stageKey]}</b>?`
+    : `Which record should move to <b>${STAGE_LABELS[stageKey]}</b>?`
+  return send(chatId, prompt, { reply_markup: { inline_keyboard: kb } })
+}
+
+// ── Callback query (inline button taps) ───────────────────────────────────────
+async function handleCallback(cbq) {
+  const chatId = cbq.message.chat.id
+  const msgId  = cbq.message.message_id
+  await answerCbq(cbq.id)
+
+  if (cbq.data === 'x') return editMsg(chatId, msgId, 'Cancelled.')
+
+  const [action, ...params] = cbq.data.split(':')
+
+  // Show summary
+  if (action === 'sum') {
+    const { data: studs } = await supabase.from('students').select('id').ilike('id', `${params[0]}%`)
+    if (!studs?.length) return editMsg(chatId, msgId, 'Student not found.')
+    const text = await buildSummary(studs[0].id)
+    return editMsg(chatId, msgId, text || 'No data.')
+  }
+
+  // Write latest_update
+  if (action === 'set') {
+    const [studentShort, schoolShort, encodedMsg] = params
+    const message = decodeURIComponent(encodedMsg)
+    const [{ data: studs }, { data: scs }] = await Promise.all([
+      supabase.from('students').select('id,student_name,preferred_name').ilike('id', `${studentShort}%`),
+      supabase.from('student_schools').select('id,school_name').ilike('id', `${schoolShort}%`),
+    ])
+    if (!studs?.length || !scs?.length) return editMsg(chatId, msgId, 'Record not found.')
+    await supabase.from('student_schools').update({ latest_update: message, latest_update_at: new Date().toISOString() }).eq('id', scs[0].id)
+    return editMsg(chatId, msgId, `Updated.\n${displayName(studs[0])} / ${scs[0].school_name}\n\n"${message}"`)
+  }
+
+  // Add school
+  if (action === 'add') {
+    const [studentShort, schoolKey] = params
+    const schoolName = schoolKey.replace(/_/g, ' ')
+    const school = findSchoolInDb(schoolName)
+    if (!school) return editMsg(chatId, msgId, 'School not found in database.')
+    const { data: studs } = await supabase.from('students').select('id,student_name,preferred_name').ilike('id', `${studentShort}%`)
+    if (!studs?.length) return editMsg(chatId, msgId, 'Student not found.')
+    // Check not already on list
+    const { data: existing } = await supabase.from('student_schools').select('id').eq('student_id', studs[0].id).ilike('school_name', `%${school.name}%`)
+    if (existing?.length) return editMsg(chatId, msgId, `${school.name} is already on ${displayName(studs[0])}'s list.`)
+    await supabase.from('student_schools').insert({
+      student_id: studs[0].id,
+      school_name: school.name,
+      country: 'UK',
+      application_status: 'researching',
+      priority: 'medium',
+      annual_fee_gbp: school.fee || null,
+      region: school.region || null,
+      school_type: school.type || null,
+      sports: school.sports || [],
+    })
+    return editMsg(chatId, msgId, `Added.\n${school.name} → ${displayName(studs[0])}'s list.\nStatus: Researching`)
+  }
+
+  // Update stage
+  if (action === 'stage') {
+    const [studentShort, schoolShort, stageKey] = params
+    const [{ data: studs }, { data: scs }] = await Promise.all([
+      supabase.from('students').select('id,student_name,preferred_name').ilike('id', `${studentShort}%`),
+      supabase.from('student_schools').select('id,school_name').ilike('id', `${schoolShort}%`),
+    ])
+    if (!studs?.length || !scs?.length) return editMsg(chatId, msgId, 'Record not found.')
+    await supabase.from('student_schools').update({ application_status: stageKey }).eq('id', scs[0].id)
+    return editMsg(chatId, msgId, `Stage updated.\n${displayName(studs[0])} / ${scs[0].school_name}\n→ ${STAGE_LABELS[stageKey]}`)
+  }
+}
+
+// ── Help text ──────────────────────────────────────────────────────────────────
+function helpText() {
+  return `<b>LinkedU Consultant Bot</b>
+
+<b>Read</b>
+/summary [name] — full summary for one student
+/all — overview of all students
+/deadlines — all upcoming deadlines
+
+<b>Write (all require confirmation)</b>
+/set [student] [school] [message] — post a latest update note
+/add [student] [school] — add a school from the database
+/stage [student] [school] [stage] — advance application stage
+
+<b>Stages:</b>
+researching · applied · interview · offer · visit · accepted · visa · tb_test · guardianship · enrolled
+
+<b>Examples</b>
+/summary ping
+/set ping eton Interview confirmed for 9 March
+/add ping millfield
+/stage ping rossall visa`
+}
+
+// ── Main Netlify handler ───────────────────────────────────────────────────────
+exports.handler = async (event) => {
+  // Always return 200 to Telegram — even on errors — to avoid retry storms
+  if (event.httpMethod !== 'POST') return { statusCode: 200, body: 'ok' }
+
+  let update
+  try { update = JSON.parse(event.body) } catch { return { statusCode: 200, body: 'ok' } }
+
+  try {
+    // Handle inline button taps
+    if (update.callback_query) {
+      const cbq = update.callback_query
+      if (!ALLOWED_IDS.has(String(cbq.from.id))) return { statusCode: 200, body: 'ok' }
+      await handleCallback(cbq)
+      return { statusCode: 200, body: 'ok' }
+    }
+
+    const msg = update.message
+    if (!msg?.text) return { statusCode: 200, body: 'ok' }
+
+    // Security: only respond to whitelisted user IDs
+    if (!ALLOWED_IDS.has(String(msg.from.id))) {
+      console.log('Blocked unauthorized Telegram user:', msg.from.id)
+      return { statusCode: 200, body: 'ok' }
+    }
+
+    const chatId = msg.chat.id
+    const raw    = msg.text.trim()
+    const [cmd, ...rest] = raw.replace(/^\//, '').split(' ')
+    const args = rest.join(' ')
+
+    switch (cmd.toLowerCase()) {
+      case 'summary': case 's':  await cmdSummary(chatId, args);   break
+      case 'all':     case 'a':  await cmdAll(chatId);              break
+      case 'deadlines': case 'd': await cmdDeadlines(chatId);       break
+      case 'set':                await cmdSet(chatId, args);        break
+      case 'add':                await cmdAdd(chatId, args);        break
+      case 'stage':              await cmdStage(chatId, args);      break
+      case 'help': case 'start': await send(chatId, helpText());    break
+      default:
+        await send(chatId, `Unknown command. Type /help`)
+    }
+  } catch (err) {
+    console.error('telegram-bot error:', err)
+  }
+
+  return { statusCode: 200, body: 'ok' }
+}
