@@ -15,6 +15,7 @@ const PARENT_EDITABLE = new Set([
   'current_school', 'current_year_group', 'curriculum', 'english_level',
   'primary_sport', 'goal', 'destination', 'budget_gbp', 'target_entry_year',
   'photo_url',
+  'parent_name', 'parent_email', 'parent_phone',
 ])
 
 exports.handler = async (event) => {

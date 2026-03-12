@@ -697,6 +697,77 @@
     .status-re { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
     .sa-golf-chip { background: rgba(50,120,50,.12); border-left: 3px solid #5a9a5a;
       font-size: 12px; color: #8dca8d; padding: 8px 18px; }
+
+    /* ── School card v2 additions ───────────────────────────── */
+    .sa-fit-stars { font-size: 12px; color: var(--gold); letter-spacing: 0.05em; margin-top: 3px; }
+    .sa-why { padding: 14px 22px; border-bottom: 1px solid var(--border); }
+    .sa-match-reasons { list-style: none; padding: 0; margin: 6px 0 0; font-size: 12px;
+      color: var(--muted); line-height: 1.6; }
+    .sa-match-reasons li { padding: 2px 0; }
+    .sa-match-reasons li::before { content: '·'; color: var(--gold); margin-right: 6px; }
+    .sa-update-box { border-left: 3px solid var(--gold); background: var(--surface2);
+      padding: 10px 14px; margin: 10px 0 0; border-radius: 0 3px 3px 0; }
+    .sa-update-date { font-size: 10px; color: var(--muted2); margin-bottom: 3px;
+      text-transform: uppercase; letter-spacing: 0.08em; }
+    .sa-update-text { font-size: 13px; color: var(--text); line-height: 1.5; }
+    .sa-timeline-panel { display: none; border-top: 1px solid var(--border);
+      background: #181818; padding: 18px 22px; }
+    .sa-timeline-panel.open { display: block; }
+    .sa-tl-item { display: flex; gap: 14px; align-items: flex-start;
+      padding: 10px 0; border-bottom: 1px solid #1f1f1f; }
+    .sa-tl-item:last-child { border-bottom: none; }
+    .sa-tl-dot-col { display: flex; flex-direction: column; align-items: center; padding-top: 2px; }
+    .sa-tl-dot-done { width: 10px; height: 10px; border-radius: 50%;
+      background: var(--gold); flex-shrink: 0; }
+    .sa-tl-dot-upcoming { width: 10px; height: 10px; border-radius: 50%;
+      background: transparent; border: 2px solid var(--muted2); flex-shrink: 0; }
+    .sa-tl-dot-custom { width: 10px; height: 10px; border-radius: 50%;
+      background: #4a6fa5; flex-shrink: 0; }
+    .sa-tl-body { flex: 1; }
+    .sa-tl-date { font-size: 14px; color: #eee; font-weight: 500; margin-bottom: 1px; }
+    .sa-tl-title { font-size: 13px; color: var(--text); }
+    .sa-tl-notes { font-size: 11px; color: var(--muted); margin-top: 2px; line-height: 1.5; }
+    .sa-tl-actions { display: flex; gap: 8px; align-items: center; margin-top: 4px; flex-wrap: wrap; }
+    .sa-tl-add-form { margin-top: 16px; padding-top: 14px; border-top: 1px solid #222; }
+    .sa-tl-add-form .tl-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .sa-tl-add-form .tl-form-field label { display: block; font-size: 10px; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--muted); margin-bottom: 4px; }
+    .sa-tl-add-form .tl-form-field input,
+    .sa-tl-add-form .tl-form-field textarea { width: 100%; background: #111; border: 1px solid #333;
+      border-radius: 3px; padding: 7px 9px; color: var(--text); font-family: 'Inter', sans-serif;
+      font-size: 12px; outline: none; }
+    .sa-tl-add-form .tl-form-field input:focus,
+    .sa-tl-add-form .tl-form-field textarea:focus { border-color: var(--gold); }
+    .sa-checklist { margin-top: 12px; }
+    .sa-checklist-item { display: flex; align-items: center; gap: 10px; padding: 7px 0;
+      border-bottom: 1px solid var(--border); font-size: 13px; }
+    .sa-checklist-item:last-child { border-bottom: none; }
+    .sa-checklist-item input[type="checkbox"] { width: 14px; height: 14px; accent-color: var(--gold); flex-shrink: 0; }
+    .sa-latest-update-edit { width: 100%; background: var(--surface); border: 1px solid rgba(0,0,0,0.14);
+      border-radius: 3px; padding: 8px 10px; color: var(--text); font-family: 'Inter', sans-serif;
+      font-size: 12px; outline: none; margin-top: 8px; resize: vertical; }
+    .sa-latest-update-edit:focus { border-color: var(--gold); }
+    /* Journey urgency bands */
+    .jny-band { margin-bottom: 28px; }
+    .jny-band-hdr { font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em;
+      color: var(--gold); padding-bottom: 8px; border-bottom: 1px solid var(--border);
+      margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .jny-band-hdr .jny-band-accent { display: inline-block; width: 3px; height: 14px;
+      border-radius: 2px; flex-shrink: 0; }
+    .jny-row { display: flex; align-items: baseline; gap: 12px; padding: 10px 0;
+      border-bottom: 1px solid rgba(0,0,0,0.05); flex-wrap: wrap; }
+    .jny-row:last-child { border-bottom: none; }
+    .jny-school { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--gold); min-width: 90px; flex-shrink: 0; }
+    .jny-title { font-size: 13px; color: var(--text); flex: 1; min-width: 160px; }
+    .jny-date-lbl { font-size: 14px; color: #eee; font-weight: 500; white-space: nowrap; }
+    .jny-days { font-size: 12px; font-weight: 700; white-space: nowrap; min-width: 60px; text-align: right; }
+    .jny-cal-link { font-size: 11px; color: var(--gold); text-decoration: none; white-space: nowrap; }
+    .jny-cal-link:hover { color: #daa520; }
+    details.jny-completed summary { cursor: pointer; font-size: 11px; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.1em; padding: 8px 0; list-style: none; }
+    details.jny-completed summary::before { content: '+ '; color: var(--gold); }
+    details.jny-completed[open] summary::before { content: '- '; }
     .sa-pipeline { display: flex; padding: 16px 22px; border-bottom: 1px solid var(--border);
       overflow-x: auto; gap: 0; }
     .sa-pip-step { display: flex; flex-direction: column; align-items: center;
@@ -1362,6 +1433,83 @@ function renderJourney() {
     })
     html += `</div>`
   }
+
+  // ── School Timeline urgency bands ─────────────────────────────────────────
+  const PIPELINE_LABELS = ['Researching','Applied','Interview','Offer','Visit','Accepted','VISA','TB Test','Guardianship','Enrolled']
+  const STAGE_TITLE_MAP  = ['Started researching','Application submitted','Interview scheduled','Offer received','Visit booked','Place accepted','VISA application','TB test booked','Guardianship arranged','Enrolled']
+  const stsMap = { researching:0, applied:1, interview:2, offer:3, visit:4, accepted:5, visa:6, tb_test:7, guardianship:8, enrolled:9, rejected:-1 }
+
+  const allSchoolItems = []
+  ;(D.schools || []).forEach(sc => {
+    const stage = stsMap[sc.application_status] ?? 0
+    const schoolShort = (sc.school_name || '').split(' ')[0].toUpperCase()
+
+    // Custom timeline items from DB
+    ;(sc.timeline_items || []).forEach(item => {
+      if (!item.date) return
+      const d = daysUntil(item.date)
+      allSchoolItems.push({
+        schoolName: schoolShort,
+        title: item.title,
+        date: item.date,
+        notes: item.notes || '',
+        days: d,
+        calUrl: calendarLink(item.title, item.date, item.notes || '', D.student.parentEmail),
+      })
+    })
+  })
+
+  allSchoolItems.sort((a,b) => a.days - b.days)
+
+  const thisWeek   = allSchoolItems.filter(i => i.days !== null && i.days >= 0 && i.days <= 7)
+  const twoWeeks   = allSchoolItems.filter(i => i.days !== null && i.days >= 8 && i.days <= 14)
+  const comingUp   = allSchoolItems.filter(i => i.days !== null && i.days >= 15)
+  const completed  = allSchoolItems.filter(i => i.days !== null && i.days < 0)
+
+  function fmtDayLabel(dateStr) {
+    if (!dateStr) return ''
+    const d = new Date(dateStr)
+    return d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' })
+  }
+
+  function jnyRow(item) {
+    const daysLbl = item.days < 0 ? `${Math.abs(item.days)}d ago` : `in ${item.days}d`
+    const col = item.days < 0 ? 'var(--muted)' : item.days <= 7 ? 'var(--red)' : item.days <= 14 ? 'var(--amber)' : 'var(--green)'
+    return `<div class="jny-row">
+      <span class="jny-school">${item.schoolName}</span>
+      <span class="jny-title">${item.title}</span>
+      <span class="jny-date-lbl">${fmtDayLabel(item.date)}</span>
+      <span class="jny-days" style="color:${col}">${daysLbl}</span>
+      <a class="jny-cal-link" href="${item.calUrl}" target="_blank">+ Calendar</a>
+    </div>`
+  }
+
+  function band(items, label, accentColor) {
+    if (!items.length) return ''
+    return `<div class="jny-band">
+      <div class="jny-band-hdr">
+        <span class="jny-band-accent" style="background:${accentColor}"></span>
+        ${label}
+      </div>
+      ${items.map(jnyRow).join('')}
+    </div>`
+  }
+
+  const completedHtml = completed.length
+    ? `<details class="jny-completed"><summary>Completed (${completed.length})</summary>
+        <div style="margin-top:8px">${completed.slice().reverse().map(jnyRow).join('')}</div>
+       </details>`
+    : ''
+
+  const anyItems = thisWeek.length || twoWeeks.length || comingUp.length || completed.length
+  if (anyItems) {
+    html += `<div class="section-title" style="margin-top:28px">School Timeline</div>`
+    html += band(thisWeek, 'This Week', '#c0392b')
+    html += band(twoWeeks, 'Within 2 Weeks', 'var(--amber)')
+    html += band(comingUp, 'Coming Up', 'var(--muted2)')
+    html += completedHtml
+  }
+
   $id('journey-content').innerHTML = html
 }
 
@@ -1370,8 +1518,8 @@ function renderSchools() {
   const schools = D.schools || []
 
   // Pipeline stages
-  const PIPELINE = ['Researching','Applied','Interview','Offer','Accepted']
-  const statusToStage = { researching:0, applied:1, interview:2, offer:3, accepted:4, rejected:-1 }
+  const PIPELINE = ['Researching','Applied','Interview','Offer','Visit','Accepted','VISA','TB Test','Guardianship','Enrolled']
+  const statusToStage = { researching:0, applied:1, interview:2, offer:3, visit:4, accepted:5, visa:6, tb_test:7, guardianship:8, enrolled:9, rejected:-1 }
   const priorityLabel = { high:'Primary Target', medium:'Supporting', reach:'Stretch', low:'Monitoring' }
   const priorityCls   = { high:'role-primary', medium:'role-support', reach:'role-stretch', low:'role-support' }
   const statusColour  = { researching:'var(--muted)', applied:'var(--amber)', interview:'var(--gold)', offer:'var(--green)', accepted:'var(--green)', rejected:'var(--red)' }
@@ -1418,35 +1566,149 @@ function renderSchools() {
     const fee = sc.annual_fee_gbp
     const thb = fee ? `฿${Math.round(fee * 46 / 1000)}k` : ''
     const feeStr = fee ? `£${fee.toLocaleString()} / yr · ${thb}` : '—'
-    const deadline = sc.deadline ? `Deadline: ${fmtDate(sc.deadline)} (${daysUntil(sc.deadline)}d)` : ''
-    const fitBar = sc.fit_score ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">Fit score: ${'★'.repeat(Math.round(sc.fit_score/2))}${'☆'.repeat(5-Math.round(sc.fit_score/2))} ${sc.fit_score}/10</div>` : ''
+
+    // Fit score as stars
+    let fitStars = ''
+    if (sc.fit_score) {
+      const filled = Math.round(sc.fit_score / 2)
+      const empty  = 5 - filled
+      fitStars = `<div class="sa-fit-stars">${'★'.repeat(filled)}${'☆'.repeat(empty)} <span style="font-size:11px;color:var(--muted)">${sc.fit_score}/10 fit</span></div>`
+    }
+
+    // Why this school (match_reasons)
+    const reasons = sc.match_reasons || []
+    let whyHtml
+    if (reasons.length) {
+      whyHtml = `<ul class="sa-match-reasons">${reasons.map(r => `<li>${r}</li>`).join('')}</ul>`
+    } else if (sc.notes) {
+      whyHtml = `<div class="sa-note">${sc.notes}</div>`
+    } else {
+      whyHtml = `<div style="font-size:12px;color:var(--muted)">No notes yet.</div>`
+    }
+    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent((sc.school_name||'') + ' boarding school')}`
+
+    // Latest update
+    let updateHtml
+    if (sc.latest_update) {
+      const updDate = sc.latest_update_at ? ` · ${fmtDate(sc.latest_update_at)}` : ''
+      updateHtml = `<div class="sa-update-box">
+        <div class="sa-update-date">Latest Update${updDate}</div>
+        <div class="sa-update-text">${sc.latest_update}</div>
+      </div>`
+    } else {
+      updateHtml = `<div style="font-size:12px;color:var(--muted);margin-top:8px">No update yet.</div>`
+    }
+
+    // Timeline items
+    const schoolId = sc.id
+    const customItems = sc.timeline_items || []
+
+    // Base stage items auto-generated from pipeline
+    const baseItems = []
+    const stageLabels = ['Started researching', 'Application submitted', 'Interview scheduled', 'Offer received', 'Visit booked', 'Place accepted', 'VISA application', 'TB test booked', 'Guardianship arranged', 'Enrolled']
+    for (let i = 0; i < PIPELINE.length; i++) {
+      if (i < stage) {
+        baseItems.push({ title: stageLabels[i] || PIPELINE[i], date: null, notes: null, isBase: true, isDone: true })
+      }
+    }
+
+    const allTlItems = [
+      ...baseItems,
+      ...customItems.slice().sort((a,b) => {
+        if (!a.date && !b.date) return 0
+        if (!a.date) return 1
+        if (!b.date) return -1
+        return new Date(a.date) - new Date(b.date)
+      })
+    ]
+
+    const tlRows = allTlItems.map(item => {
+      const dotCls = item.isBase ? 'sa-tl-dot-done' : 'sa-tl-dot-custom'
+      const dateDisplay = item.date ? fmtDate(item.date) : ''
+      const calBtn = (item.date && !item.isBase)
+        ? `<a class="jny-cal-link" href="${calendarLink(item.title, item.date, item.notes || '', D.student.parentEmail)}" target="_blank">+ Calendar</a>`
+        : ''
+      const delBtn = (D.role === 'analyst' && !item.isBase)
+        ? `<button class="btn-sm" style="font-size:10px;padding:3px 8px;color:var(--red);border-color:rgba(192,57,43,.3)" onclick="deleteTimelineItem('${item.id}','${schoolId}')">Delete</button>`
+        : ''
+      return `<div class="sa-tl-item">
+        <div class="sa-tl-dot-col"><div class="${dotCls}"></div></div>
+        <div class="sa-tl-body">
+          ${dateDisplay ? `<div class="sa-tl-date">${dateDisplay}</div>` : ''}
+          <div class="sa-tl-title">${item.title}</div>
+          ${item.notes ? `<div class="sa-tl-notes">${item.notes}</div>` : ''}
+          ${calBtn || delBtn ? `<div class="sa-tl-actions">${calBtn}${delBtn}</div>` : ''}
+        </div>
+      </div>`
+    }).join('')
+
+    const addForm = D.role === 'analyst' ? `
+      <div class="sa-tl-add-form">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);margin-bottom:10px">Add Timeline Item</div>
+        <div class="tl-form-row">
+          <div class="tl-form-field"><label>Title</label><input id="tl-title-${schoolId}" placeholder="e.g. Interview confirmed" /></div>
+          <div class="tl-form-field"><label>Date</label><input type="date" id="tl-date-${schoolId}" /></div>
+        </div>
+        <div class="tl-form-row" style="grid-template-columns:1fr">
+          <div class="tl-form-field"><label>Notes (optional)</label><input id="tl-notes-${schoolId}" placeholder="Additional details..." /></div>
+        </div>
+        <button class="btn-sm btn-sm-primary" onclick="addTimelineItem('${schoolId}','${sc.id}')">Save Item</button>
+        <span id="tl-msg-${schoolId}" style="font-size:12px;color:var(--green);margin-left:8px;display:none">Saved</span>
+      </div>` : ''
+
+    // Checklist section (analyst only)
+    let checklistHtml = ''
+    if (D.role === 'analyst') {
+      const checkItems = sc.checklist || []
+      const checkRows = checkItems.map((item, idx) => {
+        const checked = item.done ? 'checked' : ''
+        return `<div class="sa-checklist-item">
+          <input type="checkbox" ${checked} onchange="toggleChecklistItem('${sc.id}',${idx},this.checked)" />
+          <span style="${item.done ? 'text-decoration:line-through;color:var(--muted)' : ''}">${item.label || item}</span>
+        </div>`
+      }).join('')
+
+      checklistHtml = `<div style="padding:14px 22px;border-top:1px solid var(--border)">
+        <div class="sa-sec-lbl">Checklist</div>
+        ${checkRows || '<div style="font-size:12px;color:var(--muted)">No checklist items.</div>'}
+        <div style="margin-top:14px">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:4px">Latest Update (auto-saves)</div>
+          <textarea class="sa-latest-update-edit" id="lu-${sc.id}" rows="2" oninput="scheduleUpdateSave('${sc.id}')">${sc.latest_update || ''}</textarea>
+        </div>
+      </div>`
+    }
 
     return `<div class="sa-card">
       <div class="sa-card-head">
         <div>
           <div class="sa-card-name">${sc.school_name}</div>
-          <div class="sa-card-meta">${sc.country||'UK'}</div>
+          <div class="sa-card-meta">${sc.country||'UK'}${sc.region ? ' · '+sc.region : ''}</div>
           <div class="sa-card-fee">${feeStr}</div>
-          ${fitBar}
+          ${fitStars}
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
           <span class="sa-role ${priorityCls[sc.priority]||'role-support'}">${priorityLabel[sc.priority]||sc.priority}</span>
-          <span class="sa-status" style="color:${statusColour[sc.application_status]||'var(--muted)'}">● ${sc.application_status.charAt(0).toUpperCase()+sc.application_status.slice(1)}</span>
+          <span class="sa-status" style="color:${statusColour[sc.application_status]||'var(--muted)'}">· ${(sc.application_status||'').charAt(0).toUpperCase()+(sc.application_status||'').slice(1)}</span>
         </div>
       </div>
       <div class="sa-pipeline">${pip}</div>
-      <div class="sa-body">
-        <div class="sa-col">
-          <div class="sa-sec-lbl">Timeline</div>
-          ${deadline ? `<div class="sa-ev-row"><div class="sa-ev-lbl">${deadline}</div></div>` : '<div style="font-size:12px;color:var(--muted)">No deadline set</div>'}
+      <div class="sa-why">
+        <div class="sa-sec-lbl">Why This School</div>
+        ${whyHtml}
+        <div style="margin-top:8px">
+          <a href="${searchUrl}" target="_blank" class="btn-sm" style="font-size:11px">Visit Website →</a>
         </div>
-        <div class="sa-col">
-          <div class="sa-sec-lbl">Consultant Note</div>
-          <div class="sa-note">${sc.notes||'—'}</div>
-        </div>
+        ${updateHtml}
       </div>
+      <div class="sa-timeline-panel" id="tl-panel-${schoolId}">
+        <div class="sa-sec-lbl" style="margin-bottom:12px">Timeline</div>
+        ${tlRows || '<div style="font-size:12px;color:var(--muted)">No timeline items yet.</div>'}
+        ${addForm}
+      </div>
+      ${checklistHtml}
       <div class="sa-actions">
         <a href="https://line.me/R/ti/p/@linkedu" target="_blank" class="btn-sm btn-sm-primary">Ask Consultant</a>
+        <button class="btn-sm" onclick="toggleTimeline('${schoolId}')">View Timeline</button>
       </div>
     </div>`
   }).join('')
@@ -1519,7 +1781,8 @@ async function saveSection(id, fields) {
     // Update local D.student with saved values
     Object.assign(D.student, fields.student_name !== undefined ? {
       studentName: fields.student_name, preferredName: fields.preferred_name,
-      dob: fields.dob, nationality: fields.nationality
+      dob: fields.dob, nationality: fields.nationality,
+      parentName: fields.parent_name, parentEmail: fields.parent_email, parentPhone: fields.parent_phone
     } : fields.current_school !== undefined ? {
       currentSchool: fields.current_school, currentYearGroup: fields.current_year_group,
       curriculum: fields.curriculum, englishLevel: fields.english_level
@@ -1588,16 +1851,22 @@ function renderProfile() {
     ${field('Preferred Name', p.preferredName)}
     ${field('Date of Birth', p.dob ? fmtDate(p.dob) : '')}
     ${field('Nationality', p.nationality)}
+    ${field('Parent / Guardian Name', p.parentName)}
+    ${field('Parent Email', p.parentEmail)}
+    ${field('Parent Phone', p.parentPhone)}
   </div>`
   const s1edit = `<div class="prof-edit-grid">
     <div class="prof-edit-field"><label>Full Name</label><input id="pe-name" value="${p.studentName||''}" /></div>
     <div class="prof-edit-field"><label>Preferred Name</label><input id="pe-pname" value="${p.preferredName||''}" /></div>
     <div class="prof-edit-field"><label>Date of Birth</label><input type="date" id="pe-dob" value="${p.dob||''}" /></div>
     <div class="prof-edit-field"><label>Nationality</label><input id="pe-nat" value="${p.nationality||''}" /></div>
+    <div class="prof-edit-field"><label>Parent / Guardian Name</label><input id="pe-parent-name" value="${p.parentName||''}" /></div>
+    <div class="prof-edit-field"><label>Parent Email</label><input type="email" id="pe-parent-email" value="${p.parentEmail||''}" /></div>
+    <div class="prof-edit-field"><label>Parent Phone</label><input id="pe-parent-phone" value="${p.parentPhone||''}" /></div>
   </div>
   <div class="prof-edit-actions">
     <button class="btn-primary btn-sm" id="prof-savebtn-personal"
-      onclick="saveSection('personal',{student_name:$id('pe-name').value,preferred_name:$id('pe-pname').value,dob:$id('pe-dob').value,nationality:$id('pe-nat').value})">Save</button>
+      onclick="saveSection('personal',{student_name:$id('pe-name').value,preferred_name:$id('pe-pname').value,dob:$id('pe-dob').value,nationality:$id('pe-nat').value,parent_name:$id('pe-parent-name').value,parent_email:$id('pe-parent-email').value,parent_phone:$id('pe-parent-phone').value})">Save</button>
     <button class="btn-sm" onclick="cancelSection('personal')">Cancel</button>
   </div>`
 
@@ -2626,6 +2895,132 @@ async function submitDoc() {
   } else {
     msg.className = 'form-msg error'; msg.textContent = 'Submission failed. Please try again.'
   }
+}
+
+// ── School card v2 helpers ────────────────────────────────────────────────────
+
+function toggleTimeline(schoolId) {
+  const panel = $id('tl-panel-' + schoolId)
+  if (!panel) return
+  panel.classList.toggle('open')
+}
+
+function calendarLink(title, date, notes, parentEmail) {
+  if (!date) return '#'
+  // Format date as YYYYMMDD for Google Calendar
+  const d = new Date(date)
+  const pad = n => String(n).padStart(2, '0')
+  const ymd = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`
+  const dateStr = `${ymd}/${ymd}`
+  let url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${dateStr}`
+  if (notes) url += `&details=${encodeURIComponent(notes)}`
+  if (parentEmail) url += `&add=${encodeURIComponent(parentEmail)}`
+  return url
+}
+
+async function addTimelineItem(schoolId, studentSchoolId) {
+  const titleEl = $id('tl-title-' + schoolId)
+  const dateEl  = $id('tl-date-'  + schoolId)
+  const notesEl = $id('tl-notes-' + schoolId)
+  const msgEl   = $id('tl-msg-'   + schoolId)
+  if (!titleEl) return
+  const title = titleEl.value.trim()
+  if (!title) { if (msgEl) { msgEl.textContent = 'Title required'; msgEl.style.color = 'var(--red)'; msgEl.style.display = 'inline' } return }
+
+  try {
+    const res = await fetch('/api/school-timeline', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': window._adminSecret || '' },
+      body: JSON.stringify({
+        student_school_id: studentSchoolId,
+        student_id: D.student.id,
+        title,
+        date: dateEl.value || null,
+        notes: notesEl.value.trim() || null,
+        item_type: 'custom',
+      })
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Failed to save')
+
+    // Clear inputs
+    titleEl.value = ''; dateEl.value = ''; notesEl.value = ''
+    if (msgEl) { msgEl.textContent = 'Saved'; msgEl.style.color = 'var(--green)'; msgEl.style.display = 'inline'; setTimeout(() => { msgEl.style.display = 'none' }, 2500) }
+
+    // Refresh student data and re-render
+    const { data: { session } } = await sb.auth.getSession()
+    if (session) {
+      const fresh = await loadData(session.access_token)
+      D = fresh; golfRounds = D.golfRounds || []
+      try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {}
+      renderSchools()
+    }
+  } catch(err) {
+    if (msgEl) { msgEl.textContent = err.message; msgEl.style.color = 'var(--red)'; msgEl.style.display = 'inline' }
+  }
+}
+
+async function deleteTimelineItem(itemId, schoolId) {
+  if (!confirm('Delete this timeline item?')) return
+  try {
+    const res = await fetch('/api/school-timeline', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': window._adminSecret || '' },
+      body: JSON.stringify({ id: itemId })
+    })
+    if (!res.ok) { const j = await res.json(); throw new Error(j.error || 'Delete failed') }
+
+    const { data: { session } } = await sb.auth.getSession()
+    if (session) {
+      const fresh = await loadData(session.access_token)
+      D = fresh; golfRounds = D.golfRounds || []
+      try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {}
+      renderSchools()
+    }
+  } catch(err) {
+    alert('Could not delete: ' + err.message)
+  }
+}
+
+// Checklist toggle (analyst only)
+let _checklistSaveTimers = {}
+async function toggleChecklistItem(studentSchoolId, idx, done) {
+  const sc = (D.schools || []).find(s => s.id === studentSchoolId)
+  if (!sc) return
+  const checklist = (sc.checklist || []).slice()
+  if (checklist[idx] && typeof checklist[idx] === 'object') {
+    checklist[idx] = { ...checklist[idx], done }
+  }
+  // Optimistic local update
+  sc.checklist = checklist
+
+  try {
+    await fetch('/api/school-progress', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': window._adminSecret || '' },
+      body: JSON.stringify({ student_school_id: studentSchoolId, checklist })
+    })
+  } catch(e) { console.error('toggleChecklistItem error:', e) }
+}
+
+let _updateSaveTimers = {}
+function scheduleUpdateSave(studentSchoolId) {
+  clearTimeout(_updateSaveTimers[studentSchoolId])
+  _updateSaveTimers[studentSchoolId] = setTimeout(async () => {
+    const el = $id('lu-' + studentSchoolId)
+    if (!el) return
+    const latest_update = el.value.trim()
+    try {
+      await fetch('/api/school-progress', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': window._adminSecret || '' },
+        body: JSON.stringify({ student_school_id: studentSchoolId, latest_update })
+      })
+      // Update local data
+      const sc = (D.schools || []).find(s => s.id === studentSchoolId)
+      if (sc) { sc.latest_update = latest_update; sc.latest_update_at = new Date().toISOString() }
+    } catch(e) { console.error('scheduleUpdateSave error:', e) }
+  }, 1200)
 }
 
 function renderAll() {
