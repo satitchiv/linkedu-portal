@@ -2182,11 +2182,19 @@ async function saveSection(id, fields) {
   btn.disabled = true
   btn.textContent = 'Saving…'
   try {
-    const { data: { session } } = await sb.auth.getSession()
+    const reqHeaders = { 'Content-Type': 'application/json' }
+    let payload = fields
+    if (isAnalystView) {
+      reqHeaders['X-Admin-Secret'] = window._adminSecret
+      payload = { ...fields, student_id: D.student.id }
+    } else {
+      const { data: { session } } = await sb.auth.getSession()
+      reqHeaders['Authorization'] = `Bearer ${session.access_token}`
+    }
     const res = await fetch('/api/update-student', {
       method: 'PATCH',
-      headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(fields)
+      headers: reqHeaders,
+      body: JSON.stringify(payload)
     })
     const json = await res.json()
     if (!res.ok) throw new Error(json.error || 'Save failed')
@@ -2220,11 +2228,19 @@ async function saveSection(id, fields) {
 }
 
 async function saveNotesField(dbField, studentField, value) {
-  const { data: { session } } = await sb.auth.getSession()
+  const reqHeaders = { 'Content-Type': 'application/json' }
+  let payload = { [dbField]: value }
+  if (isAnalystView) {
+    reqHeaders['X-Admin-Secret'] = window._adminSecret
+    payload = { ...payload, student_id: D.student.id }
+  } else {
+    const { data: { session } } = await sb.auth.getSession()
+    reqHeaders['Authorization'] = `Bearer ${session.access_token}`
+  }
   const res = await fetch('/api/update-student', {
     method: 'PATCH',
-    headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ [dbField]: value })
+    headers: reqHeaders,
+    body: JSON.stringify(payload)
   })
   const json = await res.json()
   if (!res.ok) throw new Error(json.error || 'Save failed')
@@ -2297,17 +2313,19 @@ async function saveIntakeSection() {
   const referralNote = ($id('pe-referral') || {}).value || ''
 
   try {
-    const { data: { session } } = await sb.auth.getSession()
+    const reqHeaders = { 'Content-Type': 'application/json' }
+    const payload = { services_interested: services, school_types_interested: schoolTypes, courses_interested: courses, heard_from: heardFrom, referral_note: referralNote }
+    if (isAnalystView) {
+      reqHeaders['X-Admin-Secret'] = window._adminSecret
+      payload.student_id = D.student.id
+    } else {
+      const { data: { session } } = await sb.auth.getSession()
+      reqHeaders['Authorization'] = `Bearer ${session.access_token}`
+    }
     const res = await fetch('/api/update-student', {
       method: 'PATCH',
-      headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        services_interested:    services,
-        school_types_interested: schoolTypes,
-        courses_interested:     courses,
-        heard_from:             heardFrom,
-        referral_note:          referralNote,
-      })
+      headers: reqHeaders,
+      body: JSON.stringify(payload)
     })
     const json = await res.json()
     if (!res.ok) throw new Error(json.error || 'Save failed')
