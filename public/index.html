@@ -1112,7 +1112,6 @@ let userRole = 'parent'
 // Analyst view = no ?view=parent in URL. Used to gate consultant-only controls.
 const isAnalystView = !window.location.search.includes('view=parent')
 if (isAnalystView) window._adminSecret = 'linkedu-admin-2026'
-if (!isAnalystView) { const svcBtn = document.getElementById('tab-btn-services'); if (svcBtn) svcBtn.style.display = 'none' }
 
 // ── Utilities ───────────────────────────────────────────────────────────────
 function $id(id) { return document.getElementById(id) }
