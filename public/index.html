@@ -969,14 +969,24 @@
     .jny-update { font-size: 11px; color: #27ae60; margin-top: 3px; font-style: italic; }
     .jny-spine-item.done .jny-spine-title { color: #444; }
     .jny-spine-item.done .jny-spine-school { color: #444; }
-    /* Journey overview */
-    .jny-overview { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0 10px; }
-    .jny-ov-stat { background: #161616; border-radius: 6px; padding: 12px 18px; min-width: 72px; }
-    .jny-ov-num { font-size: 22px; font-weight: 700; color: var(--gold); }
-    .jny-ov-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 2px; }
-    .jny-ov-next { margin: 8px 0 4px; padding: 8px 12px; background: #161616; border-radius: 4px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
-    .jny-school-pill { display: inline-flex; align-items: center; gap: 5px; background: #161616; border-radius: 4px; padding: 3px 9px; margin: 2px; font-size: 12px; color: #aaa; }
-    .jny-school-pill .pill-stage { color: var(--gold); font-weight: 700; font-size: 11px; }
+    /* Schools at a Glance */
+    .jny-glance { margin: 10px 0 24px; }
+    .jny-glance-header { display: flex; align-items: center; gap: 12px; padding-bottom: 6px; border-bottom: 1px solid #1e1e1e; margin-bottom: 2px; }
+    .jny-glance-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid #161616; }
+    .jny-glance-row:last-child { border-bottom: none; }
+    .jny-glance-name { font-size: 13px; color: #eee; width: 160px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .jny-glance-name-ph { width: 160px; flex-shrink: 0; }
+    .jny-glance-pipe { display: flex; align-items: center; flex: 1; min-width: 0; }
+    .jny-gp-step { display: flex; align-items: center; flex: 1; }
+    .jny-gp-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .jny-gp-dot.gp-done   { background: var(--gold); }
+    .jny-gp-dot.gp-active { background: var(--gold); box-shadow: 0 0 0 3px rgba(184,150,46,0.22); }
+    .jny-gp-dot.gp-up     { background: #1e1e1e; border: 1.5px solid #333; }
+    .jny-gp-line { flex: 1; height: 1px; background: #252525; min-width: 2px; }
+    .jny-glance-stage { font-size: 10px; color: var(--gold); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; width: 74px; flex-shrink: 0; text-align: right; }
+    .jny-glance-stage-ph { width: 74px; flex-shrink: 0; }
+    .jny-gp-abbr-row { gap: 0; }
+    .jny-gp-abbr { flex: 1; font-size: 9px; color: #444; text-align: center; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; }
     /* Abandoned school card */
     .sa-card.abandoned { opacity: 0.45; border-color: #1a1a1a; }
 
@@ -1502,33 +1512,55 @@ function renderOverview() {
 
 // ── Journey ───────────────────────────────────────────────────────────────────
 function renderJourney() {
-  // ── Overview panel ─────────────────────────────────────────────────────────
+  // ── Schools at a Glance ────────────────────────────────────────────────────
   const activeSchools = (D.schools || []).filter(s => s.application_status !== 'abandoned')
-  const stsLabelMap = { researching:'Researching', applied:'Applied', interview:'Interview', offer:'Offer Received', visit:'Visit Booked', accepted:'Accepted', visa:'VISA', tb_test:'TB Test', guardianship:'Guardianship', enrolled:'Enrolled' }
-  const stageCounts = {}
-  activeSchools.forEach(s => {
-    const lbl = stsLabelMap[s.application_status] || s.application_status || 'Researching'
-    stageCounts[lbl] = (stageCounts[lbl] || 0) + 1
-  })
-  const stageBreakdown = Object.entries(stageCounts)
-    .map(([lbl, n]) => `<span class="jny-school-pill"><span class="pill-stage">${n}×</span> ${lbl}</span>`)
-    .join('')
+  const GLANCE_STAGES = [
+    { key:'researching', abbr:'Research' },
+    { key:'applied',     abbr:'Applied'  },
+    { key:'interview',   abbr:'Interview'},
+    { key:'offer',       abbr:'Offer'    },
+    { key:'visit',       abbr:'Visit'    },
+    { key:'accepted',    abbr:'Accepted' },
+    { key:'visa',        abbr:'VISA'     },
+    { key:'tb_test',     abbr:'TB Test'  },
+    { key:'guardianship',abbr:'Guardian' },
+    { key:'enrolled',    abbr:'Enrolled' },
+  ]
+  const GLANCE_MAP = { researching:0,applied:1,interview:2,offer:3,visit:4,accepted:5,visa:6,tb_test:7,guardianship:8,enrolled:9 }
 
-  const nextDeadline = activeSchools
-    .filter(s => s.deadline && daysUntil(s.deadline) >= 0)
-    .sort((a,b) => daysUntil(a.deadline) - daysUntil(b.deadline))[0]
-  const deadlineHtml = nextDeadline
-    ? `<div class="jny-ov-next"><span style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.1em">Next deadline</span> <span style="color:#eee;font-size:13px;margin-left:8px">${nextDeadline.school_name} — ${fmtDate(nextDeadline.deadline)}</span> <span class="jny-days-badge ${daysUntil(nextDeadline.deadline)<=7?'urgent':'soon'}" style="margin-left:6px">${daysUntil(nextDeadline.deadline)}d</span></div>`
-    : ''
+  const glanceRows = activeSchools.map(sc => {
+    const cur = GLANCE_MAP[sc.application_status] ?? 0
+    const curLabel = GLANCE_STAGES[cur] ? GLANCE_STAGES[cur].abbr : sc.application_status
+    const dots = GLANCE_STAGES.map((s, i) => {
+      const cls = i < cur ? 'gp-done' : i === cur ? 'gp-active' : 'gp-up'
+      const isLast = i === GLANCE_STAGES.length - 1
+      return `<div class="jny-gp-step">
+        <div class="jny-gp-dot ${cls}"></div>
+        ${!isLast ? '<div class="jny-gp-line"></div>' : ''}
+      </div>`
+    }).join('')
+    return `<div class="jny-glance-row">
+      <div class="jny-glance-name">${sc.school_name}</div>
+      <div class="jny-glance-pipe">${dots}</div>
+      <div class="jny-glance-stage">${curLabel}</div>
+    </div>`
+  }).join('')
 
-  let html = `<div class="section-title">Overview</div>
-    <div class="jny-overview">
-      <div class="jny-ov-stat"><div class="jny-ov-num">${activeSchools.length}</div><div class="jny-ov-lbl">Schools</div></div>
-      <div class="jny-ov-stat"><div class="jny-ov-num">${activeSchools.filter(s=>['applied','interview','offer','accepted','visa','tb_test','guardianship','enrolled'].includes(s.application_status)).length}</div><div class="jny-ov-lbl">Applied+</div></div>
-      <div class="jny-ov-stat"><div class="jny-ov-num" style="color:var(--amber)">${D.student.targetEntryYear || '—'}</div><div class="jny-ov-lbl">Target Year</div></div>
-    </div>
-    ${stageBreakdown ? `<div style="margin-bottom:6px">${stageBreakdown}</div>` : ''}
-    ${deadlineHtml}`
+  const abbrRow = GLANCE_STAGES.map(s =>
+    `<div class="jny-gp-abbr">${s.abbr}</div>`
+  ).join('')
+
+  let html = `<div class="section-title">Schools at a Glance</div>
+    <div class="jny-glance">
+      ${activeSchools.length
+        ? `<div class="jny-glance-header">
+             <div class="jny-glance-name-ph"></div>
+             <div class="jny-glance-pipe jny-gp-abbr-row">${abbrRow}</div>
+             <div class="jny-glance-stage-ph"></div>
+           </div>
+           ${glanceRows}`
+        : '<div class="empty">No schools yet.</div>'}
+    </div>`
 
   // ── School Timeline — vertical spine ──────────────────────────────────────
   const stsMapJ = { researching:0, applied:1, interview:2, offer:3, visit:4, accepted:5, visa:6, tb_test:7, guardianship:8, enrolled:9 }
