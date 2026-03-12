@@ -2131,10 +2131,7 @@ function renderServices() {
     ? svcs.map(s => {
         const def = SERVICE_DEFS[s.trim()] || { desc: 'Included in your package.' }
         return `<div class="svc-card svc-active">
-          <div class="svc-head">
-            <div class="svc-name">${s}</div>
-            <span class="svc-badge">Active</span>
-          </div>
+          <div class="svc-name">${s}</div>
           <div class="svc-desc">${def.desc}</div>
         </div>`
       }).join('')
@@ -2148,10 +2145,7 @@ function renderServices() {
     addOnHtml = addOnKeys.length
       ? `<div class="section-title" style="margin-top:28px">Available Add-ons</div>
          ${addOnKeys.map(s => `<div class="svc-card svc-inactive">
-           <div class="svc-head">
-             <div class="svc-name">${s}</div>
-             <span class="svc-badge svc-badge-off">Not included</span>
-           </div>
+           <div class="svc-name">${s}</div>
            <div class="svc-desc">${SERVICE_DEFS[s].desc}</div>
          </div>`).join('')}
          <div style="margin-top:18px">
@@ -2164,10 +2158,7 @@ function renderServices() {
       const def = SERVICE_DEFS[s] || { desc: '' }
       const isActive = activeSet.has(s)
       return `<div class="svc-card ${isActive ? 'svc-active' : 'svc-inactive'}">
-        <div class="svc-head">
-          <div class="svc-name">${s}</div>
-          <span class="svc-badge ${isActive ? '' : 'svc-badge-off'}">${isActive ? 'Active' : 'Not included'}</span>
-        </div>
+        <div class="svc-name">${s}</div>
         <div class="svc-desc">${def.desc}</div>
       </div>`
     }).join('')
