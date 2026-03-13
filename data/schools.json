@@ -1987,7 +1987,7 @@
     "region": "South East",
     "type": "Full Boarding",
     "gender": "Boys",
-    "fee": 2025,
+    "fee": 63300,
     "entry": [
       "Year 9",
       "Year 10",
@@ -2584,7 +2584,7 @@
       "Year 12"
     ],
     "gcse": 56,
-    "alevel": 4100,
+    "alevel": 41,
     "oxbridge": 0,
     "sports": [
       "Football",

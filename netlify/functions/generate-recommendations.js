@@ -89,12 +89,18 @@ function scoreSchool(school, student) {
     if (fee <= budget) {
       score += 30
       reasons.push(`Fee £${fee.toLocaleString()}/yr fits within budget of £${budget.toLocaleString()}`)
-    } else if (fee <= budget * 1.15) {
+    } else if (fee <= budget * 1.20) {
       score += 15
-      reasons.push(`Fee £${fee.toLocaleString()}/yr is slightly over budget (within 15%) — scholarship may help`)
+      reasons.push(`Fee £${fee.toLocaleString()}/yr is slightly over budget (within 20%) — scholarship may help`)
     } else {
       return null // hard exclude — too expensive
     }
+  }
+
+  // ── Academic floor: exclude weak schools for university-focused students ──
+  const academicStyleEarly = student.academicStyle || 'unknown'
+  if (academicStyleEarly === 'academic' && school.alevel !== null && school.alevel < 30) {
+    return null // hard exclude — A*-A rate too low for university-focused student
   }
 
   // ── 2. Sport match (25pts) ────────────────────────────────────────────────
