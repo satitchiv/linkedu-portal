@@ -98,6 +98,9 @@ function scoreSchool(school, student) {
   }
 
   // ── 2. Sport match (25pts) ────────────────────────────────────────────────
+  const hasMedical = /^MEDICAL:/i.test(student.sportNotes || '')
+  const coreSportCount = (school.coreSports || []).length
+
   if (student.primarySport) {
     const sport = student.primarySport
     const coreSports = school.coreSports || []
@@ -118,6 +121,24 @@ function scoreSchool(school, student) {
       reasons.push(`${sport} is available as a general sport — less structured than a core programme`)
     } else {
       reasons.push(`${sport} not listed in this school's sports programme`)
+    }
+
+    // Medical flag — warn even if sport matches
+    if (hasMedical && coreSportCount >= 4) {
+      const medicalDetail = (student.sportNotes || '').split('.')[0]
+      reasons.push(`MEDICAL FLAG: ${medicalDetail} — confirm physical demands of sport programme with family before applying`)
+    }
+  } else {
+    // No primary sport — penalise sport-identity schools
+    if (coreSportCount >= 4) {
+      if (hasMedical) {
+        score -= 20
+        const medicalDetail = (student.sportNotes || '').split('.')[0]
+        reasons.push(`MEDICAL FLAG: ${medicalDetail} — this school has a strong sport identity (${coreSportCount} core sports). Not recommended without medical clearance.`)
+      } else {
+        score -= 10
+        reasons.push(`Student has no sport interest — school has a strong sport identity (${coreSportCount} core sports). Culture fit risk.`)
+      }
     }
   }
 
