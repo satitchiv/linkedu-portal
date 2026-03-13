@@ -82,6 +82,14 @@ function scoreSchool(school, student) {
   let score = 0
   const reasons = []
 
+  // ── School type flags ─────────────────────────────────────────────────────
+  const isSixthFormCollege = !!school.sixthFormCollege
+  const isFootballAcademy  = !!school.footballAcademy
+  const isGolfSpecialist   = !!school.golfSpecialist
+
+  // Hard exclude: football-identity school for a student with no sport interest
+  if (isFootballAcademy && !student.primarySport) return null
+
   // ── 1. Budget fit (30pts) ─────────────────────────────────────────────────
   const budget = student.budgetGBP
   const fee = school.fee
@@ -92,6 +100,10 @@ function scoreSchool(school, student) {
     } else if (fee <= budget * 1.20) {
       score += 15
       reasons.push(`Fee £${fee.toLocaleString()}/yr is slightly over budget (within 20%) — scholarship may help`)
+    } else if (isFootballAcademy || isGolfSpecialist) {
+      // Sport-specialist schools: never hard-exclude on budget — family often stretches for the right programme
+      score += 0
+      reasons.push(`Fee £${fee.toLocaleString()}/yr is over budget — specialist sport programme may justify the stretch`)
     } else {
       return null // hard exclude — too expensive
     }
@@ -129,14 +141,26 @@ function scoreSchool(school, student) {
       reasons.push(`${sport} not listed in this school's sports programme`)
     }
 
+    // Specialist programme bonus
+    const wantsGolf     = sportMatches(sport, ['golf'])
+    const wantsFootball = sportMatches(sport, ['football'])
+    if (wantsGolf && isGolfSpecialist) {
+      score += 20
+      reasons.push('Specialist golf school — dedicated programme, facilities and development pathway')
+    } else if (wantsFootball && isFootballAcademy) {
+      score += 20
+      reasons.push('Football academy school — structured pathway with professional club links')
+    }
+
     // Medical flag — warn even if sport matches
     if (hasMedical && coreSportCount >= 4) {
       const medicalDetail = (student.sportNotes || '').split('.')[0]
       reasons.push(`MEDICAL FLAG: ${medicalDetail} — confirm physical demands of sport programme with family before applying`)
     }
   } else {
-    // No primary sport — penalise sport-identity schools
-    if (coreSportCount >= 4) {
+    // No primary sport
+    // Sixth form colleges: light sport only — no penalty
+    if (!isSixthFormCollege && coreSportCount >= 4) {
       if (hasMedical) {
         score -= 20
         const medicalDetail = (student.sportNotes || '').split('.')[0]
@@ -146,6 +170,14 @@ function scoreSchool(school, student) {
         reasons.push(`Student has no sport interest — school has a strong sport identity (${coreSportCount} core sports). Culture fit risk.`)
       }
     }
+  }
+
+  // ── Sixth form college bonus for no-sport students (15pts) ───────────────
+  // These schools exist purely for university placement — if student has no sport,
+  // they're an excellent fit regardless of budget position
+  if (isSixthFormCollege && !student.primarySport) {
+    score += 15
+    reasons.push('Sixth form college — focused entirely on academic results and university placement')
   }
 
   // ── 3. Scholarship (10pts monetary / 5pts honorary / 0pts none) ──────────
@@ -230,6 +262,8 @@ function scoreSchool(school, student) {
     if (ratio != null) reasons.push(`${Math.round(ratio)}% boarding ratio — boarding mix not a priority for this family`)
     else reasons.push(`Boarding ratio not a priority for this family`)
   } else if (ratio != null) {
+    // Sport-specialist schools: family chose for sport, not boarding culture — floor at 8pts
+    const minBoard = (isGolfSpecialist || isFootballAcademy) ? 8 : 0
     if (ratio >= 80) {
       score += 15
       reasons.push(`${Math.round(ratio)}% boarding ratio — predominantly boarding community`)
@@ -240,7 +274,7 @@ function scoreSchool(school, student) {
       score += 8
       reasons.push(`${Math.round(ratio)}% boarding ratio — mixed boarding and day`)
     } else {
-      score += 3
+      score += Math.max(3, minBoard)
       reasons.push(`${Math.round(ratio)}% boarding ratio — mostly day school with boarding available`)
     }
   }
