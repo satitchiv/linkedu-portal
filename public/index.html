@@ -2696,7 +2696,31 @@ function renderProfile() {
     ${secWrap('goals',    '3. Goals & Destination', s3read, s3edit)}
     ${secWrap('sport',    '4. Sport Profile', s4read, s4edit)}
     ${readOnlySec('5. Academic Record', s5read)}
-    ${readOnlySec('6. Certificates & Achievements', s7read)}`
+    ${readOnlySec('6. Certificates & Achievements', s7read)}
+    ${isAnalystView ? `
+    <div style="margin-top:32px;border:1.5px solid #2a2a2a;border-radius:10px;background:#0f0f0f;padding:20px 22px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+        <div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)">Data Dump</div>
+          <div style="font-size:11px;color:#555;margin-top:3px">Analyst only · paste raw call notes, emails, anything — never lost</div>
+        </div>
+        <button onclick="showNotesEdit('dump')" style="background:none;border:1px solid #2a2a2a;border-radius:4px;color:#777;font-size:11px;cursor:pointer;padding:4px 12px">Edit</button>
+      </div>
+      <div id="dump-read">
+        ${p.consultantNotes
+          ? `<pre style="font-size:12px;color:#aaa;white-space:pre-wrap;word-break:break-word;line-height:1.7;background:#161616;border-radius:6px;padding:14px 16px;margin:0;font-family:'Courier New',monospace;border-left:3px solid #2a2a2a">${p.consultantNotes.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>
+             <button onclick="showNotesEdit('dump')" style="margin-top:10px;background:none;border:1px solid #2a2a2a;border-radius:4px;color:#555;font-size:11px;cursor:pointer;padding:4px 12px">Edit</button>`
+          : `<button onclick="showNotesEdit('dump')" style="width:100%;padding:14px;background:#161616;border:1.5px dashed #2a2a2a;border-radius:8px;color:#444;font-size:13px;cursor:pointer;text-align:center">+ Paste raw notes here</button>`}
+      </div>
+      <div id="dump-edit" style="display:none">
+        <textarea id="dump-ta" rows="14" style="width:100%;padding:14px 16px;border:1.5px solid #333;border-radius:8px;font-size:12px;background:#161616;color:#ccc;resize:vertical;box-sizing:border-box;font-family:'Courier New',monospace;line-height:1.7;outline:none" placeholder="Paste anything here — call notes, email threads, voice-to-text dumps, research…">${(p.consultantNotes||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+        <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+          <button onclick="submitNotesEdit('dump','consultant_notes','consultantNotes')" style="background:#1a1a1a;color:#eee;border:1px solid #333;border-radius:6px;padding:8px 20px;font-size:12px;cursor:pointer;font-weight:600">Save</button>
+          <button onclick="hideNotesEdit('dump')" style="background:none;border:1px solid #222;border-radius:6px;padding:8px 16px;font-size:12px;cursor:pointer;color:#555">Cancel</button>
+          <span id="dump-msg" style="font-size:11px;color:var(--gold);margin-left:4px"></span>
+        </div>
+      </div>
+    </div>` : ''}`
 
   $id('profile-content').innerHTML = html
 }
