@@ -40,6 +40,15 @@ exports.handler = async (event) => {
       const { student_id, ...fields } = body
       if (!student_id) return { statusCode: 400, headers, body: JSON.stringify({ error: 'student_id is required' }) }
 
+      // Normalise destination: string → array
+      if (typeof fields.destination === 'string') {
+        fields.destination = fields.destination.split(',').map(s => s.trim()).filter(Boolean)
+      }
+
+      // Normalise integer fields: empty string → null
+      if (fields.budget_gbp === '' || fields.budget_gbp === undefined) fields.budget_gbp = null
+      else if (fields.budget_gbp !== null) fields.budget_gbp = parseInt(fields.budget_gbp) || null
+
       const updates = { ...fields, updated_at: new Date().toISOString() }
       if (Object.keys(fields).length === 0) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: 'No fields to update' }) }
@@ -68,7 +77,14 @@ exports.handler = async (event) => {
 
     const updates = {}
     for (const [key, val] of Object.entries(body)) {
-      if (PARENT_EDITABLE.has(key)) updates[key] = val
+      if (!PARENT_EDITABLE.has(key)) continue
+      if (key === 'destination' && typeof val === 'string') {
+        updates[key] = val.split(',').map(s => s.trim()).filter(Boolean)
+      } else if (key === 'budget_gbp') {
+        updates[key] = (val === '' || val === undefined || val === null) ? null : (parseInt(val) || null)
+      } else {
+        updates[key] = val
+      }
     }
 
     if (Object.keys(updates).length === 0) {

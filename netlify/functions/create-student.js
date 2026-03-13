@@ -11,35 +11,55 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
 async function extractFromDump(dump) {
   const prompt = `You are extracting student profile data for a UK boarding school placement consultant in Thailand.
 
-Extract all available information from the text below. Return ONLY a valid JSON object (no markdown). Use null for anything not mentioned.
+Extract all available information from the text below. Return ONLY a valid JSON object (no markdown, no code fences). Use null for anything not mentioned.
+
+STRICT RULES — read carefully before extracting:
+
+1. "destination" — COUNTRIES ONLY. Never include cities (Melbourne, London, etc.) or states. Valid values: "UK", "Australia", "USA", "Canada", "Switzerland", "Singapore". If a city is mentioned (e.g. Melbourne), map it to the country (Australia). Default to ["UK"] if unclear.
+
+2. "target_year_group" — The UK year group the student will ENTER at boarding school, NOT their next year group at current school. If a student is in Year 7 now and wants to board from Year 9, target_year_group = "Year 9". If the text says "wants to go next year" and they are Year 7 now, that still needs analysis — what boarding year makes sense for their age and goal? Do NOT just add 1 to current year.
+
+3. "target_entry_year" — The calendar year they plan to START boarding school (e.g. "2026", "2027").
+
+4. "sport_notes" — If ANY medical condition is mentioned (heart condition, asthma, allergy, surgery, etc.), start with "MEDICAL: [condition]" in all caps. Then add sport/activity details. If no sport interest, still capture the medical note.
+
+5. "services_interested" — ONLY include formal LinkedU services. Valid values: "Application Management", "School Selection", "Interview Prep", "English Tutoring", "Campus Visit", "Guardianship". Do NOT include activity types like "Excursions", "Summer Camp", "Fun Activities", "Boarding".
+
+6. "courses_interested" — Academic programmes only: "A-Levels", "IB", "IGCSE", "BTEC", "Pre-A", "Foundation". Not hobbies or extracurriculars.
+
+7. "academic_notes" — Include any academic concerns, learning difficulties, tutor needs, exam history, or subject strengths/weaknesses.
+
+8. "goal" — What the family ultimately wants to achieve (independence, top university, specific career, safe environment, etc.).
+
+9. "target_schools" — Only actual named schools. Do not guess or invent school names.
 
 {
   "student_name": "Full legal name",
-  "preferred_name": "Nickname or first name",
+  "preferred_name": "Nickname or first name used daily",
   "dob": "YYYY-MM-DD or null",
   "nationality": "e.g. Thai",
   "current_school": "School name",
-  "current_year_group": "e.g. Year 9",
+  "current_year_group": "e.g. Year 7",
   "curriculum": "e.g. Thai, IB, IGCSE, British",
   "english_level": "e.g. B2, Intermediate, IELTS 6.0",
-  "primary_sport": "e.g. Golf",
+  "primary_sport": "Main sport or null if none",
   "goal": "What the family wants to achieve",
   "destination": ["UK"],
   "budget_gbp": 40000,
   "target_entry_year": "2026",
-  "target_year_group": "Year 11",
+  "target_year_group": "Year 9",
   "parent_name": "Parent full name",
   "parent_email": "email@example.com or null",
   "parent_phone": "+66...",
   "heard_from": "How they found LinkedU",
   "referral_note": "Referrer name if any",
-  "sport_notes": "Sport-related details",
-  "academic_notes": "Academic notes or concerns",
+  "sport_notes": "MEDICAL: [condition] if any. Then sport details.",
+  "academic_notes": "Academic notes, concerns, subjects, tutoring needs",
   "school_types_interested": ["boarding"],
   "courses_interested": ["A-Levels"],
   "services_interested": ["Application Management"],
@@ -51,7 +71,8 @@ Text:
 ${dump}
 ---`
 
-  const res = await fetch(`${GEMINI_URL}?key=${process.env.GEMINI_API_KEY}`, {
+  const geminiKey = process.env.PORTAL_GEMINI_KEY || process.env.GEMINI_API_KEY
+  const res = await fetch(`${GEMINI_URL}?key=${geminiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -61,6 +82,10 @@ ${dump}
   })
 
   const json = await res.json()
+  if (json.error) {
+    console.error('Gemini API error:', JSON.stringify(json.error))
+    return {}
+  }
   const raw = json.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
   const clean = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
 
