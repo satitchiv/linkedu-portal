@@ -100,10 +100,10 @@ function scoreSchool(school, student) {
     } else if (fee <= budget * 1.20) {
       score += 15
       reasons.push(`Fee £${fee.toLocaleString()}/yr is slightly over budget (within 20%) — scholarship may help`)
-    } else if (isFootballAcademy || isGolfSpecialist) {
-      // Sport-specialist schools: never hard-exclude on budget — family often stretches for the right programme
+    } else if (isFootballAcademy || isGolfSpecialist || school.medicinePlacements) {
+      // Specialist schools: never hard-exclude on budget — family often stretches for the right programme
       score += 0
-      reasons.push(`Fee £${fee.toLocaleString()}/yr is over budget — specialist sport programme may justify the stretch`)
+      reasons.push(`Fee £${fee.toLocaleString()}/yr is over budget — specialist programme may justify the stretch`)
     } else {
       return null // hard exclude — too expensive
     }
@@ -177,6 +177,15 @@ function scoreSchool(school, student) {
     }
   }
 
+  // ── Medicine placements bonus (15pts) ────────────────────────────────────
+  const wantsMedicine = /medicine|medical school|doctor|dentist|pre-?med/i.test(
+    [student.goal || '', student.academicNotes || '', student.sportNotes || ''].join(' ')
+  )
+  if (school.medicinePlacements && wantsMedicine) {
+    score += 20
+    reasons.push('Strong medicine university placement record — 90%+ of applicants accepted to medical school')
+  }
+
   // ── Sixth form college bonus for no-sport students (15pts) ───────────────
   // These schools exist purely for university placement — if student has no sport,
   // they're an excellent fit regardless of budget position
@@ -243,7 +252,12 @@ function scoreSchool(school, student) {
       if (schoolBenchmark) reasons.push(`School's A*-A rate is ${schoolBenchmark}% — academic profile pending`)
     }
   } else if (schoolBenchmark) {
-    score += 12
+    // No student grades yet — score by school quality tier
+    let acadPts = 8
+    if (schoolBenchmark >= 75) acadPts = 18
+    else if (schoolBenchmark >= 55) acadPts = 14
+    else if (schoolBenchmark >= 40) acadPts = 11
+    score += acadPts
     reasons.push(`School's A*-A rate is ${schoolBenchmark}% — academic profile pending`)
   } else {
     score += 10
@@ -268,7 +282,7 @@ function scoreSchool(school, student) {
     else reasons.push(`Boarding ratio not a priority for this family`)
   } else if (ratio != null) {
     // Sport-specialist schools: family chose for sport, not boarding culture — floor at 8pts
-    const minBoard = (isGolfSpecialist || isFootballAcademy) ? 8 : 0
+    const minBoard = (isGolfSpecialist || isFootballAcademy || school.medicinePlacements) ? 8 : 0
     if (ratio >= 80) {
       score += 15
       reasons.push(`${Math.round(ratio)}% boarding ratio — predominantly boarding community`)
