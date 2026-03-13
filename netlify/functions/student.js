@@ -1,6 +1,8 @@
 // GET /api/student
-// Returns full student data from Supabase for the authenticated parent
-// Requires: Supabase JWT in Authorization header
+// Returns student data. Three auth paths:
+//   1. X-Access-Token header — token link (parent view, read-only)
+//   2. Authorization: Bearer <jwt> — Supabase JWT (parent or analyst account)
+//   3. (write ops handled by update-student.js with X-Admin-Secret)
 
 const { createClient } = require('@supabase/supabase-js')
 
@@ -9,38 +11,136 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
+// Fetch all student-related data in parallel given a student_id
+async function fetchStudentData(studentId) {
+  const [
+    studentRes,
+    academicsRes,
+    schoolsRes,
+    timelineItemsRes,
+    milestonesRes,
+    documentsRes,
+    golfRes,
+    recsRes,
+  ] = await Promise.all([
+    supabase.from('students').select('*').eq('id', studentId).single(),
+    supabase.from('student_academics').select('*').eq('student_id', studentId).order('date', { ascending: false }),
+    supabase.from('student_schools').select('*').eq('student_id', studentId).order('priority'),
+    supabase.from('school_timeline_items').select('*').eq('student_id', studentId).order('date', { ascending: true, nullsFirst: false }),
+    supabase.from('student_milestones').select('*').eq('student_id', studentId).order('date'),
+    supabase.from('student_documents').select('*').eq('student_id', studentId).order('due_date'),
+    supabase.from('golf_rounds').select('*').eq('student_id', studentId).order('date', { ascending: false }),
+    supabase.from('student_recommendations').select('*').eq('student_id', studentId).order('score', { ascending: false }),
+  ])
+
+  const s = studentRes.data || {}
+  const timelineItems = timelineItemsRes.data || []
+
+  return { s, academicsRes, schoolsRes, timelineItems, milestonesRes, documentsRes, golfRes, recsRes }
+}
+
+// Build the student object — pass isParent=true to strip admin-only fields
+function buildStudentObj(s, isParent) {
+  const obj = {
+    id:                      s.id,
+    studentName:             s.student_name || '',
+    preferredName:           s.preferred_name || '',
+    dob:                     s.dob || null,
+    nationality:             s.nationality || '',
+    currentSchool:           s.current_school || '',
+    currentYearGroup:        s.current_year_group || '',
+    curriculum:              s.curriculum || '',
+    englishLevel:            s.english_level || '',
+    primarySport:            s.primary_sport || '',
+    goal:                    s.goal || '',
+    destination:             s.destination || [],
+    budgetGBP:               s.budget_gbp || null,
+    targetEntryYear:         s.target_entry_year || '',
+    targetYearGroup:         s.target_year_group || '',
+    status:                  s.status || 'active',
+    stage:                   s.stage || '',
+    consultant:              s.assigned_consultant || '',
+    consultantMessage:       s.consultant_message || '',
+    servicesActive:          s.services_active || [],
+    photoUrl:                s.photo_url || null,
+    parentName:              s.parent_name || '',
+    parentEmail:             s.parent_email || '',
+    parentPhone:             s.parent_phone || '',
+    sportNotes:              s.sport_notes || '',
+    academicNotes:           s.academic_notes || '',
+    certNotes:               s.cert_notes || '',
+    servicesInterested:      s.services_interested || [],
+    schoolTypesInterested:   s.school_types_interested || [],
+    coursesInterested:       s.courses_interested || [],
+    heardFrom:               s.heard_from || '',
+    referralNote:            s.referral_note || '',
+  }
+  // Admin-only fields — never exposed via token link
+  if (!isParent) {
+    obj.consultantNotes = s.consultant_notes || ''
+  }
+  return obj
+}
+
 exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-Access-Token',
     'Content-Type': 'application/json',
   }
 
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' }
-  }
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' }
 
   try {
-    // Verify Supabase JWT
+    // ── Path 1: Token link (X-Access-Token header) ─────────────────────────
+    const accessToken = event.headers['x-access-token'] || event.headers['X-Access-Token']
+    if (accessToken) {
+      const { data: student, error } = await supabase
+        .from('students').select('id').eq('access_token', accessToken).single()
+
+      if (error || !student) {
+        return { statusCode: 401, headers, body: JSON.stringify({ error: 'Invalid or expired link' }) }
+      }
+
+      const { s, academicsRes, schoolsRes, timelineItems, milestonesRes, documentsRes, golfRes, recsRes } =
+        await fetchStudentData(student.id)
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          student: buildStudentObj(s, true),  // isParent = true
+          academics: (academicsRes.data || []).map(a => ({
+            id: a.id, subject: a.subject, term: a.term, date: a.date,
+            grade: a.grade, score: a.score, maxScore: a.max_score,
+            assessmentType: a.assessment_type, notes: a.notes,
+          })),
+          schools: (schoolsRes.data || []).map(sc => ({
+            ...sc,
+            timeline_items: timelineItems.filter(item => item.student_school_id === sc.id),
+          })),
+          milestones:      milestonesRes.data || [],
+          documents:       documentsRes.data  || [],
+          golfRounds:      golfRes.data       || [],
+          recommendations: recsRes.data       || [],
+          role: 'parent',
+        })
+      }
+    }
+
+    // ── Path 2: Supabase JWT ───────────────────────────────────────────────
     const token = (event.headers.authorization || '').replace('Bearer ', '')
     if (!token) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) }
 
     const { data: { user }, error: authErr } = await supabase.auth.getUser(token)
     if (authErr || !user) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Invalid token' }) }
 
-    // Get user profile + student_id
     const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
+      .from('user_profiles').select('*').eq('id', user.id).single()
 
     if (!profile) return { statusCode: 404, headers, body: JSON.stringify({ error: 'Profile not found' }) }
 
-    const studentId = profile.student_id
-
-    if (!studentId) {
-      // No student linked yet — return empty shell so portal loads
+    if (!profile.student_id) {
       return {
         statusCode: 200,
         headers,
@@ -53,94 +153,35 @@ exports.handler = async (event) => {
       }
     }
 
-    // Fetch all data in parallel
-    const [
-      studentRes,
-      academicsRes,
-      schoolsRes,
-      timelineItemsRes,
-      milestonesRes,
-      documentsRes,
-      golfRes,
-      recsRes,
-    ] = await Promise.all([
-      supabase.from('students').select('*').eq('id', studentId).single(),
-      supabase.from('student_academics').select('*').eq('student_id', studentId).order('date', { ascending: false }),
-      supabase.from('student_schools').select('*').eq('student_id', studentId).order('priority'),
-      supabase.from('school_timeline_items').select('*').eq('student_id', studentId).order('date', { ascending: true, nullsFirst: false }),
-      supabase.from('student_milestones').select('*').eq('student_id', studentId).order('date'),
-      supabase.from('student_documents').select('*').eq('student_id', studentId).order('due_date'),
-      supabase.from('golf_rounds').select('*').eq('student_id', studentId).order('date', { ascending: false }),
-      supabase.from('student_recommendations').select('*').eq('student_id', studentId).order('score', { ascending: false }),
-    ])
+    const { s, academicsRes, schoolsRes, timelineItems, milestonesRes, documentsRes, golfRes, recsRes } =
+      await fetchStudentData(profile.student_id)
 
-    // Merge timeline items onto schools
-    const timelineItems = timelineItemsRes.data || []
-
-    const s = studentRes.data || {}
+    const isParent = profile.role === 'parent'
 
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
-        student: {
-          id:                s.id,
-          studentName:       s.student_name || '',
-          preferredName:     s.preferred_name || '',
-          dob:               s.dob || null,
-          nationality:       s.nationality || '',
-          currentSchool:     s.current_school || '',
-          currentYearGroup:  s.current_year_group || '',
-          curriculum:        s.curriculum || '',
-          englishLevel:      s.english_level || '',
-          primarySport:      s.primary_sport || '',
-          goal:              s.goal || '',
-          destination:       s.destination || [],
-          budgetGBP:         s.budget_gbp || null,
-          targetEntryYear:   s.target_entry_year || '',
-          targetYearGroup:   s.target_year_group || '',
-          status:            s.status || 'active',
-          stage:             s.stage || '',
-          consultant:        s.assigned_consultant || '',
-          consultantMessage: s.consultant_message || '',
-          servicesActive:    s.services_active || [],
-          photoUrl:          s.photo_url || null,
-          parentName:        s.parent_name || '',
-          parentEmail:       s.parent_email || '',
-          parentPhone:       s.parent_phone || '',
-          sportNotes:              s.sport_notes || '',
-          academicNotes:           s.academic_notes || '',
-          certNotes:               s.cert_notes || '',
-          servicesInterested:      s.services_interested || [],
-          schoolTypesInterested:   s.school_types_interested || [],
-          coursesInterested:       s.courses_interested || [],
-          heardFrom:               s.heard_from || '',
-          referralNote:            s.referral_note || '',
-          consultantNotes:         s.consultant_notes || '',
-        },
+        student: buildStudentObj(s, isParent),
         academics: (academicsRes.data || []).map(a => ({
           id: a.id, subject: a.subject, term: a.term, date: a.date,
           grade: a.grade, score: a.score, maxScore: a.max_score,
           assessmentType: a.assessment_type, notes: a.notes,
         })),
-        schools:    (schoolsRes.data || []).map(school => ({
-          ...school,
-          timeline_items: timelineItems.filter(item => item.student_school_id === school.id),
+        schools: (schoolsRes.data || []).map(sc => ({
+          ...sc,
+          timeline_items: timelineItems.filter(item => item.student_school_id === sc.id),
         })),
         milestones:      milestonesRes.data || [],
         documents:       documentsRes.data  || [],
         golfRounds:      golfRes.data       || [],
         recommendations: recsRes.data       || [],
-        role:            profile.role,
+        role: profile.role,
       })
     }
 
   } catch (err) {
     console.error('student function error:', err)
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({ error: 'Server error', detail: err.message })
-    }
+    return { statusCode: 500, headers, body: JSON.stringify({ error: 'Server error', detail: err.message }) }
   }
 }
