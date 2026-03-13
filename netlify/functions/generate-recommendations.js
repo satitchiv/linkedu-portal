@@ -148,8 +148,8 @@ function scoreSchool(school, student) {
       score += 20
       reasons.push('Specialist golf school — dedicated programme, facilities and development pathway')
     } else if (wantsFootball && isFootballAcademy) {
-      score += 20
-      reasons.push('Football academy school — structured pathway with professional club links')
+      score += 25
+      reasons.push('Football academy school — professional club-level infrastructure and coaching')
     }
 
     // Medical flag — warn even if sport matches
@@ -161,10 +161,15 @@ function scoreSchool(school, student) {
     // No primary sport
     // Sixth form colleges: light sport only — no penalty
     if (!isSixthFormCollege && coreSportCount >= 4) {
-      if (hasMedical) {
+      if (hasMedical && (isFootballAcademy || isGolfSpecialist)) {
+        // Pure sport-identity school + medical condition = hard penalty
         score -= 20
         const medicalDetail = (student.sportNotes || '').split('.')[0]
-        reasons.push(`MEDICAL FLAG: ${medicalDetail} — this school has a strong sport identity (${coreSportCount} core sports). Not recommended without medical clearance.`)
+        reasons.push(`MEDICAL FLAG: ${medicalDetail} — this school is built around sport. Not suitable without medical clearance.`)
+      } else if (hasMedical) {
+        // General boarding school with sports — flag it but don't penalise
+        const medicalDetail = (student.sportNotes || '').split('.')[0]
+        reasons.push(`MEDICAL NOTE: ${medicalDetail} — confirm with school that reduced sports participation is accommodated`)
       } else {
         score -= 10
         reasons.push(`Student has no sport interest — school has a strong sport identity (${coreSportCount} core sports). Culture fit risk.`)
