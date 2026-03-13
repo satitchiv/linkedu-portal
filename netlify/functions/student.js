@@ -109,7 +109,7 @@ exports.handler = async (event) => {
         statusCode: 200,
         headers,
         body: JSON.stringify({
-          student: buildStudentObj(s, true),  // isParent = true
+          student: buildStudentObj(s, false),  // token view — show all fields incl. consultantNotes
           academics: (academicsRes.data || []).map(a => ({
             id: a.id, subject: a.subject, term: a.term, date: a.date,
             grade: a.grade, score: a.score, maxScore: a.max_score,

@@ -11,7 +11,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
 
 async function extractFromDump(dump) {
   const prompt = `You are extracting student profile data for a UK boarding school placement consultant in Thailand.
@@ -150,7 +150,8 @@ exports.handler = async (event) => {
     }
 
     const BASE = process.env.URL || 'https://linkedu-parent-portal.netlify.app'
-    const portalLink = `${BASE}?token=${access_token}&view=parent`
+    const analystLink = `${BASE}?token=${access_token}`
+    const parentLink  = `${BASE}?token=${access_token}&view=parent`
 
     return {
       statusCode: 200,
@@ -159,7 +160,8 @@ exports.handler = async (event) => {
         ok: true,
         student: { id: student.id, studentName: student.student_name, parentEmail: student.parent_email },
         extracted,
-        portalLink,
+        analystLink,
+        parentLink,
         schoolsCreated: Array.isArray(target_schools) ? target_schools.length : 0,
       })
     }

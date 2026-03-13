@@ -1165,18 +1165,27 @@
     </div>
 
     <div id="ns-result" style="display:none">
-      <div style="background:#0f0f0f;border:1px solid #2a2a2a;border-radius:8px;padding:20px;margin-bottom:16px">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);margin-bottom:12px">Student Created</div>
-        <div id="ns-student-name" style="font-size:18px;color:var(--text);font-family:'Playfair Display',serif;margin-bottom:4px"></div>
+      <div style="background:#0a1a0a;border:1px solid #1a3a1a;border-radius:8px;padding:16px 20px;margin-bottom:16px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#4caf50;margin-bottom:6px">Student Created Successfully</div>
+        <div id="ns-student-name" style="font-size:22px;color:var(--text);font-family:'Playfair Display',serif;margin-bottom:4px"></div>
         <div id="ns-student-meta" style="font-size:12px;color:#555"></div>
       </div>
 
-      <div style="background:#0f0f0f;border:1px solid #2a2a2a;border-radius:8px;padding:20px;margin-bottom:16px">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);margin-bottom:12px">Parent Portal Link</div>
-        <div style="font-size:11px;color:#555;margin-bottom:8px">No login required · share this link directly with the family</div>
+      <div style="background:#0f0f0f;border:1px solid #2a2a2a;border-radius:8px;padding:20px;margin-bottom:12px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);margin-bottom:6px">Your Admin View</div>
+        <div style="font-size:11px;color:#555;margin-bottom:8px">Open this to view + edit the new student profile</div>
         <div style="display:flex;gap:8px;align-items:center">
-          <input id="ns-link-input" type="text" readonly style="flex:1;background:#161616;border:1px solid #2a2a2a;border-radius:6px;padding:10px 12px;font-size:12px;color:#ccc;font-family:'Courier New',monospace;outline:none" />
-          <button onclick="copyNewStudentLink()" id="ns-copy-btn" style="background:#1a1a1a;color:var(--gold);border:1px solid #2a2a2a;border-radius:6px;padding:10px 16px;font-size:12px;cursor:pointer;white-space:nowrap">Copy Link</button>
+          <input id="ns-analyst-link-input" type="text" readonly style="flex:1;background:#161616;border:1px solid #2a2a2a;border-radius:6px;padding:8px 12px;font-size:11px;color:#ccc;font-family:'Courier New',monospace;outline:none" />
+          <button onclick="copyNsLink('ns-analyst-link-input','ns-copy-analyst')" id="ns-copy-analyst" style="background:#1a1a1a;color:var(--gold);border:1px solid #2a2a2a;border-radius:6px;padding:8px 14px;font-size:12px;cursor:pointer;white-space:nowrap">Copy</button>
+        </div>
+      </div>
+
+      <div style="background:#0f0f0f;border:1px solid #2a2a2a;border-radius:8px;padding:20px;margin-bottom:16px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#555;margin-bottom:6px">Parent Link</div>
+        <div style="font-size:11px;color:#555;margin-bottom:8px">Share with the family — no login required</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="ns-parent-link-input" type="text" readonly style="flex:1;background:#161616;border:1px solid #2a2a2a;border-radius:6px;padding:8px 12px;font-size:11px;color:#ccc;font-family:'Courier New',monospace;outline:none" />
+          <button onclick="copyNsLink('ns-parent-link-input','ns-copy-parent')" id="ns-copy-parent" style="background:#1a1a1a;color:#888;border:1px solid #2a2a2a;border-radius:6px;padding:8px 14px;font-size:12px;cursor:pointer;white-space:nowrap">Copy</button>
         </div>
       </div>
 
@@ -1210,11 +1219,11 @@ let golfRounds = []
 let currentTab = 'overview'
 let userRole = 'parent'
 
-// Analyst view = no ?view=parent AND no ?token= in URL
+// Analyst view = no ?view=parent in URL (token links without view=parent also get analyst mode)
 const _urlParams    = new URLSearchParams(window.location.search)
 const _portalToken  = _urlParams.get('token')
 const isTokenView   = !!_portalToken
-const isAnalystView = !isTokenView && !window.location.search.includes('view=parent')
+const isAnalystView = !window.location.search.includes('view=parent')
 if (isAnalystView) window._adminSecret = 'linkedu-admin-2026'
 if (!isAnalystView) { const docBtn = document.getElementById('tab-btn-documents'); if (docBtn) docBtn.style.display = 'none' }
 
@@ -4399,13 +4408,13 @@ function resetNewStudentForm() {
   $id('ns-dump').value = ''
   $id('ns-msg').textContent = ''
 }
-function copyNewStudentLink() {
-  const input = $id('ns-link-input')
+function copyNsLink(inputId, btnId) {
+  const input = $id(inputId)
+  const btn   = $id(btnId)
   if (!input) return
   navigator.clipboard.writeText(input.value).then(() => {
-    const btn = $id('ns-copy-btn')
     btn.textContent = '✓ Copied'
-    setTimeout(() => { btn.textContent = 'Copy Link' }, 2000)
+    setTimeout(() => { btn.textContent = 'Copy' }, 2000)
   })
 }
 async function createNewStudent() {
@@ -4431,15 +4440,16 @@ async function createNewStudent() {
     $id('ns-result').style.display = 'block'
     $id('ns-student-name').textContent = json.student.studentName
     $id('ns-student-meta').textContent = [
-      json.student.parentEmail ? 'Parent email: ' + json.student.parentEmail : 'No email extracted',
+      json.student.parentEmail ? 'Email: ' + json.student.parentEmail : 'No email extracted',
       json.schoolsCreated ? json.schoolsCreated + ' school(s) added' : ''
     ].filter(Boolean).join(' · ')
-    $id('ns-link-input').value = json.portalLink
+    $id('ns-analyst-link-input').value = json.analystLink
+    $id('ns-parent-link-input').value  = json.parentLink
 
     // Show extracted summary
     const e = json.extracted || {}
     const summary = Object.entries(e)
-      .filter(([k, v]) => v !== null && v !== '' && k !== 'target_schools' && !Array.isArray(v) || (Array.isArray(v) && v.length))
+      .filter(([k, v]) => v !== null && v !== '' && v !== undefined)
       .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`)
       .join('\n')
     $id('ns-extracted').textContent = summary || 'No structured data extracted.'
