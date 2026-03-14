@@ -3885,7 +3885,7 @@ async function uploadAndExtract() {
     const res = await fetch('/api/parse-report', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pdfBase64: base64, fileName: file.name, fileHash: _lastFileHash })
+      body: JSON.stringify({ pdfBase64: base64, fileName: file.name, fileHash: _lastFileHash, studentId: D.student?.id })
     })
     const json = await res.json()
 

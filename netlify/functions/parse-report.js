@@ -45,7 +45,7 @@ exports.handler = async (event) => {
     if (authErr || !user) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Invalid token' }) }
 
     const body = JSON.parse(event.body || '{}')
-    const { pdfBase64, fileName, fileHash } = body
+    const { pdfBase64, fileName, fileHash, studentId } = body
 
     if (!pdfBase64) {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'pdfBase64 is required' }) }
@@ -54,29 +54,25 @@ exports.handler = async (event) => {
       return { statusCode: 413, headers, body: JSON.stringify({ error: 'File too large. Please keep documents under 3MB.' }) }
     }
 
-    // ── Duplicate check ───────────────────────────────────────────────────────
-    if (fileHash) {
-      const { data: profile } = await supabase
-        .from('user_profiles').select('student_id').eq('id', user.id).single()
-      if (profile && profile.student_id) {
-        const { data: existing } = await supabase
-          .from('document_extractions')
-          .select('doc_name, extracted_at')
-          .eq('student_id', profile.student_id)
-          .eq('file_hash', fileHash)
-          .limit(1)
-          .single()
-        if (existing) {
-          return {
-            statusCode: 409,
-            headers,
-            body: JSON.stringify({
-              error: 'duplicate',
-              message: `This document was already uploaded as "${existing.doc_name}" on ${new Date(existing.extracted_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}.`,
-              docName: existing.doc_name,
-              extractedAt: existing.extracted_at,
-            })
-          }
+    // ── Duplicate check — scoped to the specific student being uploaded to ────
+    if (fileHash && studentId) {
+      const { data: existing } = await supabase
+        .from('document_extractions')
+        .select('doc_name, extracted_at')
+        .eq('student_id', studentId)
+        .eq('file_hash', fileHash)
+        .limit(1)
+        .single()
+      if (existing) {
+        return {
+          statusCode: 409,
+          headers,
+          body: JSON.stringify({
+            error: 'duplicate',
+            message: `This document was already uploaded as "${existing.doc_name}" on ${new Date(existing.extracted_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}.`,
+            docName: existing.doc_name,
+            extractedAt: existing.extracted_at,
+          })
         }
       }
     }
