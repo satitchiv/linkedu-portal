@@ -1196,8 +1196,8 @@
     <div id="ns-result" style="display:none">
       <div style="background:#0a1a0a;border:1px solid #1a3a1a;border-radius:8px;padding:16px 20px;margin-bottom:16px">
         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#4caf50;margin-bottom:6px">Student Created Successfully</div>
-        <div id="ns-student-name" style="font-size:22px;color:var(--text);font-family:'Playfair Display',serif;margin-bottom:4px"></div>
-        <div id="ns-student-meta" style="font-size:12px;color:#555"></div>
+        <div id="ns-student-name" style="font-size:22px;color:#fff;font-family:'Playfair Display',serif;margin-bottom:4px"></div>
+        <div id="ns-student-meta" style="font-size:12px;color:#9ed89e"></div>
       </div>
 
       <div style="background:#0f0f0f;border:1px solid #2a2a2a;border-radius:8px;padding:20px;margin-bottom:12px">
@@ -2628,7 +2628,13 @@ function renderProfile() {
   // ── Section 6: Consultant Note (read only) ────────────────────────────────
   const s6read = p.consultantMessage
     ? `<div class="prof-voice"><div class="prof-voice-lbl">Note from ${p.consultant||'your consultant'}</div>
-       <div class="prof-voice-text">${p.consultantMessage}</div></div>`
+       <div class="prof-voice-text">${
+         p.consultantMessage.split('\n').filter(l=>l.trim()).map(line => {
+           const safe = line.replace(/</g,'&lt;').replace(/>/g,'&gt;')
+           if (safe.startsWith('- ')) return '<div style="display:flex;gap:8px;line-height:1.8;margin-bottom:2px"><span style="color:var(--gold);flex-shrink:0">&middot;</span><span>' + safe.slice(2) + '</span></div>'
+           return '<div style="line-height:1.8;margin-bottom:2px">' + safe + '</div>'
+         }).join('')
+       }</div></div>`
     : `<div style="color:var(--muted);font-size:13px;padding:4px 0">No message yet from your consultant.</div>`
 
   // ── Section 7: Certificates & Achievements (read only) ────────────────────
@@ -2832,7 +2838,13 @@ function renderProfile() {
       </div>
       <div id="dump-read">
         ${p.consultantNotes
-          ? `<pre style="font-size:12px;color:#aaa;white-space:pre-wrap;word-break:break-word;line-height:1.7;background:#161616;border-radius:6px;padding:14px 16px;margin:0;font-family:'Courier New',monospace;border-left:3px solid #2a2a2a">${p.consultantNotes.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>
+          ? `<div style="background:#161616;border-radius:6px;padding:14px 16px;border-left:3px solid #2a2a2a">${
+              p.consultantNotes.split('\n').filter(l=>l.trim()).map(line => {
+                const safe = line.replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                if (safe.startsWith('- ')) return '<div style="display:flex;gap:8px;font-size:12px;color:#bbb;line-height:1.7;margin-bottom:2px"><span style="color:var(--gold);flex-shrink:0">&middot;</span><span>' + safe.slice(2) + '</span></div>'
+                return '<div style="font-size:12px;color:#888;line-height:1.7;margin-bottom:2px">' + safe + '</div>'
+              }).join('')
+            }</div>
              <button onclick="showNotesEdit('dump')" style="margin-top:10px;background:none;border:1px solid #2a2a2a;border-radius:4px;color:#555;font-size:11px;cursor:pointer;padding:4px 12px">Edit</button>`
           : `<button onclick="showNotesEdit('dump')" style="width:100%;padding:14px;background:#161616;border:1.5px dashed #2a2a2a;border-radius:8px;color:#444;font-size:13px;cursor:pointer;text-align:center">+ Paste raw notes here</button>`}
       </div>
