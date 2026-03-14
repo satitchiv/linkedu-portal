@@ -479,7 +479,18 @@ function esc(s) {
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
-initAuth()
+;(async () => {
+  const { data: { session } } = await sb.auth.getSession()
+  if (session) {
+    const { data: profile } = await sb.from('user_profiles').select('role').eq('id', session.user.id).single()
+    if (profile && (profile.role === 'analyst' || profile.role === 'admin')) {
+      authToken = session.access_token
+      loadStudents()
+      return
+    }
+  }
+  initAuth()
+})()
 </script>
 </body>
 </html>
