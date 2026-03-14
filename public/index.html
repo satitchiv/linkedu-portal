@@ -3227,7 +3227,8 @@ async function runRecs() {
     if (data.error) { alert('Error: ' + data.error); return }
 
     // Reload recommendations from Supabase and re-render
-    const reload = await fetch('/api/student', { headers: { 'Authorization': 'Bearer ' + window._token } })
+    const _rr1 = isTokenView && _portalToken ? { 'X-Access-Token': _portalToken } : { 'Authorization': 'Bearer ' + window._token }
+    const reload = await fetch('/api/student', { headers: _rr1 })
     const fresh = await reload.json()
     D.recommendations = fresh.recommendations || []
     renderRecommendations()
@@ -3266,7 +3267,8 @@ async function addSchoolManually() {
     if (input) input.value = ''
     if (btn) { btn.textContent = '+ Add School'; btn.disabled = false }
     // Reload recommendations
-    const reload = await fetch('/api/student', { headers: { 'Authorization': `Bearer ${window._token}` } })
+    const _rr2 = isTokenView && _portalToken ? { 'X-Access-Token': _portalToken } : { 'Authorization': `Bearer ${window._token}` }
+    const reload = await fetch('/api/student', { headers: _rr2 })
     const fresh  = await reload.json()
     D.recommendations = fresh.recommendations || D.recommendations
     renderRecommendations()
