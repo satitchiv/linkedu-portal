@@ -197,13 +197,6 @@ async function checkSecret() {
   const { data, error } = await sb.auth.signInWithPassword({ email, password })
   if (error || !data.session) { errEl.textContent = 'Incorrect email or password.'; errEl.style.display = 'block'; return }
 
-  const { data: profile } = await sb.from('user_profiles').select('role').eq('id', data.session.user.id).single()
-  if (!profile || (profile.role !== 'analyst' && profile.role !== 'admin')) {
-    await sb.auth.signOut()
-    errEl.textContent = 'Account not authorised.'
-    errEl.style.display = 'block'
-    return
-  }
   authToken = data.session.access_token
   document.getElementById('auth-overlay').style.display = 'none'
   loadStudents()
@@ -220,6 +213,7 @@ async function loadStudents() {
       headers: { 'Authorization': 'Bearer ' + authToken }
     })
     const json = await res.json()
+    if (res.status === 401) { initAuth(); return }
     if (!res.ok) throw new Error(json.error || 'Failed to load')
     students = json.students || []
     renderTable()
