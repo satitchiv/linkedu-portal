@@ -127,11 +127,11 @@
 <div id="auth-overlay" style="display:none">
   <div class="auth-box">
     <h2>LinkedU Admin</h2>
-    <p>Enter your email to receive a sign-in link</p>
-    <div id="sa-form"><input type="email" id="secret-input" placeholder="your@email.com" onkeydown="if(event.key==='Enter')checkSecret()" />
-    <button class="auth-btn" onclick="checkSecret()">Send Magic Link</button></div>
-    <div id="sa-sent" style="display:none;font-size:13px;color:#B8962E;margin-top:12px">Link sent — check your email and click it. This page will load automatically.</div>
-    <div class="auth-error" id="auth-err">Incorrect secret.</div>
+    <p>Sign in with your analyst account</p>
+    <input type="email" id="secret-input" placeholder="your@email.com" onkeydown="if(event.key==='Enter')document.getElementById('secret-pwd').focus()" style="margin-bottom:8px" />
+    <input type="password" id="secret-pwd" placeholder="Password" onkeydown="if(event.key==='Enter')checkSecret()" />
+    <button class="auth-btn" onclick="checkSecret()">Sign In</button>
+    <div class="auth-error" id="auth-err">Incorrect email or password.</div>
   </div>
 </div>
 
@@ -189,32 +189,25 @@ function initAuth() {
 
 async function checkSecret() {
   const email = (document.getElementById('secret-input').value || '').trim()
+  const password = (document.getElementById('secret-pwd').value || '').trim()
   const errEl = document.getElementById('auth-err')
   errEl.style.display = 'none'
-  if (!email) { errEl.textContent = 'Please enter your email.'; errEl.style.display = 'block'; return }
+  if (!email || !password) { errEl.textContent = 'Please enter email and password.'; errEl.style.display = 'block'; return }
 
-  const { error } = await sb.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: window.location.href }
-  })
-  if (error) { errEl.textContent = error.message; errEl.style.display = 'block'; return }
+  const { data, error } = await sb.auth.signInWithPassword({ email, password })
+  if (error || !data.session) { errEl.textContent = 'Incorrect email or password.'; errEl.style.display = 'block'; return }
 
-  document.getElementById('sa-form').style.display = 'none'
-  document.getElementById('sa-sent').style.display = 'block'
-}
-
-// Handle magic link session restore on page load
-sb.auth.onAuthStateChange(async (event, session) => {
-  if (!session) return
-  const { data: profile } = await sb.from('user_profiles').select('role').eq('id', session.user.id).single()
+  const { data: profile } = await sb.from('user_profiles').select('role').eq('id', data.session.user.id).single()
   if (!profile || (profile.role !== 'analyst' && profile.role !== 'admin')) {
     await sb.auth.signOut()
+    errEl.textContent = 'Account not authorised.'
+    errEl.style.display = 'block'
     return
   }
-  authToken = session.access_token
+  authToken = data.session.access_token
   document.getElementById('auth-overlay').style.display = 'none'
   loadStudents()
-})
+}
 
 // ── Load students ─────────────────────────────────────────────────────────────
 async function loadStudents() {
@@ -479,18 +472,7 @@ function esc(s) {
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
-;(async () => {
-  const { data: { session } } = await sb.auth.getSession()
-  if (session) {
-    const { data: profile } = await sb.from('user_profiles').select('role').eq('id', session.user.id).single()
-    if (profile && (profile.role === 'analyst' || profile.role === 'admin')) {
-      authToken = session.access_token
-      loadStudents()
-      return
-    }
-  }
-  initAuth()
-})()
+initAuth()
 </script>
 </body>
 </html>
