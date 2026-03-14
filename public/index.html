@@ -3879,12 +3879,19 @@ async function uploadAndExtract() {
     // Hash the file for duplicate detection
     _lastFileHash = await hashFile(base64)
 
-    const { data: { session } } = await sb.auth.getSession()
-    if (!session) { msg.className='form-msg error'; msg.textContent='Not logged in.'; return }
+    // Build auth headers — token view uses X-Access-Token, analyst uses JWT
+    const parseHeaders = { 'Content-Type': 'application/json' }
+    if (isTokenView && _portalToken) {
+      parseHeaders['X-Access-Token'] = _portalToken
+    } else {
+      const { data: { session } } = await sb.auth.getSession()
+      if (!session) { msg.className='form-msg error'; msg.textContent='Not logged in.'; return }
+      parseHeaders['Authorization'] = `Bearer ${session.access_token}`
+    }
 
     const res = await fetch('/api/parse-report', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+      headers: parseHeaders,
       body: JSON.stringify({ pdfBase64: base64, fileName: file.name, fileHash: _lastFileHash, studentId: D.student?.id })
     })
     const json = await res.json()
@@ -4001,9 +4008,22 @@ async function confirmExtracted() {
     if (e.yearGroup   && !D.student.currentYearGroup)     profileUpdates.current_year_group  = e.yearGroup
     if (e.curriculum  && !D.student.curriculum)           profileUpdates.curriculum          = e.curriculum
 
+    // Build auth headers — token view uses X-Access-Token, analyst uses JWT
+    const saveHeaders = { 'Content-Type': 'application/json' }
+    let refreshUrl = '/api/student'
+    if (isTokenView && _portalToken) {
+      saveHeaders['X-Access-Token'] = _portalToken
+      // Refresh also uses token auth for parent view
+    } else {
+      const { data: { session: analystSession } } = await sb.auth.getSession()
+      if (analystSession) saveHeaders['Authorization'] = `Bearer ${analystSession.access_token}`
+      // Analyst refresh fetches the specific student being viewed
+      if (D.student?.id) refreshUrl = `/api/student?student_id=${D.student.id}`
+    }
+
     const res = await fetch('/api/save-academics', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+      headers: saveHeaders,
       body: JSON.stringify({
         grades:         e.grades || [],
         certifications: e.certifications || [],
@@ -4014,6 +4034,7 @@ async function confirmExtracted() {
         docType:        e.docType || 'other',
         rawJson:        e,
         fileHash:       _lastFileHash || null,
+        studentId:      D.student?.id,
       })
     })
     const json = await res.json()
@@ -4026,8 +4047,15 @@ async function confirmExtracted() {
     if (profileUpdates.current_year_group)  D.student.currentYearGroup  = profileUpdates.current_year_group
     if (profileUpdates.curriculum)          D.student.curriculum        = profileUpdates.curriculum
 
-    // Refresh all data from server (academics, certifications, extractions)
-    const refreshRes = await fetch('/api/student', { headers: { Authorization: `Bearer ${session.access_token}` } })
+    // Refresh all data from server (academics, certifications, extractions) for the correct student
+    const refreshHeaders = {}
+    if (isTokenView && _portalToken) {
+      refreshHeaders['X-Access-Token'] = _portalToken
+    } else {
+      const { data: { session: refreshSession } } = await sb.auth.getSession()
+      if (refreshSession) refreshHeaders['Authorization'] = `Bearer ${refreshSession.access_token}`
+    }
+    const refreshRes = await fetch(refreshUrl, { headers: refreshHeaders })
     if (refreshRes.ok) {
       const fresh = await refreshRes.json()
       D.academics      = fresh.academics      || D.academics

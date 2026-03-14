@@ -2,6 +2,7 @@
 // Accepts a base64-encoded PDF (any document type)
 // Calls Gemini 2.5 Flash to extract student info, grades, and certifications
 // Returns extracted JSON for parent review — does NOT save yet
+// Auth: X-Access-Token (parent token view) OR Supabase JWT (analyst)
 
 const { GoogleGenerativeAI } = require('@google/generative-ai')
 const { createClient } = require('@supabase/supabase-js')
@@ -28,7 +29,7 @@ const supabase = createClient(
 exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-Access-Token',
     'Content-Type': 'application/json',
   }
 
@@ -38,12 +39,6 @@ exports.handler = async (event) => {
   }
 
   try {
-    const token = (event.headers.authorization || '').replace('Bearer ', '')
-    if (!token) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) }
-
-    const { data: { user }, error: authErr } = await supabase.auth.getUser(token)
-    if (authErr || !user) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Invalid token' }) }
-
     const body = JSON.parse(event.body || '{}')
     const { pdfBase64, fileName, fileHash, studentId } = body
 
@@ -54,12 +49,45 @@ exports.handler = async (event) => {
       return { statusCode: 413, headers, body: JSON.stringify({ error: 'File too large. Please keep documents under 3MB.' }) }
     }
 
-    // ── Duplicate check — scoped to the specific student being uploaded to ────
-    if (fileHash && studentId) {
+    // ── Resolve student ID from auth ──────────────────────────────────────────
+    let resolvedStudentId = null
+
+    // Path 1: X-Access-Token (parent token view)
+    const accessToken = event.headers['x-access-token'] || event.headers['X-Access-Token']
+    if (accessToken) {
+      const { data: student, error } = await supabase
+        .from('students').select('id').eq('access_token', accessToken).single()
+      if (error || !student) {
+        return { statusCode: 401, headers, body: JSON.stringify({ error: 'Invalid access token' }) }
+      }
+      resolvedStudentId = student.id
+    } else {
+      // Path 2: Supabase JWT (analyst)
+      const token = (event.headers.authorization || '').replace('Bearer ', '')
+      if (!token) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) }
+
+      const { data: { user }, error: authErr } = await supabase.auth.getUser(token)
+      if (authErr || !user) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Invalid token' }) }
+
+      // Analyst must pass studentId explicitly — we verify role
+      const { data: profile } = await supabase
+        .from('user_profiles').select('role, student_id').eq('id', user.id).single()
+
+      if (profile && profile.role === 'analyst' && studentId) {
+        resolvedStudentId = studentId
+      } else if (profile && profile.student_id) {
+        resolvedStudentId = profile.student_id
+      } else {
+        return { statusCode: 403, headers, body: JSON.stringify({ error: 'Cannot determine student for this upload' }) }
+      }
+    }
+
+    // ── Duplicate check — scoped to the resolved student ─────────────────────
+    if (fileHash && resolvedStudentId) {
       const { data: existing } = await supabase
         .from('document_extractions')
         .select('doc_name, extracted_at')
-        .eq('student_id', studentId)
+        .eq('student_id', resolvedStudentId)
         .eq('file_hash', fileHash)
         .limit(1)
         .single()

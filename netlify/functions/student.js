@@ -140,7 +140,15 @@ exports.handler = async (event) => {
 
     if (!profile) return { statusCode: 404, headers, body: JSON.stringify({ error: 'Profile not found' }) }
 
-    if (!profile.student_id) {
+    // Analysts may request a specific student via ?student_id= query param
+    const queryStudentId = event.queryStringParameters && event.queryStringParameters.student_id
+    let studentIdToFetch = profile.student_id
+
+    if (queryStudentId && profile.role === 'analyst') {
+      studentIdToFetch = queryStudentId
+    }
+
+    if (!studentIdToFetch) {
       return {
         statusCode: 200,
         headers,
@@ -154,7 +162,7 @@ exports.handler = async (event) => {
     }
 
     const { s, academicsRes, schoolsRes, timelineItems, milestonesRes, documentsRes, golfRes, recsRes } =
-      await fetchStudentData(profile.student_id)
+      await fetchStudentData(studentIdToFetch)
 
     const isParent = profile.role === 'parent'
 

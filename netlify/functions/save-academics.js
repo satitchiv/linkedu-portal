@@ -1,6 +1,6 @@
 // POST /api/save-academics
 // Saves extracted data: grades, certifications, extraction log, optional profile updates
-// Requires: Supabase JWT in Authorization header
+// Auth: X-Access-Token (parent token view) OR Supabase JWT with analyst role + studentId in body
 
 const { createClient } = require('@supabase/supabase-js')
 
@@ -18,7 +18,7 @@ const PARENT_EDITABLE = new Set([
 exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-Access-Token',
     'Content-Type': 'application/json',
   }
 
@@ -28,19 +28,6 @@ exports.handler = async (event) => {
   }
 
   try {
-    const token = (event.headers.authorization || '').replace('Bearer ', '')
-    if (!token) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) }
-
-    const { data: { user }, error: authErr } = await supabase.auth.getUser(token)
-    if (authErr || !user) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Invalid token' }) }
-
-    const { data: profile } = await supabase
-      .from('user_profiles').select('*').eq('id', user.id).single()
-
-    if (!profile || !profile.student_id) {
-      return { statusCode: 404, headers, body: JSON.stringify({ error: 'No student linked to this account' }) }
-    }
-
     const body = JSON.parse(event.body || '{}')
     const {
       grades = [],
@@ -52,7 +39,45 @@ exports.handler = async (event) => {
       docType = 'other',
       rawJson,
       fileHash,
+      studentId,
     } = body
+
+    // ── Resolve student ID from auth ──────────────────────────────────────────
+    let resolvedStudentId = null
+    let extractedBy = null
+
+    // Path 1: X-Access-Token (parent token view)
+    const accessToken = event.headers['x-access-token'] || event.headers['X-Access-Token']
+    if (accessToken) {
+      const { data: student, error } = await supabase
+        .from('students').select('id').eq('access_token', accessToken).single()
+      if (error || !student) {
+        return { statusCode: 401, headers, body: JSON.stringify({ error: 'Invalid access token' }) }
+      }
+      resolvedStudentId = student.id
+    } else {
+      // Path 2: Supabase JWT (analyst)
+      const token = (event.headers.authorization || '').replace('Bearer ', '')
+      if (!token) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) }
+
+      const { data: { user }, error: authErr } = await supabase.auth.getUser(token)
+      if (authErr || !user) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Invalid token' }) }
+
+      extractedBy = user.id
+
+      const { data: profile } = await supabase
+        .from('user_profiles').select('role, student_id').eq('id', user.id).single()
+
+      if (profile && profile.role === 'analyst' && studentId) {
+        // Analyst explicitly passing which student to save to
+        resolvedStudentId = studentId
+      } else if (profile && profile.student_id) {
+        // Parent or analyst with own linked student
+        resolvedStudentId = profile.student_id
+      } else {
+        return { statusCode: 404, headers, body: JSON.stringify({ error: 'No student linked to this account' }) }
+      }
+    }
 
     let gradesSaved = 0
     let certsSaved = 0
@@ -68,7 +93,7 @@ exports.handler = async (event) => {
       const gradeRows = grades
         .filter(g => g.subject && (g.grade || g.score !== null))
         .map(g => ({
-          student_id:      profile.student_id,
+          student_id:      resolvedStudentId,
           subject:         g.subject,
           grade:           g.grade || null,
           score:           g.score !== null && g.score !== undefined ? parseFloat(g.score) : null,
@@ -91,7 +116,7 @@ exports.handler = async (event) => {
       const certRows = certifications
         .filter(c => c.name)
         .map(c => ({
-          student_id:   profile.student_id,
+          student_id:   resolvedStudentId,
           category:     c.category || 'other',
           name:         c.name,
           issuer:       c.issuer || null,
@@ -113,12 +138,12 @@ exports.handler = async (event) => {
     // ── Log extraction ───────────────────────────────────────────────────────
     if (docName) {
       await supabase.from('document_extractions').insert({
-        student_id:    profile.student_id,
+        student_id:    resolvedStudentId,
         doc_name:      docName,
         doc_type:      docType,
         grades_saved:  gradesSaved,
         certs_saved:   certsSaved,
-        extracted_by:  user.id,
+        extracted_by:  extractedBy,
         raw_json:      rawJson || null,
         file_hash:     fileHash || null,
       })
@@ -135,7 +160,7 @@ exports.handler = async (event) => {
       if (Object.keys(updates).length > 0) {
         updates.updated_at = new Date().toISOString()
         const { error } = await supabase
-          .from('students').update(updates).eq('id', profile.student_id)
+          .from('students').update(updates).eq('id', resolvedStudentId)
         if (error) console.warn('Profile update partial fail:', error.message)
       }
     }
