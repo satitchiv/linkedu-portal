@@ -127,10 +127,10 @@
 <div id="auth-overlay" style="display:none">
   <div class="auth-box">
     <h2>LinkedU Admin</h2>
-    <p>Sign in with your analyst account</p>
-    <input type="email" id="secret-input" placeholder="your@email.com" style="margin-bottom:8px" />
-    <input type="password" id="secret-pass" placeholder="Password" onkeydown="if(event.key==='Enter')checkSecret()" />
-    <button class="auth-btn" onclick="checkSecret()">Sign In</button>
+    <p>Enter your email to receive a sign-in link</p>
+    <div id="sa-form"><input type="email" id="secret-input" placeholder="your@email.com" onkeydown="if(event.key==='Enter')checkSecret()" />
+    <button class="auth-btn" onclick="checkSecret()">Send Magic Link</button></div>
+    <div id="sa-sent" style="display:none;font-size:13px;color:#B8962E;margin-top:12px">Link sent — check your email and click it. This page will load automatically.</div>
     <div class="auth-error" id="auth-err">Incorrect secret.</div>
   </div>
 </div>
@@ -188,32 +188,33 @@ function initAuth() {
 }
 
 async function checkSecret() {
-  const email    = (document.getElementById('secret-input').value || '').trim()
-  const password = (document.getElementById('secret-pass').value || '').trim()
-  const errEl    = document.getElementById('auth-err')
+  const email = (document.getElementById('secret-input').value || '').trim()
+  const errEl = document.getElementById('auth-err')
   errEl.style.display = 'none'
-  if (!email || !password) { errEl.textContent = 'Email and password required.'; errEl.style.display = 'block'; return }
+  if (!email) { errEl.textContent = 'Please enter your email.'; errEl.style.display = 'block'; return }
 
-  const { data, error } = await sb.auth.signInWithPassword({ email, password })
-  if (error || !data.session) {
-    errEl.textContent = error?.message || 'Login failed.'
-    errEl.style.display = 'block'
-    return
-  }
+  const { error } = await sb.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: window.location.href }
+  })
+  if (error) { errEl.textContent = error.message; errEl.style.display = 'block'; return }
 
-  // Verify analyst role
-  const { data: profile } = await sb.from('user_profiles').select('role').eq('id', data.user.id).single()
+  document.getElementById('sa-form').style.display = 'none'
+  document.getElementById('sa-sent').style.display = 'block'
+}
+
+// Handle magic link session restore on page load
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (!session) return
+  const { data: profile } = await sb.from('user_profiles').select('role').eq('id', session.user.id).single()
   if (!profile || (profile.role !== 'analyst' && profile.role !== 'admin')) {
-    errEl.textContent = 'This account does not have analyst access.'
-    errEl.style.display = 'block'
     await sb.auth.signOut()
     return
   }
-
-  authToken = data.session.access_token
+  authToken = session.access_token
   document.getElementById('auth-overlay').style.display = 'none'
   loadStudents()
-}
+})
 
 // ── Load students ─────────────────────────────────────────────────────────────
 async function loadStudents() {

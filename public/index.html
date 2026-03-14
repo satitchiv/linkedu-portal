@@ -4440,10 +4440,21 @@ if (isTokenView) {
       $id('auth-screen').style.display = 'none'
       $id('app').style.display = 'flex'
       $id('app').classList.add('visible')
-      // Show analyst login prompt if this is not a parent view link
+      // Check for existing analyst session (e.g. after magic link redirect)
       if (!isParentView) {
-        const overlay = $id('analyst-login-overlay')
-        if (overlay) overlay.style.display = 'flex'
+        const { data: { session } } = await sb.auth.getSession()
+        if (session) {
+          const { data: profile } = await sb.from('user_profiles').select('role').eq('id', session.user.id).single()
+          if (profile && (profile.role === 'analyst' || profile.role === 'admin')) {
+            window._token = session.access_token
+            isAnalystView = true
+            renderAll()
+          }
+        }
+        if (!isAnalystView) {
+          const overlay = $id('analyst-login-overlay')
+          if (overlay) overlay.style.display = 'flex'
+        }
       }
     } catch (err) {
       $id('loading').style.display = 'none'
@@ -4717,47 +4728,50 @@ sb.auth.onAuthStateChange(async (event, session) => {
 <div id="analyst-login-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:500;align-items:center;justify-content:center">
   <div style="background:#161616;border:1px solid #2a2a2a;border-radius:10px;padding:36px 32px;width:340px;text-align:center">
     <div style="font-family:'Cormorant Garamond',serif;color:#B8962E;font-size:20px;margin-bottom:6px">Analyst Access</div>
-    <div style="font-size:12px;color:#555;margin-bottom:20px">Sign in to enable edit controls</div>
-    <input type="email" id="al-email" placeholder="your@email.com" style="width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;font-size:14px;color:#eee;outline:none;text-align:center;margin-bottom:8px;box-sizing:border-box" />
-    <input type="password" id="al-password" placeholder="Password" onkeydown="if(event.key==='Enter')analystLogin()" style="width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;font-size:14px;color:#eee;outline:none;text-align:center;box-sizing:border-box" />
-    <button onclick="analystLogin()" style="margin-top:12px;width:100%;padding:10px;background:#B8962E;color:#111;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">Sign In</button>
+    <div id="al-prompt" style="font-size:12px;color:#555;margin-bottom:20px">Enter your email to receive a sign-in link</div>
+    <div id="al-form">
+      <input type="email" id="al-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')sendAnalystMagicLink()" style="width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;font-size:14px;color:#eee;outline:none;text-align:center;box-sizing:border-box" />
+      <button onclick="sendAnalystMagicLink()" style="margin-top:12px;width:100%;padding:10px;background:#B8962E;color:#111;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">Send Magic Link</button>
+    </div>
+    <div id="al-sent" style="display:none;font-size:13px;color:#B8962E;margin-top:8px">Link sent — check your email. This tab will activate automatically when you click it.</div>
     <div id="al-error" style="color:#e74c3c;font-size:12px;margin-top:8px;display:none"></div>
     <div style="margin-top:16px"><button onclick="document.getElementById('analyst-login-overlay').style.display='none'" style="background:none;border:none;color:#555;font-size:12px;cursor:pointer">Continue as parent view</button></div>
   </div>
 </div>
 
 <script>
-// ── Analyst login (token view) ────────────────────────────────────────────────
-async function analystLogin() {
-  const email    = ($id('al-email').value || '').trim()
-  const password = ($id('al-password').value || '').trim()
-  const errEl    = $id('al-error')
+// ── Analyst login (token view) — magic link ───────────────────────────────────
+async function sendAnalystMagicLink() {
+  const email = ($id('al-email').value || '').trim()
+  const errEl = $id('al-error')
   errEl.style.display = 'none'
-  if (!email || !password) { errEl.textContent = 'Email and password required.'; errEl.style.display = 'block'; return }
+  if (!email) { errEl.textContent = 'Please enter your email.'; errEl.style.display = 'block'; return }
 
-  const { data, error } = await sb.auth.signInWithPassword({ email, password })
-  if (error || !data.session) {
-    errEl.textContent = error?.message || 'Login failed.'
-    errEl.style.display = 'block'
-    return
-  }
+  const { error } = await sb.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: window.location.href }
+  })
+  if (error) { errEl.textContent = error.message; errEl.style.display = 'block'; return }
 
+  $id('al-form').style.display = 'none'
+  $id('al-sent').style.display = 'block'
+  $id('al-prompt').style.display = 'none'
+}
+
+// Handle magic link session on page load / auth state change (token view)
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (!isTokenView || isParentView) return
+  if (!session) return
   // Verify analyst role
-  const jwt = data.session.access_token
-  const { data: profile } = await sb.from('user_profiles').select('role').eq('id', data.user.id).single()
-  if (!profile || (profile.role !== 'analyst' && profile.role !== 'admin')) {
-    errEl.textContent = 'This account does not have analyst access.'
-    errEl.style.display = 'block'
-    await sb.auth.signOut()
-    return
-  }
-
-  window._token = jwt
+  const { data: profile } = await sb.from('user_profiles').select('role').eq('id', session.user.id).single()
+  if (!profile || (profile.role !== 'analyst' && profile.role !== 'admin')) return
+  window._token = session.access_token
   isAnalystView = true
-  document.getElementById('analyst-login-overlay').style.display = 'none'
+  const overlay = $id('analyst-login-overlay')
+  if (overlay) overlay.style.display = 'none'
   if ($id('btn-new-student')) $id('btn-new-student').style.display = 'inline-block'
   renderAll()
-}
+})
 </script>
 </body>
 </html>
