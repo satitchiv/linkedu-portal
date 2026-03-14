@@ -4,6 +4,7 @@
 // Body: { dump: "raw text..." }
 
 const { createClient } = require('@supabase/supabase-js')
+const { isAuthorizedAnalyst } = require('./utils/auth')
 const crypto = require('crypto')
 const fs   = require('fs')
 const path = require('path')
@@ -142,8 +143,7 @@ exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' }
   if (event.httpMethod !== 'POST') return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) }
 
-  const secret = event.headers['x-admin-secret'] || event.headers['X-Admin-Secret']
-  if (!secret || secret !== process.env.ADMIN_SECRET) {
+  if (!await isAuthorizedAnalyst(event)) {
     return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) }
   }
 

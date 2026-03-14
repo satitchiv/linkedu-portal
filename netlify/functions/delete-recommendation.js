@@ -2,6 +2,7 @@
 // Deletes a recommendation by id. Consultant only.
 
 const { createClient } = require('@supabase/supabase-js')
+const { isAuthorizedAnalyst } = require('./utils/auth')
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -17,8 +18,7 @@ exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' }
 
   try {
-    const secret = event.headers['x-admin-secret']
-    if (secret !== process.env.ADMIN_SECRET) {
+    if (!await isAuthorizedAnalyst(event)) {
       return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) }
     }
 

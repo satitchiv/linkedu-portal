@@ -1246,12 +1246,12 @@ let golfRounds = []
 let currentTab = 'overview'
 let userRole = 'parent'
 
-// Analyst view = no ?view=parent in URL (token links without view=parent also get analyst mode)
 const _urlParams    = new URLSearchParams(window.location.search)
 const _portalToken  = _urlParams.get('token')
 const isTokenView   = !!_portalToken
-const isAnalystView = !window.location.search.includes('view=parent')
-if (isAnalystView) window._adminSecret = 'lnk-Ilvpdog7W9aDUf32u1VHP00btu4bwN33'
+const isParentView  = window.location.search.includes('view=parent')
+// isAnalystView is confirmed only after JWT login — never assumed from URL alone
+let isAnalystView = false
 
 // ── Utilities ───────────────────────────────────────────────────────────────
 function $id(id) { return document.getElementById(id) }
@@ -2307,7 +2307,7 @@ async function saveSection(id, fields) {
     const reqHeaders = { 'Content-Type': 'application/json' }
     let payload = fields
     if (isAnalystView) {
-      reqHeaders['X-Admin-Secret'] = window._adminSecret
+      reqHeaders['Authorization'] = 'Bearer ' + (window._token || '')
       payload = { ...fields, student_id: D.student.id }
     } else {
       const { data: { session } } = await sb.auth.getSession()
@@ -2353,7 +2353,7 @@ async function saveNotesField(dbField, studentField, value) {
   const reqHeaders = { 'Content-Type': 'application/json' }
   let payload = { [dbField]: value }
   if (isAnalystView) {
-    reqHeaders['X-Admin-Secret'] = window._adminSecret
+    reqHeaders['Authorization'] = 'Bearer ' + (window._token || '')
     payload = { ...payload, student_id: D.student.id }
   } else {
     const { data: { session } } = await sb.auth.getSession()
@@ -2438,7 +2438,7 @@ async function saveIntakeSection() {
     const reqHeaders = { 'Content-Type': 'application/json' }
     const payload = { services_interested: services, school_types_interested: schoolTypes, courses_interested: courses, heard_from: heardFrom, referral_note: referralNote }
     if (isAnalystView) {
-      reqHeaders['X-Admin-Secret'] = window._adminSecret
+      reqHeaders['Authorization'] = 'Bearer ' + (window._token || '')
       payload.student_id = D.student.id
     } else {
       const { data: { session } } = await sb.auth.getSession()
@@ -3167,7 +3167,7 @@ async function approveRec(id) {
   try {
     const res = await fetch('/api/approve-recommendations', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': 'lnk-Ilvpdog7W9aDUf32u1VHP00btu4bwN33' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
       body: JSON.stringify({ student_id: D.student.id, approvals: [{ school_id: id, approved: true, consultant_note: null }] })
     })
     if (!res.ok) throw new Error(await res.text())
@@ -3182,7 +3182,7 @@ async function deleteRec(id) {
   try {
     const res = await fetch('/api/delete-recommendation', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': 'lnk-Ilvpdog7W9aDUf32u1VHP00btu4bwN33' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
       body: JSON.stringify({ id })
     })
     if (!res.ok) throw new Error(await res.text())
@@ -3197,7 +3197,7 @@ async function moveToApplying(rec_id) {
   try {
     const res = await fetch('/api/move-to-applying', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': 'lnk-Ilvpdog7W9aDUf32u1VHP00btu4bwN33' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
       body: JSON.stringify({ recommendation_id: rec_id, student_id: D.student.id })
     })
     const data = await res.json()
@@ -3220,7 +3220,7 @@ async function runRecs() {
   try {
     const res = await fetch('/api/generate-recommendations', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': 'lnk-Ilvpdog7W9aDUf32u1VHP00btu4bwN33' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
       body: JSON.stringify({ student_id: D.student.id })
     })
     const data = await res.json()
@@ -3259,7 +3259,7 @@ async function addSchoolManually() {
   try {
     const res = await fetch('/api/add-recommendation', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': 'lnk-Ilvpdog7W9aDUf32u1VHP00btu4bwN33' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
       body: JSON.stringify({ student_id: D.student.id, school_name: name, consultant_note: '', tier: 'consider' })
     })
     const data = await res.json()
@@ -4132,7 +4132,7 @@ async function updateSchoolStatus(schoolId, newStatus) {
   try {
     const res = await fetch('/api/update-school-status', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': window._adminSecret || '' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
       body: JSON.stringify({ student_school_id: schoolId, application_status: newStatus })
     })
     if (!res.ok) { const j = await res.json(); throw new Error(j.error) }
@@ -4164,7 +4164,7 @@ async function _patchCustomItemType(itemId, schoolId, itemType) {
   try {
     const res = await fetch('/api/school-timeline', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': window._adminSecret || '' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
       body: JSON.stringify({ id: itemId, item_type: itemType })
     })
     if (!res.ok) { const j = await res.json(); throw new Error(j.error) }
@@ -4213,7 +4213,7 @@ async function saveItemNote(itemId, stageKey) {
       // Analyst: update notes field, preserve stage:key tag
       const stageTag = stageKey ? ` stage:${stageKey}` : ''
       body = { id: itemId, notes: noteText + stageTag }
-      headers['X-Admin-Secret'] = window._adminSecret || ''
+      headers['Authorization'] = 'Bearer ' + (window._token || '')
     } else {
       // Parent: update parent_note field via JWT
       const { data: { session } } = await sb.auth.getSession()
@@ -4267,7 +4267,7 @@ async function addTimelineItem(schoolId, studentSchoolId) {
   try {
     const res = await fetch('/api/school-timeline', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': window._adminSecret || '' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
       body: JSON.stringify({
         student_school_id: studentSchoolId,
         student_id: D.student.id,
@@ -4302,7 +4302,7 @@ async function deleteTimelineItem(itemId, schoolId) {
   try {
     const res = await fetch('/api/school-timeline', {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': window._adminSecret || '' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
       body: JSON.stringify({ id: itemId })
     })
     if (!res.ok) { const j = await res.json(); throw new Error(j.error || 'Delete failed') }
@@ -4343,13 +4343,13 @@ async function saveBaseItem(schoolId, stageKey, existingId) {
     if (existingId && existingId !== 'null' && existingId !== '') {
       res = await fetch('/api/school-timeline', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': window._adminSecret || '' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
         body: JSON.stringify({ id: existingId, date: body.date, notes: body.notes })
       })
     } else {
       res = await fetch('/api/school-timeline', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': window._adminSecret || '' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
         body: JSON.stringify(body)
       })
     }
@@ -4388,7 +4388,7 @@ async function toggleChecklistItem(studentSchoolId, idx, done) {
   try {
     await fetch('/api/school-progress', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': window._adminSecret || '' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
       body: JSON.stringify({ student_school_id: studentSchoolId, checklist })
     })
   } catch(e) { console.error('toggleChecklistItem error:', e) }
@@ -4404,7 +4404,7 @@ function scheduleUpdateSave(studentSchoolId) {
     try {
       await fetch('/api/school-progress', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': window._adminSecret || '' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
         body: JSON.stringify({ student_school_id: studentSchoolId, latest_update })
       })
       // Update local data
@@ -4440,6 +4440,11 @@ if (isTokenView) {
       $id('auth-screen').style.display = 'none'
       $id('app').style.display = 'flex'
       $id('app').classList.add('visible')
+      // Show analyst login prompt if this is not a parent view link
+      if (!isParentView) {
+        const overlay = $id('analyst-login-overlay')
+        if (overlay) overlay.style.display = 'flex'
+      }
     } catch (err) {
       $id('loading').style.display = 'none'
       $id('auth-screen').style.display = 'flex'
@@ -4455,7 +4460,7 @@ let _allStudents = []
 
 async function loadStudentsList() {
   const res = await fetch('/api/students-list', {
-    headers: { 'X-Admin-Secret': window._adminSecret }
+    headers: { 'Authorization': 'Bearer ' + (window._token || '') }
   })
   const json = await res.json()
   _allStudents = json.students || []
@@ -4559,7 +4564,7 @@ async function createNewStudent() {
   try {
     const res = await fetch('/api/create-student', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': window._adminSecret },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
       body: JSON.stringify({ dump })
     })
     const json = await res.json()
@@ -4600,7 +4605,7 @@ async function copyPortalLink() {
   try {
     const res = await fetch('/api/get-portal-link', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': window._adminSecret },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
       body: JSON.stringify({ student_id: D.student.id, type: 'token' })
     })
     const json = await res.json()
@@ -4619,7 +4624,7 @@ async function regeneratePortalLink() {
   try {
     const res = await fetch('/api/get-portal-link', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': window._adminSecret },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
       body: JSON.stringify({ student_id: D.student.id, type: 'regenerate' })
     })
     const json = await res.json()
@@ -4639,7 +4644,7 @@ async function generateMagicLink() {
   try {
     const res = await fetch('/api/get-portal-link', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': window._adminSecret },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
       body: JSON.stringify({ student_id: D.student.id, type: 'magic' })
     })
     const json = await res.json()
@@ -4673,8 +4678,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
       D = dataRes
       userRole = D.role || 'parent'
       golfRounds = D.golfRounds || []
-      if (isAnalystView) window._adminSecret = 'lnk-Ilvpdog7W9aDUf32u1VHP00btu4bwN33'
-
+      if (userRole === 'analyst' || userRole === 'admin') isAnalystView = true
       // Analyst → show students list
       if (isAnalystView) {
         $id('loading').style.display = 'none'
@@ -4707,6 +4711,53 @@ sb.auth.onAuthStateChange(async (event, session) => {
     $id('auth-screen').style.display = 'flex'
   }
 })
+</script>
+
+<!-- Analyst login overlay (token view, no ?view=parent) -->
+<div id="analyst-login-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:500;align-items:center;justify-content:center">
+  <div style="background:#161616;border:1px solid #2a2a2a;border-radius:10px;padding:36px 32px;width:340px;text-align:center">
+    <div style="font-family:'Cormorant Garamond',serif;color:#B8962E;font-size:20px;margin-bottom:6px">Analyst Access</div>
+    <div style="font-size:12px;color:#555;margin-bottom:20px">Sign in to enable edit controls</div>
+    <input type="email" id="al-email" placeholder="your@email.com" style="width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;font-size:14px;color:#eee;outline:none;text-align:center;margin-bottom:8px;box-sizing:border-box" />
+    <input type="password" id="al-password" placeholder="Password" onkeydown="if(event.key==='Enter')analystLogin()" style="width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;font-size:14px;color:#eee;outline:none;text-align:center;box-sizing:border-box" />
+    <button onclick="analystLogin()" style="margin-top:12px;width:100%;padding:10px;background:#B8962E;color:#111;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">Sign In</button>
+    <div id="al-error" style="color:#e74c3c;font-size:12px;margin-top:8px;display:none"></div>
+    <div style="margin-top:16px"><button onclick="document.getElementById('analyst-login-overlay').style.display='none'" style="background:none;border:none;color:#555;font-size:12px;cursor:pointer">Continue as parent view</button></div>
+  </div>
+</div>
+
+<script>
+// ── Analyst login (token view) ────────────────────────────────────────────────
+async function analystLogin() {
+  const email    = ($id('al-email').value || '').trim()
+  const password = ($id('al-password').value || '').trim()
+  const errEl    = $id('al-error')
+  errEl.style.display = 'none'
+  if (!email || !password) { errEl.textContent = 'Email and password required.'; errEl.style.display = 'block'; return }
+
+  const { data, error } = await sb.auth.signInWithPassword({ email, password })
+  if (error || !data.session) {
+    errEl.textContent = error?.message || 'Login failed.'
+    errEl.style.display = 'block'
+    return
+  }
+
+  // Verify analyst role
+  const jwt = data.session.access_token
+  const { data: profile } = await sb.from('user_profiles').select('role').eq('id', data.user.id).single()
+  if (!profile || (profile.role !== 'analyst' && profile.role !== 'admin')) {
+    errEl.textContent = 'This account does not have analyst access.'
+    errEl.style.display = 'block'
+    await sb.auth.signOut()
+    return
+  }
+
+  window._token = jwt
+  isAnalystView = true
+  document.getElementById('analyst-login-overlay').style.display = 'none'
+  if ($id('btn-new-student')) $id('btn-new-student').style.display = 'inline-block'
+  renderAll()
+}
 </script>
 </body>
 </html>

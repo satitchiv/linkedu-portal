@@ -3,6 +3,7 @@
 // Body: { student_id: "uuid" }
 
 const { createClient } = require('@supabase/supabase-js')
+const { isAuthorizedAnalyst } = require('./utils/auth')
 
 const supabase = createClient(
   process.env.SUPABASE_URL,

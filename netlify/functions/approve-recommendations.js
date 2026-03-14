@@ -3,6 +3,7 @@
 // Requires: X-Admin-Secret header
 
 const { createClient } = require('@supabase/supabase-js')
+const { isAuthorizedAnalyst } = require('./utils/auth')
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -19,8 +20,7 @@ exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' }
   if (event.httpMethod !== 'POST') return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) }
 
-  const adminSecret = event.headers['x-admin-secret'] || event.headers['X-Admin-Secret']
-  if (!adminSecret || adminSecret !== process.env.ADMIN_SECRET) {
+  if (!await isAuthorizedAnalyst(event)) {
     return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) }
   }
 
