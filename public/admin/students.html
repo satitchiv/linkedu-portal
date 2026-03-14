@@ -174,21 +174,14 @@
 </div>
 
 <script>
-const ADMIN_SECRET = 'linkedu-admin-2026'
+const ADMIN_SECRET = 'lnk-Ilvpdog7W9aDUf32u1VHP00btu4bwN33'
 const BASE = window.location.origin
 let secret = ''
 let students = []
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 function initAuth() {
-  const params = new URLSearchParams(window.location.search)
-  const s = params.get('secret')
-  if (s === ADMIN_SECRET) {
-    secret = s
-    loadStudents()
-  } else {
-    document.getElementById('auth-overlay').style.display = 'flex'
-  }
+  document.getElementById('auth-overlay').style.display = 'flex'
 }
 
 function checkSecret() {

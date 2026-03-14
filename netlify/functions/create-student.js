@@ -5,6 +5,8 @@
 
 const { createClient } = require('@supabase/supabase-js')
 const crypto = require('crypto')
+const fs   = require('fs')
+const path = require('path')
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -12,6 +14,44 @@ const supabase = createClient(
 )
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
+
+function getGeminiKey() {
+  const envKey = process.env.GEMINI_API_KEY
+  if (envKey && envKey.startsWith('AIza')) return envKey
+  try {
+    const envFile = fs.readFileSync(path.join(__dirname, '../../.env'), 'utf8')
+    const match = envFile.match(/^GEMINI_API_KEY=(.+)$/m)
+    if (match) return match[1].trim()
+  } catch (e) {}
+  return envKey
+}
+
+async function summarizeDump(dump) {
+  const prompt = `You are a UK boarding school placement consultant's assistant.
+
+Summarize the following enquiry notes into clean, concise bullet points that a parent can read and understand.
+Write in third person (e.g. "Student is..."). No jargon. No markdown headers. Each line starts with a dash and a space (- ).
+Cover: student background, academic situation, sports/interests, goals, budget, preferred destination, any special needs or notes.
+Maximum 10 bullet points. Be factual — only include what is mentioned.
+
+Return ONLY the bullet points. No intro, no outro, no markdown fences.
+
+Notes:
+---
+${dump}
+---`
+
+  const res = await fetch(`${GEMINI_URL}?key=${getGeminiKey()}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.2 }
+    })
+  })
+  const json = await res.json()
+  return (json.candidates?.[0]?.content?.parts?.[0]?.text || '').trim()
+}
 
 async function extractFromDump(dump) {
   const prompt = `You are extracting student profile data for a UK boarding school placement consultant in Thailand.
@@ -71,8 +111,7 @@ Text:
 ${dump}
 ---`
 
-  const geminiKey = process.env.PORTAL_GEMINI_KEY || process.env.GEMINI_API_KEY
-  const res = await fetch(`${GEMINI_URL}?key=${geminiKey}`, {
+  const res = await fetch(`${GEMINI_URL}?key=${getGeminiKey()}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -82,10 +121,6 @@ ${dump}
   })
 
   const json = await res.json()
-  if (json.error) {
-    console.error('Gemini API error:', JSON.stringify(json.error))
-    return {}
-  }
   const raw = json.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
   const clean = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
 
@@ -118,9 +153,17 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'dump is required' }) }
     }
 
-    // Extract structured data
-    const extracted = await extractFromDump(dump)
+    // Extract structured data + generate summary in parallel
+    const [extracted, summary] = await Promise.all([
+      extractFromDump(dump),
+      summarizeDump(dump),
+    ])
     const { target_schools, ...fields } = extracted
+
+    // Default services if Gemini left it empty
+    if (!fields.services_interested || fields.services_interested.length === 0) {
+      fields.services_interested = ['School Selection']
+    }
 
     // Generate access token
     const access_token = crypto.randomBytes(8).toString('hex')
@@ -151,7 +194,8 @@ exports.handler = async (event) => {
       school_types_interested: fields.school_types_interested || [],
       courses_interested:      fields.courses_interested    || [],
       services_interested:     fields.services_interested   || [],
-      consultant_notes:        dump,  // raw dump preserved in full
+      consultant_notes:        dump,              // raw dump preserved for analyst
+      consultant_message:      summary || null,   // AI bullet summary visible to parents
       access_token,
       status: 'active',
       stage:  'researching',
@@ -161,18 +205,6 @@ exports.handler = async (event) => {
       .from('students').insert(record).select().single()
 
     if (insertErr) throw insertErr
-
-    // Create student_schools rows for target schools
-    if (Array.isArray(target_schools) && target_schools.length) {
-      await supabase.from('student_schools').insert(
-        target_schools.map((name, i) => ({
-          student_id: student.id,
-          school_name: name,
-          application_status: 'researching',
-          priority: i + 1,
-        }))
-      )
-    }
 
     const BASE = process.env.URL || 'https://linkedu-parent-portal.netlify.app'
     const analystLink = `${BASE}?token=${access_token}`
@@ -187,7 +219,6 @@ exports.handler = async (event) => {
         extracted,
         analystLink,
         parentLink,
-        schoolsCreated: Array.isArray(target_schools) ? target_schools.length : 0,
       })
     }
 

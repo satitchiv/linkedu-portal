@@ -1251,7 +1251,7 @@ const _urlParams    = new URLSearchParams(window.location.search)
 const _portalToken  = _urlParams.get('token')
 const isTokenView   = !!_portalToken
 const isAnalystView = !window.location.search.includes('view=parent')
-if (isAnalystView) window._adminSecret = 'linkedu-admin-2026'
+if (isAnalystView) window._adminSecret = 'lnk-Ilvpdog7W9aDUf32u1VHP00btu4bwN33'
 
 // ── Utilities ───────────────────────────────────────────────────────────────
 function $id(id) { return document.getElementById(id) }
@@ -3167,7 +3167,7 @@ async function approveRec(id) {
   try {
     const res = await fetch('/api/approve-recommendations', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': 'linkedu-admin-2026' },
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': 'lnk-Ilvpdog7W9aDUf32u1VHP00btu4bwN33' },
       body: JSON.stringify({ student_id: D.student.id, approvals: [{ school_id: id, approved: true, consultant_note: null }] })
     })
     if (!res.ok) throw new Error(await res.text())
@@ -3182,7 +3182,7 @@ async function deleteRec(id) {
   try {
     const res = await fetch('/api/delete-recommendation', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': 'linkedu-admin-2026' },
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': 'lnk-Ilvpdog7W9aDUf32u1VHP00btu4bwN33' },
       body: JSON.stringify({ id })
     })
     if (!res.ok) throw new Error(await res.text())
@@ -3197,7 +3197,7 @@ async function moveToApplying(rec_id) {
   try {
     const res = await fetch('/api/move-to-applying', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': 'linkedu-admin-2026' },
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': 'lnk-Ilvpdog7W9aDUf32u1VHP00btu4bwN33' },
       body: JSON.stringify({ recommendation_id: rec_id, student_id: D.student.id })
     })
     const data = await res.json()
@@ -3220,7 +3220,7 @@ async function runRecs() {
   try {
     const res = await fetch('/api/generate-recommendations', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': 'linkedu-admin-2026' },
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': 'lnk-Ilvpdog7W9aDUf32u1VHP00btu4bwN33' },
       body: JSON.stringify({ student_id: D.student.id })
     })
     const data = await res.json()
@@ -3259,7 +3259,7 @@ async function addSchoolManually() {
   try {
     const res = await fetch('/api/add-recommendation', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': 'linkedu-admin-2026' },
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Secret': 'lnk-Ilvpdog7W9aDUf32u1VHP00btu4bwN33' },
       body: JSON.stringify({ student_id: D.student.id, school_name: name, consultant_note: '', tier: 'consider' })
     })
     const data = await res.json()
@@ -4571,7 +4571,6 @@ async function createNewStudent() {
     $id('ns-student-name').textContent = json.student.studentName
     $id('ns-student-meta').textContent = [
       json.student.parentEmail ? 'Email: ' + json.student.parentEmail : 'No email extracted',
-      json.schoolsCreated ? json.schoolsCreated + ' school(s) added' : ''
     ].filter(Boolean).join(' · ')
     $id('ns-analyst-link-input').value = json.analystLink
     $id('ns-parent-link-input').value  = json.parentLink
@@ -4674,7 +4673,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
       D = dataRes
       userRole = D.role || 'parent'
       golfRounds = D.golfRounds || []
-      if (isAnalystView) window._adminSecret = 'linkedu-admin-2026'
+      if (isAnalystView) window._adminSecret = 'lnk-Ilvpdog7W9aDUf32u1VHP00btu4bwN33'
 
       // Analyst → show students list
       if (isAnalystView) {
