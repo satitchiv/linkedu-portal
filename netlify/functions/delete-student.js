@@ -1,5 +1,5 @@
 // DELETE /api/delete-student
-// Permanently deletes a student and all related records — admin only
+// Permanently deletes a student and all related records — analyst only
 // Body: { student_id: "uuid" }
 
 const { createClient } = require('@supabase/supabase-js')
@@ -23,8 +23,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const secret = event.headers['x-admin-secret'] || event.headers['X-Admin-Secret']
-    if (!secret || secret !== process.env.ADMIN_SECRET) {
+    if (!await isAuthorizedAnalyst(event)) {
       return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) }
     }
 

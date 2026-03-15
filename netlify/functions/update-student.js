@@ -1,21 +1,25 @@
 // PATCH /api/update-student
 // Updates fields on the students table
-// Auth: X-Admin-Secret (analyst, all fields, student_id in body) OR Supabase JWT (parent, restricted fields)
+// Auth: X-Admin-Secret or analyst JWT (all fields, student_id in body) OR Supabase JWT (parent, restricted fields)
 
 const { createClient } = require('@supabase/supabase-js')
+const { isAuthorizedAnalyst } = require('./utils/auth')
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
-// Only these fields can be updated by a parent via JWT
+// Only these fields can be updated by a parent (via JWT or access token link)
 const PARENT_EDITABLE = new Set([
   'student_name', 'preferred_name', 'dob', 'nationality',
   'current_school', 'current_year_group', 'curriculum', 'english_level',
   'primary_sport', 'goal', 'destination', 'budget_gbp', 'target_entry_year',
   'photo_url',
   'parent_name', 'parent_email', 'parent_phone',
+  'sport_notes', 'academic_notes', 'cert_notes',
+  'services_interested', 'school_types_interested', 'courses_interested',
+  'heard_from', 'referral_note',
 ])
 
 exports.handler = async (event) => {
@@ -32,10 +36,9 @@ exports.handler = async (event) => {
 
   try {
     const body = JSON.parse(event.body || '{}')
-    const secret = event.headers['x-admin-secret'] || event.headers['X-Admin-Secret']
-    const isAdmin = secret && secret === process.env.ADMIN_SECRET
+    const isAdmin = await isAuthorizedAnalyst(event)
 
-    // ── Admin path: all fields allowed, student_id required in body ──
+    // ── Admin/analyst path: all fields allowed, student_id required in body ──
     if (isAdmin) {
       const { student_id, ...fields } = body
       if (!student_id) return { statusCode: 400, headers, body: JSON.stringify({ error: 'student_id is required' }) }
@@ -58,6 +61,34 @@ exports.handler = async (event) => {
         .from('students').update(updates).eq('id', student_id).select().single()
 
       if (error) throw error
+      return { statusCode: 200, headers, body: JSON.stringify({ ok: true, student: data }) }
+    }
+
+    // ── Token link path: X-Access-Token header (parent via link, restricted fields) ──
+    const xToken = event.headers['x-access-token'] || event.headers['X-Access-Token']
+    if (xToken) {
+      const { data: student, error: tokenErr } = await supabase
+        .from('students').select('id').eq('access_token', xToken).single()
+      if (tokenErr || !student) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Invalid or expired link' }) }
+
+      const updates = {}
+      for (const [key, val] of Object.entries(body)) {
+        if (!PARENT_EDITABLE.has(key)) continue
+        if (key === 'destination' && typeof val === 'string') {
+          updates[key] = val.split(',').map(s => s.trim()).filter(Boolean)
+        } else if (key === 'budget_gbp') {
+          updates[key] = (val === '' || val === undefined || val === null) ? null : (parseInt(val) || null)
+        } else {
+          updates[key] = val
+        }
+      }
+      if (Object.keys(updates).length === 0) {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'No valid fields to update' }) }
+      }
+      updates.updated_at = new Date().toISOString()
+      const { data, error: updateErr } = await supabase
+        .from('students').update(updates).eq('id', student.id).select().single()
+      if (updateErr) throw updateErr
       return { statusCode: 200, headers, body: JSON.stringify({ ok: true, student: data }) }
     }
 

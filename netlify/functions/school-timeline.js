@@ -1,10 +1,11 @@
 // /api/school-timeline
 // GET    ?student_school_id=xxx  — returns all timeline items for that school (JWT required)
-// POST   { student_school_id, student_id, title, date, notes, item_type } — insert (admin only)
-// PATCH  { id, title, date, notes, parent_note } — update item (admin: all fields; JWT: parent_note only)
-// DELETE { id } — delete item (admin only)
+// POST   { student_school_id, student_id, title, date, notes, item_type } — insert (analyst or admin)
+// PATCH  { id, title, date, notes, item_type, parent_note } — update item (analyst/admin: all fields; parent JWT: parent_note only)
+// DELETE { id } — delete item (analyst or admin)
 
 const { createClient } = require('@supabase/supabase-js')
+const { isAuthorizedAnalyst } = require('./utils/auth')
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -45,19 +46,17 @@ exports.handler = async (event) => {
     return { statusCode: 200, headers, body: JSON.stringify({ items: data || [] }) }
   }
 
-  // ── PATCH: admin can update all fields; parent JWT can only update parent_note ──
+  // ── PATCH: analyst/admin can update all fields; parent JWT can only update parent_note ──
   if (method === 'PATCH') {
     try {
       const body = JSON.parse(event.body || '{}')
-      const { id, title, date, notes, parent_note } = body
+      const { id, title, date, notes, parent_note, item_type } = body
       if (!id) return { statusCode: 400, headers, body: JSON.stringify({ error: 'id is required' }) }
 
-      const secret = event.headers['x-admin-secret'] || event.headers['X-Admin-Secret']
-      const isAdmin = secret && secret === process.env.ADMIN_SECRET
+      const isAnalyst = await isAuthorizedAnalyst(event)
 
-      if (isAdmin) {
-        // Admin: allow updating all fields
-        const { item_type } = body
+      if (isAnalyst) {
+        // Analyst/admin: allow updating all fields
         const updates = {}
         if (title       !== undefined) updates.title       = title
         if (date        !== undefined) updates.date        = date || null
@@ -72,7 +71,26 @@ exports.handler = async (event) => {
           .select()
           .single()
 
-        if (error) { console.error('school-timeline PATCH admin error:', error); throw error }
+        if (error) { console.error('school-timeline PATCH analyst error:', error); throw error }
+        return { statusCode: 200, headers, body: JSON.stringify({ ok: true, item: data }) }
+      }
+
+      // Try X-Access-Token (parent via token link)
+      const xToken = event.headers['x-access-token'] || event.headers['X-Access-Token']
+      if (xToken) {
+        const { data: student, error: tokenErr } = await supabase
+          .from('students').select('id').eq('access_token', xToken).single()
+        if (tokenErr || !student) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Invalid or expired link' }) }
+        if (parent_note === undefined) {
+          return { statusCode: 400, headers, body: JSON.stringify({ error: 'parent_note is required' }) }
+        }
+        const { data, error } = await supabase
+          .from('school_timeline_items')
+          .update({ parent_note: parent_note || null })
+          .eq('id', id)
+          .select()
+          .single()
+        if (error) { console.error('school-timeline PATCH token parent error:', error); throw error }
         return { statusCode: 200, headers, body: JSON.stringify({ ok: true, item: data }) }
       }
 
@@ -103,9 +121,8 @@ exports.handler = async (event) => {
     }
   }
 
-  // ── POST / DELETE: require X-Admin-Secret ─────────────────────────────────
-  const secret = event.headers['x-admin-secret'] || event.headers['X-Admin-Secret']
-  if (!secret || secret !== process.env.ADMIN_SECRET) {
+  // ── POST / DELETE: require analyst or admin auth ───────────────────────────
+  if (!await isAuthorizedAnalyst(event)) {
     return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) }
   }
 

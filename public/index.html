@@ -589,12 +589,65 @@
     /* ── Responsive ────────────────────────────────────── */
     @media (max-width: 640px) {
       #main { padding: 20px 16px; }
-      #header { padding: 0 16px; }
+      #header { padding: 0 16px; gap: 10px; overflow: hidden; }
+      .header-student { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       #tabnav { padding: 0 16px; }
       .tab-btn { padding: 12px 14px; font-size: 11px; }
       .hero-fields { gap: 20px; }
       .form-row { grid-template-columns: 1fr; }
-      .auth-card { padding: 32px 24px; }
+      .auth-card { padding: 24px 20px; }
+
+      /* Font sizes — scale up illegible small labels */
+      .stage-name { font-size: 11px; }
+      .sa-tl-now-badge, .sa-tl-custom-badge { font-size: 11px; }
+      .sa-pip-lbl { font-size: 11px; }
+      .pip-stage-select { font-size: 11px; }
+      .glance-table th { font-size: 11px; letter-spacing: 1px; }
+      .glance-stage-badge { font-size: 11px; }
+      .jny2-now-badge { font-size: 10px; }
+      .jny2-month span { font-size: 11px; }
+      .jny2-school { font-size: 11px; }
+      .jny2-lbl { font-size: 11px; }
+      .sa-kbn-school { font-size: 11px; }
+      .sa-kbn-badge-done, .sa-kbn-badge-now { font-size: 10px; }
+
+      /* Touch targets */
+      .sa-checklist-item input[type="checkbox"] { width: 20px; height: 20px; }
+      .sa-tl-date-input { padding: 8px 10px; min-height: 36px; }
+      .sa-status-select { padding: 8px 10px; min-height: 36px; }
+      .header-signout { padding: 8px 12px; }
+      .header-lang { padding: 7px 10px; }
+
+      /* Urgency deadline rows — 3-col grid so days badge stays beside date */
+      .sa-urg-row { display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: auto auto; gap: 2px 8px; }
+      .sa-urg-dot { grid-row: 1 / 3; align-self: center; }
+      .sa-urg-school { grid-column: 2; grid-row: 1; min-width: 0; }
+      .sa-urg-lbl { grid-column: 2; grid-row: 2; min-width: 0; font-size: 11px; }
+      .sa-urg-date { grid-column: 3; grid-row: 1; text-align: right; }
+      .sa-urg-days { grid-column: 3; grid-row: 2; min-width: 0; text-align: right; }
+
+      /* Students list screen — !important needed to override inline style */
+      #students-list-screen { padding: 20px 16px !important; }
+
+      /* New student modal — !important needed to override inline style */
+      #new-student-overlay > div { padding: 20px 16px !important; }
+
+      /* Timeline add form — stack to 1 column */
+      .sa-tl-add-form .tl-form-row { grid-template-columns: 1fr; }
+
+      /* Schools at a Glance — tighten for mobile */
+      .glance-table { min-width: 480px; }
+      .glance-table th:first-child { width: 110px; }
+      .glance-school-name { font-size: 12px; padding-right: 12px; }
+      .glance-stage-cell { padding: 9px 3px; }
+      .glance-stage-badge { padding: 9px 0; }
+
+      /* Journey kanban — 1 col on mobile so cards have room to breathe */
+      .sa-kbn-grid { grid-template-columns: 1fr; }
+
+      /* School card head — stack vertically, badges left-aligned not floating right */
+      .sa-card-head { flex-direction: column; gap: 10px; }
+      .sa-card-head > div:last-child { flex-direction: row !important; align-items: center !important; gap: 8px !important; }
     }
   
     /* ── Overview cockpit ──────────────────────────────── */
@@ -694,6 +747,11 @@
     .sa-urg-lbl { flex: 1; color: var(--text); min-width: 140px; }
     .sa-urg-date { font-size: 11px; color: var(--muted); white-space: nowrap; }
     .sa-urg-days { font-size: 11px; font-weight: 700; min-width: 54px; text-align: right; }
+    .sa-school-nav { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 18px; }
+    .sa-school-pill { font-size: 11px; padding: 4px 11px; border-radius: 20px;
+      background: #1a1a1a; border: 1px solid #2a2a2a; color: #aaa;
+      text-decoration: none; white-space: nowrap; transition: color .15s, border-color .15s; }
+    .sa-school-pill:hover { color: var(--gold); border-color: var(--gold); }
     .sa-card { background: var(--surface); border: 1px solid var(--border);
       border-radius: 4px; margin-bottom: 20px; overflow: hidden; }
     .sa-card-head { background: #0e0e0e; padding: 20px 24px;
@@ -964,7 +1022,7 @@
       .ov-status-board { grid-template-columns: 1fr 1fr; }
       .sa-body { grid-template-columns: 1fr; }
       .sa-col:first-child { border-right: none; border-bottom: 1px solid var(--border); }
-      .prof-grid-2, .prof-grid-3 { grid-template-columns: 1fr; }
+      .prof-grid-2, .prof-grid-3, .prof-edit-grid { grid-template-columns: 1fr; }
     }
 
     /* ── Fix 1: Inline pipeline stage select ─────────────────── */
@@ -1081,7 +1139,6 @@
       <div class="auth-error" id="auth-error"></div>
     </div>
     <div id="auth-sent-wrap" style="display:none; text-align:center; padding: 12px 0;">
-      <div style="font-size:32px; margin-bottom:16px;">✉️</div>
       <div style="font-family:'Playfair Display',serif; font-size:16px; color:#1a1a1a; margin-bottom:10px;">Check your email</div>
       <div style="font-size:13px; color:#666; line-height:1.7;">We've sent a secure login link to<br><strong id="auth-sent-email" style="color:#1a1a1a;"></strong><br><br>Click the link in the email to sign in.<br>It expires in 1 hour.</div>
       <div style="margin-top:20px; font-size:12px; color:#999;">Wrong email? <span onclick="resetAuthForm()" style="color:#B8962E; cursor:pointer;">Go back</span></div>
@@ -1096,11 +1153,12 @@
       <div style="font-size:20px;font-weight:600;color:var(--gold);letter-spacing:.02em">Students</div>
       <div style="display:flex;gap:10px;align-items:center">
         <input id="sl-search" type="text" placeholder="Search by name or parent..." oninput="filterStudentsList()"
-          style="background:#1a1a1a;border:1px solid #2a2a2a;color:var(--text);padding:7px 12px;border-radius:4px;font-size:13px;width:240px;outline:none" />
+          style="background:#1a1a1a;border:1px solid #2a2a2a;color:var(--text);padding:7px 12px;border-radius:4px;font-size:13px;flex:1;min-width:0;max-width:240px;outline:none" />
         <button onclick="showNewStudentPanel()" style="background:var(--gold);color:#111;border:none;padding:7px 14px;border-radius:4px;font-size:13px;font-weight:600;cursor:pointer">+ New Student</button>
       </div>
     </div>
-    <table style="width:100%;border-collapse:collapse">
+    <div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;min-width:600px">
       <thead>
         <tr style="font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);border-bottom:1px solid #222">
           <th style="text-align:left;padding:0 0 10px 0;font-weight:400">Student</th>
@@ -1109,10 +1167,12 @@
           <th style="text-align:left;padding:0 0 10px 16px;font-weight:400">Status</th>
           <th style="text-align:left;padding:0 0 10px 16px;font-weight:400">Entry</th>
           <th style="text-align:left;padding:0 0 10px 16px;font-weight:400">Created</th>
+          <th style="text-align:right;padding:0 0 10px 16px;font-weight:400">Actions</th>
         </tr>
       </thead>
       <tbody id="sl-tbody"></tbody>
     </table>
+    </div>
     <div id="sl-empty" style="display:none;color:var(--muted);font-size:13px;padding:32px 0">No students found.</div>
   </div>
 </div>
@@ -2172,7 +2232,7 @@ function renderSchools() {
       </div>`
     }
 
-    return `<div class="sa-card${sc.application_status === 'abandoned' ? ' abandoned' : ''}">
+    return `<div class="sa-card${sc.application_status === 'abandoned' ? ' abandoned' : ''}" id="school-card-${sc.id}">
       <div class="sa-card-head">
         <div>
           <div class="sa-card-name">${sc.school_name}</div>
@@ -2224,6 +2284,14 @@ function renderSchools() {
     .map(sc => cards[schools.indexOf(sc)])
     .join('')
 
+  const visibleSchools = schools.filter(s => showAbandoned || s.application_status !== 'abandoned')
+  const schoolNav = visibleSchools.length > 1
+    ? `<div class="sa-school-nav">${visibleSchools.map(sc => {
+        const name = sc.school_name.length > 22 ? sc.school_name.slice(0, 20) + '…' : sc.school_name
+        return `<a class="sa-school-pill" href="#school-card-${sc.id}">${name}</a>`
+      }).join('')}</div>`
+    : ''
+
   const html = `
     <div class="sa-summary">
       <div class="sa-sum-card"><div class="sa-sum-num">${activeSchools.length}</div><div class="sa-sum-lbl">Schools Tracked</div></div>
@@ -2233,6 +2301,7 @@ function renderSchools() {
     </div>
     ${upcoming.length ? `<div class="sa-urgency"><div class="sa-urg-hdr">Upcoming Deadlines</div>${urgRows}</div>` : ''}
     <div class="section-title">Application Tracker</div>
+    ${schoolNav}
     ${abandonedToggle}
     ${activeCards || '<div class="empty">No schools on shortlist yet. Your consultant will add them here.</div>'}`
 
@@ -2309,8 +2378,11 @@ async function saveSection(id, fields) {
     if (isAnalystView) {
       reqHeaders['Authorization'] = 'Bearer ' + (window._token || '')
       payload = { ...fields, student_id: D.student.id }
+    } else if (_portalToken) {
+      reqHeaders['X-Access-Token'] = _portalToken
     } else {
       const { data: { session } } = await sb.auth.getSession()
+      if (!session) throw new Error('Not logged in')
       reqHeaders['Authorization'] = `Bearer ${session.access_token}`
     }
     const res = await fetch('/api/update-student', {
@@ -2355,8 +2427,11 @@ async function saveNotesField(dbField, studentField, value) {
   if (isAnalystView) {
     reqHeaders['Authorization'] = 'Bearer ' + (window._token || '')
     payload = { ...payload, student_id: D.student.id }
+  } else if (_portalToken) {
+    reqHeaders['X-Access-Token'] = _portalToken
   } else {
     const { data: { session } } = await sb.auth.getSession()
+    if (!session) throw new Error('Not logged in')
     reqHeaders['Authorization'] = `Bearer ${session.access_token}`
   }
   const res = await fetch('/api/update-student', {
@@ -2375,7 +2450,6 @@ function notesBox(dbField, studentField, currentValue, elId) {
   return `
     <div style="margin-top:20px;border:1.5px solid rgba(184,150,46,0.5);border-radius:10px;background:rgba(184,150,46,0.06);padding:16px 18px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <span style="font-size:15px">📝</span>
         <div>
           <div style="font-size:12px;font-weight:600;color:var(--gold);letter-spacing:.04em">Important things to note</div>
           <div style="font-size:11px;color:var(--muted);margin-top:1px">Anything you want your consultant to know — context, reminders, extra info</div>
@@ -2384,7 +2458,7 @@ function notesBox(dbField, studentField, currentValue, elId) {
       <div id="${elId}-read">
         ${val
           ? `<div style="font-size:13px;color:var(--text);white-space:pre-wrap;line-height:1.6;background:rgba(184,150,46,0.08);border-radius:6px;padding:12px 14px;border-left:3px solid var(--gold)">${val}</div>
-             <button onclick="showNotesEdit('${elId}')" style="margin-top:10px;background:none;border:1px solid rgba(184,150,46,0.4);border-radius:4px;color:var(--gold);font-size:12px;cursor:pointer;padding:5px 12px">✏ Edit note</button>`
+             <button onclick="showNotesEdit('${elId}')" style="margin-top:10px;background:none;border:1px solid rgba(184,150,46,0.4);border-radius:4px;color:var(--gold);font-size:12px;cursor:pointer;padding:5px 12px">Edit note</button>`
           : `<button onclick="showNotesEdit('${elId}')" style="width:100%;padding:14px;background:rgba(184,150,46,0.08);border:1.5px dashed rgba(184,150,46,0.4);border-radius:8px;color:var(--gold);font-size:13px;cursor:pointer;text-align:center;transition:background .15s" onmouseover="this.style.background='rgba(184,150,46,0.14)'" onmouseout="this.style.background='rgba(184,150,46,0.08)'">
                + Add a note
              </button>`}
@@ -2440,8 +2514,11 @@ async function saveIntakeSection() {
     if (isAnalystView) {
       reqHeaders['Authorization'] = 'Bearer ' + (window._token || '')
       payload.student_id = D.student.id
+    } else if (_portalToken) {
+      reqHeaders['X-Access-Token'] = _portalToken
     } else {
       const { data: { session } } = await sb.auth.getSession()
+      if (!session) throw new Error('Not logged in')
       reqHeaders['Authorization'] = `Bearer ${session.access_token}`
     }
     const res = await fetch('/api/update-student', {
@@ -2617,8 +2694,8 @@ function renderProfile() {
       </tr>`).join('')
     : `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">No academic records yet — your consultant will add these.</td></tr>`
   const s5read = `<div class="card" style="padding:0;overflow:hidden;margin-bottom:0">
-    <table><thead><tr><th>Subject</th><th>Term</th><th>Type</th><th>Grade</th><th>Score</th><th>Date</th></tr></thead>
-    <tbody>${gradeRows}</tbody></table>
+    <div style="overflow-x:auto"><table><thead><tr><th>Subject</th><th>Term</th><th>Type</th><th>Grade</th><th>Score</th><th>Date</th></tr></thead>
+    <tbody>${gradeRows}</tbody></table></div>
   </div>
   ${notesBox('academic_notes', 'academicNotes', p.academicNotes, 'notes-academic')}`
 
@@ -3462,7 +3539,7 @@ function fmtDateGolf(iso) {
 }
 function stpStr(n) { return n===0?'E':n>0?'+'+n:''+n; }
 function stpClass(n) { return n<=-1?'under':n===0?'even':'over'; }
-function mentalEmoji(m) { return m<=1.5?'😊':m<=2.5?'😐':'😤'; }
+function mentalEmoji(m) { return m<=1.5?'G':m<=2.5?'N':'F'; }
 function fmtTeeClubs(bd) {
   if (!bd||!Object.keys(bd).length) return '';
   return Object.entries(bd).sort((a,b)=>b[1].attempts-a[1].attempts)
@@ -3533,7 +3610,7 @@ window.renderList = async function(studentId) {
 
   if (!rounds.length) {
     listEl.innerHTML = `<div class="empty-state">
-      <div class="empty-icon">⛳</div>
+      <div class="empty-icon">—</div>
       <div class="empty-title"><span class="lang-en">No rounds recorded yet</span><span class="lang-th">ยังไม่มีข้อมูลการเล่น</span></div>
       <div class="empty-sub"><span class="lang-en">Rounds tracked by your LINKEDU Golf analyst will appear here after each session.</span><span class="lang-th">รายงานการเล่นจากนักวิเคราะห์ LINKEDU Golf จะปรากฏที่นี่หลังแต่ละรอบ</span></div>
     </div>`;
@@ -3666,8 +3743,8 @@ window.renderDetail = function(roundId) {
     </div>`;
 
   const mentalRow = (round.holes||[]).map((h,i) => {
-    const emoji = h.mentalRating===3?'😤':h.mentalRating===2?'😐':'😊';
-    return `<div class="mental-cell"><div class="mental-emoji">${emoji}</div><div class="mental-hole-num">${i+1}</div></div>`;
+    const mentalLabel = h.mentalRating===3?'F':h.mentalRating===2?'N':'G';
+    return `<div class="mental-cell"><div class="mental-emoji">${mentalLabel}</div><div class="mental-hole-num">${i+1}</div></div>`;
   }).join('');
   const mentalHtml = `
     <p class="sec-label"><span class="lang-en">Mental Game</span><span class="lang-th">จิตใจในการเล่น</span></p>
@@ -3681,9 +3758,9 @@ window.renderDetail = function(roundId) {
   const qualityHtml = `
     <p class="sec-label"><span class="lang-en">Shot Quality</span><span class="lang-th">คุณภาพการตีช็อต</span></p>
     <div class="card">
-      <div class="quality-bar-row"><div class="quality-bar-label">👍 Pure</div><div class="quality-bar-track"><div class="quality-bar-fill" style="width:${pPure}%;background:#5a9a5a"></div></div><div class="quality-bar-pct">${pPure}%</div></div>
-      <div class="quality-bar-row"><div class="quality-bar-label">👌 OK</div><div class="quality-bar-track"><div class="quality-bar-fill" style="width:${pOk}%;background:#c9a830"></div></div><div class="quality-bar-pct">${pOk}%</div></div>
-      <div class="quality-bar-row"><div class="quality-bar-label">👎 Mishit</div><div class="quality-bar-track"><div class="quality-bar-fill" style="width:${pMis}%;background:#ca6d6d"></div></div><div class="quality-bar-pct">${pMis}%</div></div>
+      <div class="quality-bar-row"><div class="quality-bar-label">Pure</div><div class="quality-bar-track"><div class="quality-bar-fill" style="width:${pPure}%;background:#5a9a5a"></div></div><div class="quality-bar-pct">${pPure}%</div></div>
+      <div class="quality-bar-row"><div class="quality-bar-label">OK</div><div class="quality-bar-track"><div class="quality-bar-fill" style="width:${pOk}%;background:#c9a830"></div></div><div class="quality-bar-pct">${pOk}%</div></div>
+      <div class="quality-bar-row"><div class="quality-bar-label">Mishit</div><div class="quality-bar-track"><div class="quality-bar-fill" style="width:${pMis}%;background:#ca6d6d"></div></div><div class="quality-bar-pct">${pMis}%</div></div>
       <div class="mental-note" style="margin-top:12px"><span class="lang-en">Overall shot consistency across the round.</span><span class="lang-th">สัดส่วนนี้ให้ภาพรวมของความสม่ำเสมอในการตีช็อต</span></div>
     </div>`;
 
@@ -3698,14 +3775,14 @@ window.renderDetail = function(roundId) {
       <td class="sc-par">${h.par}</td>
       <td class="${cls}">${h.score} <span style="font-size:10px;opacity:0.7">${diffStr}</span></td>
       <td>${h.putts}</td>
-      <td>${h.mentalRating===3?'😤':h.mentalRating===2?'😐':'😊'}</td>
-      <td>${(h.noteText||h.noteAudioUrl)?'📎':''}</td>
+      <td>${h.mentalRating===3?'F':h.mentalRating===2?'N':'G'}</td>
+      <td>${(h.noteText||h.noteAudioUrl)?'·':''}</td>
     </tr>`;
   }).join('');
   const scorecardHtml=(round.holes&&round.holes.length)?`
     <p class="sec-label"><span class="lang-en">Hole-by-Hole Scorecard</span><span class="lang-th">สกอร์การ์ดแต่ละหลุม</span></p>
     <div class="card" style="padding:0;overflow:hidden">
-      <table class="scorecard-table">
+      <div style="overflow-x:auto"><table class="scorecard-table">
         <thead><tr><th>Hole</th><th>Par</th><th>Score</th><th>Putts</th><th>Mind</th><th>Note</th></tr></thead>
         <tbody>
           ${scorecardRows}
@@ -3717,7 +3794,7 @@ window.renderDetail = function(roundId) {
             <td></td><td></td>
           </tr>
         </tbody>
-      </table>
+      </table></div>
     </div>` : '';
 
   const clubs=comp.clubsUsed, clubTotal=Object.values(clubs).reduce((a,b)=>a+b,0)||1;
@@ -3788,7 +3865,7 @@ async function renderCompare() {
   if (!cachedRounds.length) cachedRounds=await fetchRounds(D&&D.student&&D.student.id);
   const courseStats=computeCourseStats(cachedRounds);
   if (!courseStats.length) {
-    el.innerHTML=`<div class="empty-state"><div class="empty-icon">🏌️</div><div class="empty-title"><span class="lang-en">No course data yet</span><span class="lang-th">ยังไม่มีข้อมูลสนาม</span></div></div>`;
+    el.innerHTML=`<div class="empty-state"><div class="empty-icon">—</div><div class="empty-title"><span class="lang-en">No course data yet</span><span class="lang-th">ยังไม่มีข้อมูลสนาม</span></div></div>`;
     return;
   }
   const bestAvg=Math.min(...courseStats.filter(c=>c.avgScoreToPar!==null).map(c=>c.avgScoreToPar));
@@ -4137,14 +4214,10 @@ async function updateSchoolStatus(schoolId, newStatus) {
     })
     if (!res.ok) { const j = await res.json(); throw new Error(j.error) }
     // Reload fresh data so cache reflects the change
-    const { data: { session } } = await sb.auth.getSession()
-    if (session) {
-      const fresh = await loadData(session.access_token)
-      D = fresh; golfRounds = D.golfRounds || []
-      try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {}
-      renderSchools()
-      renderJourney()
-    }
+    const fresh = _portalToken ? await loadDataByToken(_portalToken) : await (async () => { const { data: { session } } = await sb.auth.getSession(); return session ? await loadData(session.access_token) : null })()
+    if (fresh) { D = fresh; golfRounds = D.golfRounds || []; try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {} }
+    renderSchools()
+    renderJourney()
   } catch(e) { alert('Could not update status: ' + e.message) }
 }
 
@@ -4168,14 +4241,10 @@ async function _patchCustomItemType(itemId, schoolId, itemType) {
       body: JSON.stringify({ id: itemId, item_type: itemType })
     })
     if (!res.ok) { const j = await res.json(); throw new Error(j.error) }
-    const { data: { session } } = await sb.auth.getSession()
-    if (session) {
-      const fresh = await loadData(session.access_token)
-      D = fresh; golfRounds = D.golfRounds || []
-      try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {}
-      renderSchools()
-      renderJourney()
-    }
+    const fresh = _portalToken ? await loadDataByToken(_portalToken) : await (async () => { const { data: { session } } = await sb.auth.getSession(); return session ? await loadData(session.access_token) : null })()
+    if (fresh) { D = fresh; golfRounds = D.golfRounds || []; try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {} }
+    renderSchools()
+    renderJourney()
   } catch(e) { alert('Could not update item: ' + e.message) }
 }
 
@@ -4214,8 +4283,12 @@ async function saveItemNote(itemId, stageKey) {
       const stageTag = stageKey ? ` stage:${stageKey}` : ''
       body = { id: itemId, notes: noteText + stageTag }
       headers['Authorization'] = 'Bearer ' + (window._token || '')
+    } else if (_portalToken) {
+      // Parent via token link
+      body = { id: itemId, parent_note: noteText }
+      headers['X-Access-Token'] = _portalToken
     } else {
-      // Parent: update parent_note field via JWT
+      // Parent via Supabase session
       const { data: { session } } = await sb.auth.getSession()
       if (!session) throw new Error('Not logged in')
       body = { id: itemId, parent_note: noteText }
@@ -4230,13 +4303,9 @@ async function saveItemNote(itemId, stageKey) {
     if (!res.ok) { const j = await res.json(); throw new Error(j.error || 'Save failed') }
 
     // Close form, reload data, re-render
-    const { data: { session } } = await sb.auth.getSession()
-    if (session) {
-      const fresh = await loadData(session.access_token)
-      D = fresh; golfRounds = D.golfRounds || []
-      try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {}
-      renderSchools()
-    }
+    const fresh = _portalToken ? await loadDataByToken(_portalToken) : await (async () => { const { data: { session } } = await sb.auth.getSession(); return session ? await loadData(session.access_token) : null })()
+    if (fresh) { D = fresh; golfRounds = D.golfRounds || []; try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {} }
+    renderSchools()
   } catch(err) {
     alert('Could not save note: ' + err.message)
   }
@@ -4285,13 +4354,9 @@ async function addTimelineItem(schoolId, studentSchoolId) {
     if (msgEl) { msgEl.textContent = 'Saved'; msgEl.style.color = 'var(--green)'; msgEl.style.display = 'inline'; setTimeout(() => { msgEl.style.display = 'none' }, 2500) }
 
     // Refresh student data and re-render
-    const { data: { session } } = await sb.auth.getSession()
-    if (session) {
-      const fresh = await loadData(session.access_token)
-      D = fresh; golfRounds = D.golfRounds || []
-      try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {}
-      renderSchools()
-    }
+    const fresh = _portalToken ? await loadDataByToken(_portalToken) : await (async () => { const { data: { session } } = await sb.auth.getSession(); return session ? await loadData(session.access_token) : null })()
+    if (fresh) { D = fresh; golfRounds = D.golfRounds || []; try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {} }
+    renderSchools()
   } catch(err) {
     if (msgEl) { msgEl.textContent = err.message; msgEl.style.color = 'var(--red)'; msgEl.style.display = 'inline' }
   }
@@ -4307,13 +4372,9 @@ async function deleteTimelineItem(itemId, schoolId) {
     })
     if (!res.ok) { const j = await res.json(); throw new Error(j.error || 'Delete failed') }
 
-    const { data: { session } } = await sb.auth.getSession()
-    if (session) {
-      const fresh = await loadData(session.access_token)
-      D = fresh; golfRounds = D.golfRounds || []
-      try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {}
-      renderSchools()
-    }
+    const fresh = _portalToken ? await loadDataByToken(_portalToken) : await (async () => { const { data: { session } } = await sb.auth.getSession(); return session ? await loadData(session.access_token) : null })()
+    if (fresh) { D = fresh; golfRounds = D.golfRounds || []; try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {} }
+    renderSchools()
   } catch(err) {
     alert('Could not delete: ' + err.message)
   }
@@ -4360,14 +4421,10 @@ async function saveBaseItem(schoolId, stageKey, existingId) {
     if (editBtn) editBtn.style.display = 'inline'
 
     // Refresh and re-render
-    const { data: { session } } = await sb.auth.getSession()
-    if (session) {
-      const fresh = await loadData(session.access_token)
-      D = fresh; golfRounds = D.golfRounds || []
-      try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {}
-      renderSchools()
-      renderJourney()
-    }
+    const fresh = _portalToken ? await loadDataByToken(_portalToken) : await (async () => { const { data: { session } } = await sb.auth.getSession(); return session ? await loadData(session.access_token) : null })()
+    if (fresh) { D = fresh; golfRounds = D.golfRounds || []; try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {} }
+    renderSchools()
+    renderJourney()
   } catch(err) {
     alert('Could not save: ' + err.message)
   }
@@ -4444,12 +4501,15 @@ if (isTokenView) {
       if (!isParentView) {
         const { data: { session } } = await sb.auth.getSession()
         if (session) {
-          const { data: profile } = await sb.from('user_profiles').select('role').eq('id', session.user.id).single()
-          if (profile && (profile.role === 'analyst' || profile.role === 'admin')) {
-            window._token = session.access_token
-            isAnalystView = true
-            renderAll()
-          }
+          try {
+            const _acr = await fetch('/api/check-analyst', { headers: { 'Authorization': 'Bearer ' + session.access_token } })
+            const { isAnalyst } = await _acr.json()
+            if (isAnalyst) {
+              window._token = session.access_token
+              isAnalystView = true
+              renderAll()
+            }
+          } catch (e) { /* network error — show overlay */ }
         }
         if (!isAnalystView) {
           const overlay = $id('analyst-login-overlay')
@@ -4489,6 +4549,10 @@ function filterStudentsList() {
   renderStudentsList(filtered)
 }
 
+function slEsc(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+}
+
 function renderStudentsList(students) {
   const tbody = $id('sl-tbody')
   const empty = $id('sl-empty')
@@ -4498,16 +4562,63 @@ function renderStudentsList(students) {
     return
   }
   empty.style.display = 'none'
+  const inputStyle = 'width:100%;padding:8px 10px;background:var(--surface);border:1px solid rgba(0,0,0,0.15);border-radius:5px;font-size:13px;color:var(--text);outline:none;font-family:inherit'
+  const labelStyle = 'display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted2);margin-bottom:5px;font-weight:600'
   tbody.innerHTML = students.map(s => {
     const created = s.createdAt ? new Date(s.createdAt).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }) : '—'
     const stage = s.stage ? s.stage.replace(/_/g, ' ') : '—'
-    return `<tr onclick="openStudentFromList('${s.accessToken}')" style="cursor:pointer;border-bottom:1px solid #1a1a1a" onmouseover="this.style.background='#161616'" onmouseout="this.style.background=''">
+    const sid = s.id
+    const analystUrl = s.accessToken ? `${window.location.origin}/?token=${s.accessToken}` : ''
+    const parentUrl  = s.accessToken ? `${window.location.origin}/?token=${s.accessToken}&view=parent` : ''
+    return `
+    <tr id="sl-row-${sid}" onclick="openStudentFromList('${s.accessToken}')" style="cursor:pointer;border-bottom:1px solid rgba(0,0,0,0.07)" onmouseover="this.style.background='rgba(184,150,46,0.04)'" onmouseout="this.style.background=''">
       <td style="padding:12px 0;font-size:13px;color:var(--text);font-weight:500">${s.name}</td>
-      <td style="padding:12px 16px;font-size:13px;color:#aaa">${s.parentName || '—'}</td>
-      <td style="padding:12px 16px;font-size:12px;color:#888;text-transform:capitalize">${stage}</td>
-      <td style="padding:12px 16px;font-size:12px;color:#888;text-transform:capitalize">${s.status || '—'}</td>
-      <td style="padding:12px 16px;font-size:12px;color:#888">${s.targetEntryYear || '—'}</td>
-      <td style="padding:12px 16px;font-size:12px;color:#555">${created}</td>
+      <td style="padding:12px 16px;font-size:13px;color:var(--muted)">${s.parentName || '—'}</td>
+      <td style="padding:12px 16px;font-size:12px;color:var(--muted);text-transform:capitalize">${stage}</td>
+      <td style="padding:12px 16px;font-size:12px;color:var(--muted);text-transform:capitalize">${s.status || '—'}</td>
+      <td style="padding:12px 16px;font-size:12px;color:var(--muted)">${s.targetEntryYear || '—'}</td>
+      <td style="padding:12px 16px;font-size:12px;color:var(--muted2)">${created}</td>
+      <td style="padding:12px 0 12px 16px;text-align:right;white-space:nowrap">
+        <div style="display:flex;gap:6px;justify-content:flex-end;align-items:center">
+          ${analystUrl ? `<button onclick="event.stopPropagation();window.open('${analystUrl}','_blank')" style="padding:4px 10px;background:var(--gold);color:#111;border:none;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer">Open</button>` : ''}
+          ${parentUrl  ? `<button id="sl-copy-${sid}" onclick="event.stopPropagation();slCopyParentLink('${parentUrl}','sl-copy-${sid}')" style="padding:4px 10px;background:none;border:1px solid rgba(0,0,0,0.15);border-radius:4px;font-size:11px;color:var(--muted);cursor:pointer">Copy Link</button>` : ''}
+          <button onclick="event.stopPropagation();slToggleEdit('${sid}')" style="padding:4px 10px;background:none;border:1px solid rgba(0,0,0,0.15);border-radius:4px;font-size:11px;color:var(--muted);cursor:pointer">Edit</button>
+          <button onclick="event.stopPropagation();slShowDelete('${sid}')" style="padding:4px 10px;background:none;border:none;font-size:11px;color:var(--muted2);cursor:pointer">Delete</button>
+        </div>
+      </td>
+    </tr>
+    <tr id="sl-editrow-${sid}" style="display:none;background:var(--surface);border-bottom:2px solid rgba(184,150,46,0.2)">
+      <td colspan="7" style="padding:16px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-bottom:14px">
+          <div><label style="${labelStyle}">Student Name</label><input id="sl-ef-name-${sid}" value="${slEsc(s.studentName)}" style="${inputStyle}" /></div>
+          <div><label style="${labelStyle}">Preferred Name</label><input id="sl-ef-pname-${sid}" value="${slEsc(s.preferredName)}" style="${inputStyle}" /></div>
+          <div><label style="${labelStyle}">Parent Name</label><input id="sl-ef-parent-${sid}" value="${slEsc(s.parentName)}" style="${inputStyle}" /></div>
+          <div><label style="${labelStyle}">Parent Email</label><input id="sl-ef-email-${sid}" value="${slEsc(s.parentEmail)}" type="email" style="${inputStyle}" /></div>
+          <div><label style="${labelStyle}">Parent Phone</label><input id="sl-ef-phone-${sid}" value="${slEsc(s.parentPhone)}" style="${inputStyle}" /></div>
+          <div><label style="${labelStyle}">Status</label>
+            <select id="sl-ef-status-${sid}" style="${inputStyle}">
+              <option value="active"   ${s.status==='active'   ?'selected':''}>Active</option>
+              <option value="prospect" ${s.status==='prospect' ?'selected':''}>Prospect</option>
+              <option value="inactive" ${s.status==='inactive' ?'selected':''}>Inactive</option>
+              <option value="enrolled" ${s.status==='enrolled' ?'selected':''}>Enrolled</option>
+            </select>
+          </div>
+          <div><label style="${labelStyle}">Current School</label><input id="sl-ef-school-${sid}" value="${slEsc(s.currentSchool)}" style="${inputStyle}" /></div>
+          <div><label style="${labelStyle}">Entry Year</label><input id="sl-ef-year-${sid}" value="${slEsc(s.targetEntryYear)}" style="${inputStyle}" /></div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button onclick="slSaveEdit('${sid}')" style="padding:7px 16px;background:var(--green);color:#fff;border:none;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer">Save</button>
+          <button onclick="slToggleEdit('${sid}')" style="padding:7px 16px;background:none;border:1px solid rgba(0,0,0,0.15);border-radius:5px;font-size:12px;color:var(--muted);cursor:pointer">Cancel</button>
+          <span id="sl-edit-msg-${sid}" style="font-size:12px;color:var(--gold);margin-left:8px"></span>
+        </div>
+        <div id="sl-del-confirm-${sid}" style="display:none;background:rgba(192,57,43,0.06);border:1px solid rgba(192,57,43,0.2);border-radius:6px;padding:10px 14px;margin-top:12px;font-size:12px;color:var(--red)">
+          Remove <strong>${slEsc(s.name)}</strong> permanently? This cannot be undone.
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button onclick="slDeleteStudent('${sid}')" style="padding:5px 14px;background:var(--red);color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600">Yes, delete</button>
+            <button onclick="slHideDelete('${sid}')" style="padding:5px 14px;background:none;border:1px solid rgba(0,0,0,0.15);border-radius:4px;font-size:12px;cursor:pointer;color:var(--muted)">Cancel</button>
+          </div>
+        </div>
+      </td>
     </tr>`
   }).join('')
 }
@@ -4538,6 +4649,97 @@ function showStudentsList() {
   $id('app').classList.remove('visible')
   $id('students-list-screen').style.display = 'block'
   loadStudentsList()
+}
+
+// ── Students list — edit / delete / copy ──────────────────────────────────────
+function slToggleEdit(sid) {
+  const editRow = $id(`sl-editrow-${sid}`)
+  const isOpen = editRow.style.display !== 'none'
+  document.querySelectorAll('[id^="sl-editrow-"]').forEach(r => { r.style.display = 'none' })
+  if (!isOpen) editRow.style.display = 'table-row'
+}
+
+async function slSaveEdit(sid) {
+  const s = _allStudents.find(x => x.id === sid)
+  if (!s) return
+  const msg = $id(`sl-edit-msg-${sid}`)
+  msg.textContent = 'Saving...'
+  msg.style.color = 'var(--gold)'
+  const updates = {
+    student_id:        sid,
+    student_name:      $id(`sl-ef-name-${sid}`).value.trim(),
+    preferred_name:    $id(`sl-ef-pname-${sid}`).value.trim(),
+    parent_name:       $id(`sl-ef-parent-${sid}`).value.trim(),
+    parent_email:      $id(`sl-ef-email-${sid}`).value.trim(),
+    parent_phone:      $id(`sl-ef-phone-${sid}`).value.trim(),
+    status:            $id(`sl-ef-status-${sid}`).value,
+    current_school:    $id(`sl-ef-school-${sid}`).value.trim(),
+    target_entry_year: $id(`sl-ef-year-${sid}`).value.trim(),
+  }
+  try {
+    const res = await fetch('/api/update-student', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
+      body: JSON.stringify(updates)
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Save failed')
+    Object.assign(s, {
+      studentName:     updates.student_name,
+      preferredName:   updates.preferred_name,
+      name:            updates.preferred_name || updates.student_name || s.name,
+      parentName:      updates.parent_name,
+      parentEmail:     updates.parent_email,
+      parentPhone:     updates.parent_phone,
+      status:          updates.status,
+      currentSchool:   updates.current_school,
+      targetEntryYear: updates.target_entry_year,
+    })
+    msg.textContent = 'Saved'
+    msg.style.color = 'var(--green)'
+    setTimeout(() => { const q = ($id('sl-search').value || '').trim(); if (q) filterStudentsList(); else renderStudentsList(_allStudents) }, 800)
+  } catch (err) {
+    msg.textContent = 'Error: ' + err.message
+    msg.style.color = 'var(--red)'
+  }
+}
+
+function slShowDelete(sid) {
+  const editRow = $id(`sl-editrow-${sid}`)
+  document.querySelectorAll('[id^="sl-editrow-"]').forEach(r => { r.style.display = 'none' })
+  editRow.style.display = 'table-row'
+  $id(`sl-del-confirm-${sid}`).style.display = 'block'
+}
+
+function slHideDelete(sid) {
+  $id(`sl-del-confirm-${sid}`).style.display = 'none'
+}
+
+async function slDeleteStudent(sid) {
+  try {
+    const res = await fetch('/api/delete-student', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
+      body: JSON.stringify({ student_id: sid })
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Delete failed')
+    _allStudents = _allStudents.filter(x => x.id !== sid)
+    const q = ($id('sl-search').value || '').trim(); if (q) filterStudentsList(); else renderStudentsList(_allStudents)
+  } catch (err) {
+    alert('Delete failed: ' + err.message)
+  }
+}
+
+function slCopyParentLink(url, btnId) {
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = $id(btnId)
+    if (!btn) return
+    const orig = btn.textContent
+    btn.textContent = 'Copied'
+    btn.style.color = 'var(--green)'
+    setTimeout(() => { btn.textContent = orig; btn.style.color = '' }, 2000)
+  })
 }
 
 // ── New Student panel ─────────────────────────────────────────────────────────
@@ -4728,48 +4930,52 @@ sb.auth.onAuthStateChange(async (event, session) => {
 <div id="analyst-login-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:500;align-items:center;justify-content:center">
   <div style="background:#161616;border:1px solid #2a2a2a;border-radius:10px;padding:36px 32px;width:340px;text-align:center">
     <div style="font-family:'Cormorant Garamond',serif;color:#B8962E;font-size:20px;margin-bottom:6px">Analyst Access</div>
-    <div id="al-prompt" style="font-size:12px;color:#555;margin-bottom:20px">Enter your email to receive a sign-in link</div>
+    <div id="al-prompt" style="font-size:12px;color:#555;margin-bottom:20px">Sign in to view analyst tools</div>
     <div id="al-form">
-      <input type="email" id="al-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')sendAnalystMagicLink()" style="width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;font-size:14px;color:#eee;outline:none;text-align:center;box-sizing:border-box" />
-      <button onclick="sendAnalystMagicLink()" style="margin-top:12px;width:100%;padding:10px;background:#B8962E;color:#111;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">Send Magic Link</button>
+      <input type="email" id="al-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')$id('al-password').focus()" style="width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;font-size:14px;color:#eee;outline:none;text-align:center;box-sizing:border-box" />
+      <input type="password" id="al-password" placeholder="password" onkeydown="if(event.key==='Enter')signInAnalyst()" style="margin-top:8px;width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;font-size:14px;color:#eee;outline:none;text-align:center;box-sizing:border-box" />
+      <button onclick="signInAnalyst()" id="al-btn" style="margin-top:12px;width:100%;padding:10px;background:#B8962E;color:#111;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">Sign In</button>
     </div>
-    <div id="al-sent" style="display:none;font-size:13px;color:#B8962E;margin-top:8px">Link sent — check your email. This tab will activate automatically when you click it.</div>
     <div id="al-error" style="color:#e74c3c;font-size:12px;margin-top:8px;display:none"></div>
     <div style="margin-top:16px"><button onclick="document.getElementById('analyst-login-overlay').style.display='none'" style="background:none;border:none;color:#555;font-size:12px;cursor:pointer">Continue as parent view</button></div>
   </div>
 </div>
 
 <script>
-// ── Analyst login (token view) — magic link ───────────────────────────────────
-async function sendAnalystMagicLink() {
+// ── Analyst login (token view) — email + password ─────────────────────────────
+async function signInAnalyst() {
   const email = ($id('al-email').value || '').trim()
+  const password = ($id('al-password').value || '')
   const errEl = $id('al-error')
+  const btn = $id('al-btn')
   errEl.style.display = 'none'
-  if (!email) { errEl.textContent = 'Please enter your email.'; errEl.style.display = 'block'; return }
-
-  const { error } = await sb.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: window.location.href }
-  })
+  if (!email || !password) { errEl.textContent = 'Email and password required.'; errEl.style.display = 'block'; return }
+  btn.textContent = 'Signing in...'
+  btn.disabled = true
+  const { error } = await sb.auth.signInWithPassword({ email, password })
+  btn.textContent = 'Sign In'
+  btn.disabled = false
   if (error) { errEl.textContent = error.message; errEl.style.display = 'block'; return }
-
-  $id('al-form').style.display = 'none'
-  $id('al-sent').style.display = 'block'
-  $id('al-prompt').style.display = 'none'
+  // onAuthStateChange below handles the rest
 }
 
-// Handle magic link session on page load / auth state change (token view)
+// Handle sign-in session on page load / auth state change (token view)
 sb.auth.onAuthStateChange(async (event, session) => {
   if (!isTokenView || isParentView) return
   if (!session) return
-  // Verify analyst role
-  const { data: profile } = await sb.from('user_profiles').select('role').eq('id', session.user.id).single()
-  if (!profile || (profile.role !== 'analyst' && profile.role !== 'admin')) return
+  // Verify analyst role via backend (bypasses broken RLS on user_profiles)
+  try {
+    const _acr = await fetch('/api/check-analyst', { headers: { 'Authorization': 'Bearer ' + session.access_token } })
+    const { isAnalyst } = await _acr.json()
+    if (!isAnalyst) return
+  } catch (e) { return }
   window._token = session.access_token
   isAnalystView = true
   const overlay = $id('analyst-login-overlay')
   if (overlay) overlay.style.display = 'none'
   if ($id('btn-new-student')) $id('btn-new-student').style.display = 'inline-block'
+  if ($id('btn-all-students')) $id('btn-all-students').style.display = 'inline-block'
+  if (!D) return
   renderAll()
 })
 </script>
