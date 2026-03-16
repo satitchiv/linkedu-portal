@@ -58,7 +58,7 @@ function displayName(s) { return s.preferred_name || s.student_name }
 
 let _schoolsDb = null
 function schoolsDb() {
-  if (!_schoolsDb) _schoolsDb = require('../../public/data/schools.json')
+  if (!_schoolsDb) _schoolsDb = require('../../public/data/schools.json') // static path — required for Netlify bundler
   return _schoolsDb
 }
 function findSchoolInDb(query) {

@@ -11,7 +11,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
-const SCHOOLS = require(path.join(__dirname, '../../public/data/schools.json'))
+const SCHOOLS = require('../../public/data/schools.json')
 
 exports.handler = async (event) => {
   const headers = {
