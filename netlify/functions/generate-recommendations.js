@@ -470,11 +470,11 @@ exports.handler = async (event) => {
       approved: false,
       consultant_note: null,
     }))
-    const { error: insertErr } = await supabase.from('student_recommendations').insert(rows)
+    const { data: insertedRows, error: insertErr } = await supabase.from('student_recommendations').insert(rows).select()
     if (insertErr) throw insertErr
 
-    // Send Telegram notification
-    await sendTelegram(studentProfile, scored)
+    // Send Telegram notification (fire and forget — don't block the response)
+    sendTelegram(studentProfile, scored).catch(e => console.error('Telegram notify failed:', e))
 
     return {
       statusCode: 200,
@@ -485,7 +485,7 @@ exports.handler = async (event) => {
         topScore: scored[0]?.score,
         student_id: studentId,
         academicStyle,
-        schools: scored,
+        schools: insertedRows || scored,
       })
     }
 

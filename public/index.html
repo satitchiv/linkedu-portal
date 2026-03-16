@@ -3326,11 +3326,8 @@ async function runRecs() {
     const data = await res.json()
     if (data.error) { alert('Error: ' + data.error); return }
 
-    // Reload recommendations from Supabase and re-render
-    const _rr1 = isTokenView && _portalToken ? { 'X-Access-Token': _portalToken } : { 'Authorization': 'Bearer ' + window._token }
-    const reload = await fetch(`/api/student?student_id=${encodeURIComponent(D.student.id)}`, { headers: _rr1 })
-    const fresh = await reload.json()
-    D.recommendations = fresh.recommendations || []
+    // Use inserted rows returned directly — no second fetch needed
+    D.recommendations = data.schools || []
     renderRecommendations()
     btn.textContent = `↻ Re-run Recommendations`
   } catch(e) {
