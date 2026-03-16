@@ -3291,10 +3291,18 @@ async function moveToApplying(rec_id) {
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error || 'Failed')
-    // Mark rec locally so button stays green permanently on re-render
+    // Mark rec locally
     const rec = (D.recommendations || []).find(r => r.id === rec_id)
     if (rec) rec.moved_to_applying = true
-    if (btn) { btn.textContent = 'In Schools Tab ✓'; btn.style.background = '#2d6a2d'; btn.style.color = '#fff'; btn.disabled = true }
+    // Push the new school into D.schools immediately — API returns the inserted row
+    if (data.student_school) {
+      D.schools = [...(D.schools || []), { ...data.student_school, timeline_items: [] }]
+      try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {}
+      renderSchools()
+      renderRecommendations()
+    } else {
+      if (btn) { btn.textContent = 'In Schools Tab ✓'; btn.style.background = '#2d6a2d'; btn.style.color = '#fff'; btn.disabled = true }
+    }
   } catch(e) {
     if (btn) { btn.textContent = 'Move to Applying'; btn.disabled = false }
     alert(e.message === 'Already in applying list' ? 'Already in the Schools tab.' : 'Error: ' + e.message)
