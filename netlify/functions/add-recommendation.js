@@ -13,6 +13,18 @@ const supabase = createClient(
 
 const SCHOOLS = require('../../public/data/schools.json')
 
+// Build factual reason bullets from school properties for display in the portal
+function buildManualReasons(school) {
+  const reasons = []
+  if (school.type && school.type.includes('Boarding'))          reasons.push('boarding')
+  if (school.sports && school.sports.some(s => /golf/i.test(s))) reasons.push('golf')
+  if (school.schol && school.schol.length > 5)                  reasons.push('scholarship')
+  else if (school.sports && school.sports.length > 0)           reasons.push('sport')
+  if (school.region)                                            reasons.push(`Region: ${school.region}`)
+  if (school.fee && school.fee > 0)                             reasons.push(`Tuition: £${Number(school.fee).toLocaleString()}/yr`)
+  return reasons.length ? reasons : ['Manually added by consultant']
+}
+
 exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -90,7 +102,7 @@ exports.handler = async (event) => {
       school_type:     school.type || null,
       sports:          school.sports || [],
       has_scholarship: !!(school.schol && school.schol.length > 5),
-      match_reasons:   ['Manually added by consultant'],
+      match_reasons:   buildManualReasons(school),
       approved:        true,
       consultant_note: consultant_note || null,
       approved_at:     new Date().toISOString(),
