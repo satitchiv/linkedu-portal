@@ -1013,7 +1013,7 @@
     .rec-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #1a1a1a;
       border: 1px solid var(--border); border-top: none; border-radius: 0 0 6px 6px;
       max-height: 220px; overflow-y: auto; z-index: 200; display: none; }
-    .rec-dropdown-item { padding: 9px 14px; font-size: 13px; color: var(--text); cursor: pointer;
+    .rec-dropdown-item { padding: 9px 14px; font-size: 13px; color: #eee; cursor: pointer;
       border-bottom: 1px solid #222; }
     .rec-dropdown-item:last-child { border-bottom: none; }
     .rec-dropdown-item:hover, .rec-dropdown-item.rec-dd-active { background: #222; color: var(--gold); }
@@ -3413,8 +3413,14 @@ async function addSchoolManually() {
     if (btn) { btn.textContent = '+ Add School'; btn.disabled = false }
     const _rr2 = isTokenView && _portalToken ? { 'X-Access-Token': _portalToken } : { 'Authorization': `Bearer ${window._token}` }
     const reload = await fetch('/api/student', { headers: _rr2 })
-    const fresh  = await reload.json()
-    D.recommendations = fresh.recommendations || D.recommendations
+    if (reload.ok) {
+      const fresh = await reload.json()
+      if (fresh && fresh.student) {
+        D = fresh
+        golfRounds = D.golfRounds || []
+        try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {}
+      }
+    }
     renderRecommendations()
   } catch(e) {
     if (btn) { btn.textContent = '+ Add School'; btn.disabled = false }
@@ -4273,6 +4279,12 @@ function toggleTimeline(schoolId) {
 }
 
 async function updateSchoolStatus(schoolId, newStatus) {
+  // Optimistic: update D immediately so the UI reflects the change with no delay
+  const sc = (D.schools || []).find(s => s.id === schoolId)
+  const prevStatus = sc ? sc.application_status : null
+  if (sc) sc.application_status = newStatus
+  renderSchools()
+  renderJourney()
   try {
     const res = await fetch('/api/update-school-status', {
       method: 'PATCH',
@@ -4285,7 +4297,13 @@ async function updateSchoolStatus(schoolId, newStatus) {
     if (fresh) { D = fresh; golfRounds = D.golfRounds || []; try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {} }
     renderSchools()
     renderJourney()
-  } catch(e) { alert('Could not update status: ' + e.message) }
+  } catch(e) {
+    // Revert optimistic update on failure
+    if (sc && prevStatus !== null) sc.application_status = prevStatus
+    renderSchools()
+    renderJourney()
+    alert('Could not update status: ' + e.message)
+  }
 }
 
 const NEXT_STAGE = {
