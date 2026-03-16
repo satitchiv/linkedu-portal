@@ -3098,7 +3098,7 @@ function renderRecommendations() {
   }))
 
   const approved = filteredRecs.filter(r => r.approved)
-  const pending  = isAgent ? filteredRecs.filter(r => !r.approved) : []
+  const pending  = (isAgent || (isTokenView && !isParentView)) ? filteredRecs.filter(r => !r.approved) : []
 
   // School details link using slug
   function schoolLink(r) {
