@@ -3328,7 +3328,7 @@ async function runRecs() {
 
     // Reload recommendations from Supabase and re-render
     const _rr1 = isTokenView && _portalToken ? { 'X-Access-Token': _portalToken } : { 'Authorization': 'Bearer ' + window._token }
-    const reload = await fetch('/api/student', { headers: _rr1 })
+    const reload = await fetch(`/api/student?student_id=${encodeURIComponent(D.student.id)}`, { headers: _rr1 })
     const fresh = await reload.json()
     D.recommendations = fresh.recommendations || []
     renderRecommendations()
