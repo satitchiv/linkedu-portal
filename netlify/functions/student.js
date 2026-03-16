@@ -109,7 +109,7 @@ exports.handler = async (event) => {
         statusCode: 200,
         headers,
         body: JSON.stringify({
-          student: buildStudentObj(s, false),  // token view — show all fields incl. consultantNotes
+          student: buildStudentObj(s, true),   // token view — parent access, strip analyst-only fields
           academics: (academicsRes.data || []).map(a => ({
             id: a.id, subject: a.subject, term: a.term, date: a.date,
             grade: a.grade, score: a.score, maxScore: a.max_score,
