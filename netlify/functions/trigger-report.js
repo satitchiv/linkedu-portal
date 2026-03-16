@@ -70,17 +70,18 @@ exports.handler = async (event) => {
 
     if (sErr || !s) return { statusCode: 404, headers, body: JSON.stringify({ error: 'Student not found' }) }
 
-    // Fetch all recommendations
+    // Fetch approved recommendations only — analyst must approve before report is built
     const { data: recs, error: rErr } = await supabase
       .from('student_recommendations')
       .select('school_name,score,approved')
       .eq('student_id', studentId)
+      .eq('approved', true)
       .order('score', { ascending: false })
 
     if (rErr) throw rErr
 
     if (!recs || !recs.length) {
-      return { statusCode: 400, headers, body: JSON.stringify({ error: 'No recommendations found for this student. Add recommendations first.' }) }
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'No approved schools yet. Use "Show to Parent" on the recommendations first.' }) }
     }
 
     const name    = s.preferred_name || s.student_name
