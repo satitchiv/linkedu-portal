@@ -6,6 +6,7 @@
 const { GoogleGenerativeAI, FunctionCallingMode } = require('@google/generative-ai')
 const { createClient } = require('@supabase/supabase-js')
 const https = require('https')
+const crypto = require('crypto')
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 const genAI    = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
@@ -57,7 +58,7 @@ function displayName(s) { return s.preferred_name || s.student_name }
 
 let _schoolsDb = null
 function schoolsDb() {
-  if (!_schoolsDb) _schoolsDb = require('../../data/schools.json')
+  if (!_schoolsDb) _schoolsDb = require('../../public/data/schools.json')
   return _schoolsDb
 }
 function findSchoolInDb(query) {
@@ -349,6 +350,166 @@ async function handleCallback(cbq) {
   }
 }
 
+// ── Dump: extract + create student from raw text ──────────────────────────────
+const GEMINI_EXTRACT_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
+
+async function geminiExtract(prompt) {
+  const res = await fetch(`${GEMINI_EXTRACT_URL}?key=${process.env.GEMINI_API_KEY}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.1 }
+    })
+  })
+  const json = await res.json()
+  return (json.candidates?.[0]?.content?.parts?.[0]?.text || '').trim()
+}
+
+async function extractFromDump(dump) {
+  const prompt = `You are extracting student profile data for a UK boarding school placement consultant in Thailand.
+
+Extract all available information from the text below. Return ONLY a valid JSON object (no markdown, no code fences). Use null for anything not mentioned.
+
+STRICT RULES:
+1. "destination" — COUNTRIES ONLY. Valid values: "UK", "Australia", "USA", "Canada", "Switzerland", "Singapore". Map cities to countries. Default ["UK"].
+2. "target_year_group" — UK year group the student will ENTER at boarding school (not current school's next year).
+3. "target_entry_year" — Calendar year they plan to START boarding school e.g. "2026".
+4. "sport_notes" — If ANY medical condition mentioned, start with "MEDICAL: [condition]". Then add sport details.
+5. "services_interested" — ONLY: "Application Management", "School Selection", "Interview Prep", "English Tutoring", "Campus Visit", "Guardianship".
+6. "courses_interested" — Academic only: "A-Levels", "IB", "IGCSE", "BTEC", "Pre-A", "Foundation".
+7. "target_schools" — Only actual named schools. Do not invent names.
+
+{
+  "student_name": null, "preferred_name": null, "dob": null, "nationality": null,
+  "current_school": null, "current_year_group": null, "curriculum": null, "english_level": null,
+  "primary_sport": null, "goal": null, "destination": ["UK"], "budget_gbp": null,
+  "target_entry_year": null, "target_year_group": null,
+  "parent_name": null, "parent_email": null, "parent_phone": null,
+  "heard_from": null, "referral_note": null, "sport_notes": null, "academic_notes": null,
+  "school_types_interested": [], "courses_interested": [], "services_interested": [], "target_schools": []
+}
+
+Text:
+---
+${dump}
+---`
+
+  const raw = await geminiExtract(prompt)
+  const clean = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+  try { return JSON.parse(clean) } catch { return {} }
+}
+
+async function summarizeDump(dump) {
+  const prompt = `Summarize these enquiry notes into clean bullet points a parent can read.
+Write in third person ("Student is..."). No jargon. Each line starts with "- ".
+Cover: background, academics, sport, goals, budget, destination, special notes.
+Max 10 bullets. Factual only. No intro, no outro, no markdown fences.
+
+Notes:
+---
+${dump}
+---`
+  return geminiExtract(prompt)
+}
+
+async function actionDump(chatId, dump) {
+  if (!dump.trim()) {
+    return send(chatId, 'Usage: /dump [paste notes here]\n\nExample:\n/dump Student name is Nong, Thai, Year 8...')
+  }
+
+  // Respond immediately — Telegram requires reply within 5s or it retries
+  await send(chatId, 'Processing dump — this takes a few seconds...')
+
+  try {
+    // Run extraction + summary in parallel
+    const [extracted, summary] = await Promise.all([
+      extractFromDump(dump),
+      summarizeDump(dump),
+    ])
+
+    const { target_schools, ...fields } = extracted
+    const studentName = fields.student_name || 'Unknown Student'
+
+    // Duplicate guard — check by phone number first, then by name
+    if (fields.parent_phone) {
+      const { data: existing } = await supabase
+        .from('students')
+        .select('id, student_name')
+        .eq('parent_phone', fields.parent_phone)
+        .limit(1)
+      if (existing?.length) {
+        return send(chatId, `Duplicate detected — a student with this phone number already exists.\n\n<b>${existing[0].student_name}</b>\n\nNo record created. If this is a different student, edit the phone number in the dump.`)
+      }
+    }
+
+    if (!fields.services_interested?.length) {
+      fields.services_interested = ['School Selection']
+    }
+
+    const access_token = crypto.randomBytes(8).toString('hex')
+
+    const record = {
+      student_name:            studentName,
+      preferred_name:          fields.preferred_name        || null,
+      dob:                     fields.dob                   || null,
+      nationality:             fields.nationality           || null,
+      current_school:          fields.current_school        || null,
+      current_year_group:      fields.current_year_group    || null,
+      curriculum:              fields.curriculum            || null,
+      english_level:           fields.english_level         || null,
+      primary_sport:           fields.primary_sport         || null,
+      goal:                    fields.goal                  || null,
+      destination:             fields.destination           || [],
+      budget_gbp:              fields.budget_gbp            || null,
+      target_entry_year:       fields.target_entry_year     || null,
+      target_year_group:       fields.target_year_group     || null,
+      parent_name:             fields.parent_name           || null,
+      parent_email:            fields.parent_email          || null,
+      parent_phone:            fields.parent_phone          || null,
+      heard_from:              fields.heard_from            || null,
+      referral_note:           fields.referral_note         || null,
+      sport_notes:             fields.sport_notes           || null,
+      academic_notes:          fields.academic_notes        || null,
+      school_types_interested: fields.school_types_interested || [],
+      courses_interested:      fields.courses_interested    || [],
+      services_interested:     fields.services_interested,
+      consultant_notes:        dump,
+      consultant_message:      summary || null,
+      access_token,
+      status: 'active',
+      stage:  'researching',
+    }
+
+    const { data: student, error } = await supabase
+      .from('students').insert(record).select().single()
+
+    if (error) throw error
+
+    const BASE = process.env.URL || 'https://linkedu-parent-portal.netlify.app'
+    const analystLink = `${BASE}?token=${access_token}`
+    const parentLink  = `${BASE}?token=${access_token}&view=parent`
+
+    const destStr   = (fields.destination || []).join(', ') || '—'
+    const budgetStr = fields.budget_gbp ? `£${Number(fields.budget_gbp).toLocaleString()}/yr` : '—'
+    const sportStr  = fields.primary_sport || '—'
+    const entryStr  = fields.target_entry_year ? `${fields.target_year_group || ''} ${fields.target_entry_year}`.trim() : '—'
+
+    await send(chatId,
+      `Student created.\n\n` +
+      `<b>${studentName}</b>${fields.preferred_name ? ' (' + fields.preferred_name + ')' : ''}\n` +
+      `${fields.nationality || '—'}  ·  ${fields.current_school || '—'}  ·  ${entryStr}\n` +
+      `Destination: ${destStr}  ·  Budget: ${budgetStr}  ·  Sport: ${sportStr}\n\n` +
+      `Analyst: ${analystLink}\n` +
+      `Parent: ${parentLink}`
+    )
+
+  } catch (err) {
+    console.error('dump error:', err)
+    await send(chatId, `Error creating student: ${err.message}`)
+  }
+}
+
 // ── Help text ──────────────────────────────────────────────────────────────────
 const HELP = `<b>LinkedU Bot — Gemini powered</b>
 
@@ -360,10 +521,11 @@ Just talk naturally. Examples:
 "what deadlines are coming up"
 "set an update for ping at eton — interview confirmed"
 
-<b>Or use commands:</b>
+<b>Commands:</b>
 /summary [name]
 /all
-/deadlines`
+/deadlines
+/dump [paste enquiry notes]  — creates a new student record from raw text`
 
 // ── Main handler ───────────────────────────────────────────────────────────────
 exports.handler = async (event) => {
@@ -393,6 +555,12 @@ exports.handler = async (event) => {
     // Hard commands that bypass Gemini
     if (text === '/help' || text === '/start') {
       await send(chatId, HELP)
+      return { statusCode: 200, body: 'ok' }
+    }
+
+    if (text.startsWith('/dump')) {
+      const dump = text.slice(5).trim()
+      await actionDump(chatId, dump)
       return { statusCode: 200, body: 'ok' }
     }
 
