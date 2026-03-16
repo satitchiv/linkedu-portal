@@ -89,3 +89,4 @@ Her opinion takes priority on all aesthetic decisions.
 - Test token: `YIFJXNUR` (Ping's JWT)
 - Telegram allowed user ID: `5085440081`
 - Telegram bot webhook: `https://linkedu-parent-portal.netlify.app/api/telegram-bot`
+- Seed demo data: visit `/golf-seed` and click Seed
