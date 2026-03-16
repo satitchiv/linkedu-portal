@@ -398,8 +398,16 @@ exports.handler = async (event) => {
       const { data: { user }, error: authErr } = await supabase.auth.getUser(token)
       if (authErr || !user) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Invalid token' }) }
       const { data: profile } = await supabase.from('user_profiles').select('student_id, role').eq('id', user.id).single()
-      if (!profile || !profile.student_id) return { statusCode: 404, headers, body: JSON.stringify({ error: 'No student linked' }) }
-      studentId = profile.student_id
+      // Analyst/admin: use student_id from request body
+      if (profile && (profile.role === 'analyst' || profile.role === 'admin')) {
+        const body = JSON.parse(event.body || '{}')
+        if (!body.student_id) return { statusCode: 400, headers, body: JSON.stringify({ error: 'student_id required' }) }
+        studentId = body.student_id
+      } else {
+        // Student/parent: use student_id linked to their profile
+        if (!profile || !profile.student_id) return { statusCode: 404, headers, body: JSON.stringify({ error: 'No student linked' }) }
+        studentId = profile.student_id
+      }
     }
 
     if (!studentId) return { statusCode: 400, headers, body: JSON.stringify({ error: 'student_id required' }) }
