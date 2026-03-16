@@ -3411,13 +3411,14 @@ async function addSchoolManually() {
     if (input) input.value = ''
     _selectedSchoolName = ''
     if (btn) { btn.textContent = '+ Add School'; btn.disabled = false }
-    const _rr2 = isTokenView && _portalToken ? { 'X-Access-Token': _portalToken } : { 'Authorization': `Bearer ${window._token}` }
-    const reload = await fetch('/api/student', { headers: _rr2 })
+    // Reload only recommendations — never replace full D (avoids wiping page on analyst JWT path)
+    const _rrHeaders = isTokenView && _portalToken ? { 'X-Access-Token': _portalToken } : { 'Authorization': `Bearer ${window._token}` }
+    const _rrUrl = (isTokenView && _portalToken) ? '/api/student' : `/api/student?student_id=${D.student && D.student.id ? D.student.id : ''}`
+    const reload = await fetch(_rrUrl, { headers: _rrHeaders })
     if (reload.ok) {
       const fresh = await reload.json()
-      if (fresh && fresh.student) {
-        D = fresh
-        golfRounds = D.golfRounds || []
+      if (fresh && Array.isArray(fresh.recommendations)) {
+        D.recommendations = fresh.recommendations
         try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {}
       }
     }
@@ -4279,8 +4280,8 @@ function toggleTimeline(schoolId) {
 }
 
 async function updateSchoolStatus(schoolId, newStatus) {
-  // Optimistic: update D immediately so the UI reflects the change with no delay
-  const sc = (D.schools || []).find(s => s.id === schoolId)
+  // Optimistic: update D locally and re-render immediately — no full reload
+  const sc = (D.schools || []).find(s => String(s.id) === String(schoolId))
   const prevStatus = sc ? sc.application_status : null
   if (sc) sc.application_status = newStatus
   renderSchools()
@@ -4292,11 +4293,8 @@ async function updateSchoolStatus(schoolId, newStatus) {
       body: JSON.stringify({ student_school_id: schoolId, application_status: newStatus })
     })
     if (!res.ok) { const j = await res.json(); throw new Error(j.error) }
-    // Reload fresh data so cache reflects the change
-    const fresh = _portalToken ? await loadDataByToken(_portalToken) : await (async () => { const { data: { session } } = await sb.auth.getSession(); return session ? await loadData(session.access_token) : null })()
-    if (fresh) { D = fresh; golfRounds = D.golfRounds || []; try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {} }
-    renderSchools()
-    renderJourney()
+    // Update cache to reflect the change — no full reload (avoids wiping D on analyst JWT path)
+    try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {}
   } catch(e) {
     // Revert optimistic update on failure
     if (sc && prevStatus !== null) sc.application_status = prevStatus
