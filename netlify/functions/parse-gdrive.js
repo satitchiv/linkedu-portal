@@ -188,7 +188,9 @@ exports.handler = async (event) => {
       const exportUrl = `https://docs.google.com/document/d/${parsed.fileId}/export?format=txt`
       const { body: textBuf, contentType, statusCode } = await fetchUrl(exportUrl)
 
-      if (statusCode !== 200 || contentType.includes('text/html')) {
+      const docStart = textBuf.slice(0, 200).toString('utf8').trim().toLowerCase()
+      const isDocHtml = contentType.includes('text/html') || (docStart.includes('<!doctype') || docStart.includes('<html'))
+      if (statusCode !== 200 || isDocHtml) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: 'Could not access this Google Doc. Make sure it is shared as "Anyone with the link can view".' }) }
       }
 
@@ -206,7 +208,12 @@ exports.handler = async (event) => {
       const downloadUrl = `https://drive.usercontent.google.com/download?id=${parsed.fileId}&export=download&authuser=0&confirm=1`
       const { body: fileBuf, contentType, statusCode } = await fetchUrl(downloadUrl)
 
-      if (statusCode !== 200 || contentType.includes('text/html')) {
+      // Detect HTML by content-type OR by body start — Google returns HTML
+      // virus-scan pages with application/octet-stream content-type
+      const bodyStart = fileBuf.slice(0, 50).toString('utf8').trim().toLowerCase()
+      const isHtml = contentType.includes('text/html') || bodyStart.startsWith('<')
+
+      if (statusCode !== 200 || isHtml) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: 'Could not access this file. Make sure it is shared as "Anyone with the link can view".' }) }
       }
 
