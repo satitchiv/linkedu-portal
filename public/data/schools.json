@@ -1989,6 +1989,34 @@
     ]
   },
   {
+    "id": 115,
+    "name": "Epsom College - Malaysia",
+    "slug": "epsom-college-malaysia",
+    "loc": "Kuala Lumpur",
+    "region": "Malaysia",
+    "type": "Full Boarding",
+    "gender": "Co-ed",
+    "fee": 0,
+    "entry": [
+      "Year 7",
+      "Year 8",
+      "Year 9",
+      "Year 10",
+      "Year 12"
+    ],
+    "gcse": 93,
+    "alevel": 71,
+    "oxbridge": 0,
+    "sports": [],
+    "schol": "",
+    "exeat": "",
+    "totalStudents": 600,
+    "boardRatio": 60,
+    "distLondon": 0,
+    "note": "Epsom College Malaysia is the sister campus of Epsom College (Surrey, UK), located in Kuala Lumpur. Co-educational full boarding from Year 7. Boarding ratio 60%. Not visa-licensed — students cannot obtain a UK student visa through this campus.",
+    "coreSports": []
+  },
+  {
     "id": 43,
     "name": "Eton College",
     "slug": "eton-college",
