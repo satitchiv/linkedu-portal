@@ -2246,7 +2246,8 @@ function renderSchools() {
       <div class="sa-card-head">
         <div>
           <div class="sa-card-name">${sc.school_name}</div>
-          <div class="sa-card-meta">${sc.country||'UK'}${sc.region ? ' · '+sc.region : ''}${sc.target_year ? ' · Entry '+sc.target_year : ''}</div>
+          <div class="sa-card-meta">${sc.country||'UK'}${sc.region ? ' · '+sc.region : ''}</div>
+          ${sc.target_year ? `<div style="display:inline-block;margin:4px 0 2px;padding:3px 10px;background:rgba(184,150,46,0.12);border:1px solid rgba(184,150,46,0.5);border-radius:4px;font-size:13px;font-weight:700;color:#B8962E;letter-spacing:.04em">Entry ${sc.target_year}</div>` : ''}
           <div class="sa-card-fee">${feeStr}</div>
           ${fitStars}
         </div>
