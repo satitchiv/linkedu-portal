@@ -10,6 +10,9 @@
   publish = "public"
   functions = "netlify/functions"
 
+[functions.parse-gdrive]
+  timeout = 26
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
