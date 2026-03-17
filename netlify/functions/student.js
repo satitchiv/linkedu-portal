@@ -22,6 +22,8 @@ async function fetchStudentData(studentId) {
     documentsRes,
     golfRes,
     recsRes,
+    certificationsRes,
+    extractionsRes,
   ] = await Promise.all([
     supabase.from('students').select('*').eq('id', studentId).single(),
     supabase.from('student_academics').select('*').eq('student_id', studentId).order('date', { ascending: false }),
@@ -31,12 +33,14 @@ async function fetchStudentData(studentId) {
     supabase.from('student_documents').select('*').eq('student_id', studentId).order('due_date'),
     supabase.from('golf_rounds').select('*').eq('student_id', studentId).order('date', { ascending: false }),
     supabase.from('student_recommendations').select('*').eq('student_id', studentId).order('score', { ascending: false }),
+    supabase.from('student_certifications').select('*').eq('student_id', studentId).order('date', { ascending: false, nullsFirst: false }),
+    supabase.from('document_extractions').select('*').eq('student_id', studentId).order('extracted_at', { ascending: false }),
   ])
 
   const s = studentRes.data || {}
   const timelineItems = timelineItemsRes.data || []
 
-  return { s, academicsRes, schoolsRes, timelineItems, milestonesRes, documentsRes, golfRes, recsRes }
+  return { s, academicsRes, schoolsRes, timelineItems, milestonesRes, documentsRes, golfRes, recsRes, certificationsRes, extractionsRes }
 }
 
 // Build the student object — pass isParent=true to strip admin-only fields
@@ -103,7 +107,7 @@ exports.handler = async (event) => {
         return { statusCode: 401, headers, body: JSON.stringify({ error: 'Invalid or expired link' }) }
       }
 
-      const { s, academicsRes, schoolsRes, timelineItems, milestonesRes, documentsRes, golfRes, recsRes } =
+      const { s, academicsRes, schoolsRes, timelineItems, milestonesRes, documentsRes, golfRes, recsRes, certificationsRes, extractionsRes } =
         await fetchStudentData(student.id)
 
       return {
@@ -120,10 +124,12 @@ exports.handler = async (event) => {
             ...sc,
             timeline_items: timelineItems.filter(item => item.student_school_id === sc.id),
           })),
-          milestones:      milestonesRes.data || [],
-          documents:       documentsRes.data  || [],
-          golfRounds:      golfRes.data       || [],
-          recommendations: recsRes.data       || [],
+          milestones:       milestonesRes.data     || [],
+          documents:        documentsRes.data       || [],
+          golfRounds:       golfRes.data            || [],
+          recommendations:  recsRes.data            || [],
+          certifications:   certificationsRes.data  || [],
+          extractions:      extractionsRes.data     || [],
           role: 'parent',
         })
       }
@@ -162,7 +168,7 @@ exports.handler = async (event) => {
       }
     }
 
-    const { s, academicsRes, schoolsRes, timelineItems, milestonesRes, documentsRes, golfRes, recsRes } =
+    const { s, academicsRes, schoolsRes, timelineItems, milestonesRes, documentsRes, golfRes, recsRes, certificationsRes, extractionsRes } =
       await fetchStudentData(studentIdToFetch)
 
     const isParent = profile.role === 'parent'
@@ -181,10 +187,12 @@ exports.handler = async (event) => {
           ...sc,
           timeline_items: timelineItems.filter(item => item.student_school_id === sc.id),
         })),
-        milestones:      milestonesRes.data || [],
-        documents:       documentsRes.data  || [],
-        golfRounds:      golfRes.data       || [],
-        recommendations: recsRes.data       || [],
+        milestones:       milestonesRes.data     || [],
+        documents:        documentsRes.data       || [],
+        golfRounds:       golfRes.data            || [],
+        recommendations:  recsRes.data            || [],
+        certifications:   certificationsRes.data  || [],
+        extractions:      extractionsRes.data     || [],
         role: profile.role,
       })
     }
