@@ -3265,7 +3265,7 @@ async function setHighlighted(id) {
     if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed') }
     // Update local data and re-render
     ;(D.recommendations || []).forEach(r => { r.highlighted = r.id === id })
-    showTab('recommendations')
+    renderRecommendations()
   } catch(e) {
     alert('Error: ' + e.message)
   }
