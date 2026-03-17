@@ -9,6 +9,15 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
+// Sanitize dates from Gemini extraction — Postgres rejects anything other than YYYY-MM-DD
+function sanitizeDate(val) {
+  if (!val) return null
+  const s = String(val).trim()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s          // already valid
+  if (/^\d{4}$/.test(s)) return `${s}-06-30`            // year-only → mid-year
+  return null                                             // partial / unknown → null
+}
+
 const PARENT_EDITABLE = new Set([
   'student_name', 'preferred_name', 'dob', 'nationality',
   'current_school', 'current_year_group', 'curriculum', 'english_level',
@@ -123,8 +132,8 @@ exports.handler = async (event) => {
           presenter:    c.presenter || null,
           score:        c.score ? String(c.score) : null,
           grade:        c.grade || null,
-          date:         c.date || null,
-          expiry_date:  c.expiryDate || null,
+          date:         sanitizeDate(c.date),
+          expiry_date:  sanitizeDate(c.expiryDate),
           notes:        c.notes || null,
         }))
 
