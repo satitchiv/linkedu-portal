@@ -3003,6 +3003,18 @@ function renderProfile() {
               <input type="file" id="report-file-input" accept=".pdf" style="font-size:13px;color:var(--text)" />
             </div>
             <button class="btn-submit" id="extract-btn" onclick="uploadAndExtract()" style="margin-bottom:12px">Extract from Document</button>
+
+            <div style="display:flex;align-items:center;gap:10px;margin:14px 0 12px">
+              <div style="flex:1;height:1px;background:var(--border)"></div>
+              <div style="font-size:11px;color:var(--muted);white-space:nowrap;letter-spacing:.04em">or extract from Google Drive</div>
+              <div style="flex:1;height:1px;background:var(--border)"></div>
+            </div>
+            <div class="form-field" style="margin-bottom:10px">
+              <input type="url" id="gdrive-url-input" placeholder="Paste Google Drive or Docs share URL" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--surface2);color:var(--text);box-sizing:border-box" />
+              <div style="font-size:11px;color:var(--muted);margin-top:4px">File must be shared as "Anyone with the link can view"</div>
+            </div>
+            <button class="btn-submit" id="gdrive-btn" onclick="extractFromDrive()" style="margin-bottom:12px">Extract from Drive</button>
+
             <div class="form-msg" id="extract-msg"></div>
 
             <div id="extract-preview" style="display:none;margin-top:20px;border:1px solid var(--border);border-radius:8px;padding:20px;background:var(--surface2)">
@@ -4191,78 +4203,129 @@ async function uploadAndExtract() {
 
     if (!res.ok) throw new Error(json.error || 'Extraction failed')
 
-    const e = json.extracted
-    _lastExtracted = e
-
-    // Show document info found
-    const profileLines = []
-    if (e.docType)      profileLines.push(`<b>Document type:</b> ${e.docType.replace(/_/g,' ')}`)
-    if (e.studentName)  profileLines.push(`<b>Name:</b> ${e.studentName}`)
-    if (e.dob)          profileLines.push(`<b>Date of birth:</b> ${e.dob}`)
-    if (e.school)       profileLines.push(`<b>School:</b> ${e.school}`)
-    if (e.yearGroup)    profileLines.push(`<b>Year group:</b> ${e.yearGroup}`)
-    if (e.curriculum)   profileLines.push(`<b>Curriculum:</b> ${e.curriculum}`)
-    if (e.term)         profileLines.push(`<b>Term:</b> ${e.term}`)
-    if (e.academicYear) profileLines.push(`<b>Academic year:</b> ${e.academicYear}`)
-
-    $id('extract-profile-preview').innerHTML = profileLines.length
-      ? profileLines.join('<br>')
-      : '<span style="color:var(--muted)">No document info found</span>'
-
-    // Show grades table
-    const grades = e.grades || []
-    const gradesSection = $id('extract-grades-section')
-    if (grades.length) {
-      const rows = grades.map(g => `
-        <tr>
-          <td style="padding:4px 8px;border-bottom:1px solid var(--border)">${g.subject}</td>
-          <td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:center">${g.grade || '—'}</td>
-          <td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:center">${g.score !== null && g.score !== undefined ? g.score : '—'}${g.maxScore ? '/'+g.maxScore : ''}</td>
-        </tr>`).join('')
-      $id('extract-grades-preview').innerHTML = `
-        <table style="width:100%;border-collapse:collapse;font-size:12px">
-          <thead><tr style="background:var(--surface3)">
-            <th style="padding:6px 8px;text-align:left;font-weight:500">Subject</th>
-            <th style="padding:6px 8px;text-align:center;font-weight:500">Grade</th>
-            <th style="padding:6px 8px;text-align:center;font-weight:500">Score</th>
-          </tr></thead>
-          <tbody>${rows}</tbody>
-        </table>`
-      gradesSection.style.display = 'block'
-    } else {
-      gradesSection.style.display = 'none'
-    }
-
-    // Show certifications
-    const certs = e.certifications || []
-    const certsSection = $id('extract-certs-section')
-    if (certs.length) {
-      const certRows = certs.map(c => `
-        <div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:12px">
-          <div style="font-weight:500;color:var(--text)">${c.name}</div>
-          <div style="color:var(--muted);margin-top:2px">
-            ${c.issuer ? c.issuer + (c.presenter || c.score || c.grade || c.date ? ' · ' : '') : ''}${c.presenter ? 'Presented by ' + c.presenter + (c.score || c.grade || c.date ? ' · ' : '') : ''}${c.score || c.grade || ''}${c.date ? ' · ' + c.date : ''}
-          </div>
-        </div>`).join('')
-      $id('extract-certs-preview').innerHTML = certRows
-      certsSection.style.display = 'block'
-    } else {
-      certsSection.style.display = 'none'
-    }
-
-    preview.style.display = 'block'
-    const summary = [
-      grades.length ? `${grades.length} grade${grades.length!==1?'s':''}` : '',
-      certs.length  ? `${certs.length} certificate${certs.length!==1?'s':''}` : '',
-    ].filter(Boolean).join(', ')
-    msg.className = 'form-msg ok'
-    msg.textContent = (summary ? `Found ${summary}` : 'Document read') + ' — review below and confirm to save.'
+    showExtractPreview(json.extracted, msg)
 
   } catch (err) {
     msg.className = 'form-msg error'; msg.textContent = err.message || 'Extraction failed.'
     console.error('uploadAndExtract error:', err)
   } finally {
     btn.disabled = false; btn.textContent = 'Extract from Document'
+  }
+}
+
+function showExtractPreview(e, msg) {
+  _lastExtracted = e
+  const preview = $id('extract-preview')
+
+  const profileLines = []
+  if (e.docType)      profileLines.push(`<b>Document type:</b> ${e.docType.replace(/_/g,' ')}`)
+  if (e.studentName)  profileLines.push(`<b>Name:</b> ${e.studentName}`)
+  if (e.dob)          profileLines.push(`<b>Date of birth:</b> ${e.dob}`)
+  if (e.school)       profileLines.push(`<b>School:</b> ${e.school}`)
+  if (e.yearGroup)    profileLines.push(`<b>Year group:</b> ${e.yearGroup}`)
+  if (e.curriculum)   profileLines.push(`<b>Curriculum:</b> ${e.curriculum}`)
+  if (e.term)         profileLines.push(`<b>Term:</b> ${e.term}`)
+  if (e.academicYear) profileLines.push(`<b>Academic year:</b> ${e.academicYear}`)
+
+  $id('extract-profile-preview').innerHTML = profileLines.length
+    ? profileLines.join('<br>')
+    : '<span style="color:var(--muted)">No document info found</span>'
+
+  const grades = e.grades || []
+  const gradesSection = $id('extract-grades-section')
+  if (grades.length) {
+    const rows = grades.map(g => `
+      <tr>
+        <td style="padding:4px 8px;border-bottom:1px solid var(--border)">${g.subject}</td>
+        <td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:center">${g.grade || '—'}</td>
+        <td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:center">${g.score !== null && g.score !== undefined ? g.score : '—'}${g.maxScore ? '/'+g.maxScore : ''}</td>
+      </tr>`).join('')
+    $id('extract-grades-preview').innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:var(--surface3)">
+          <th style="padding:6px 8px;text-align:left;font-weight:500">Subject</th>
+          <th style="padding:6px 8px;text-align:center;font-weight:500">Grade</th>
+          <th style="padding:6px 8px;text-align:center;font-weight:500">Score</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`
+    gradesSection.style.display = 'block'
+  } else {
+    gradesSection.style.display = 'none'
+  }
+
+  const certs = e.certifications || []
+  const certsSection = $id('extract-certs-section')
+  if (certs.length) {
+    const certRows = certs.map(c => `
+      <div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:12px">
+        <div style="font-weight:500;color:var(--text)">${c.name}</div>
+        <div style="color:var(--muted);margin-top:2px">
+          ${c.issuer ? c.issuer + (c.presenter || c.score || c.grade || c.date ? ' · ' : '') : ''}${c.presenter ? 'Presented by ' + c.presenter + (c.score || c.grade || c.date ? ' · ' : '') : ''}${c.score || c.grade || ''}${c.date ? ' · ' + c.date : ''}
+        </div>
+      </div>`).join('')
+    $id('extract-certs-preview').innerHTML = certRows
+    certsSection.style.display = 'block'
+  } else {
+    certsSection.style.display = 'none'
+  }
+
+  preview.style.display = 'block'
+  const summary = [
+    grades.length ? `${grades.length} grade${grades.length!==1?'s':''}` : '',
+    certs.length  ? `${certs.length} certificate${certs.length!==1?'s':''}` : '',
+  ].filter(Boolean).join(', ')
+  if (msg) {
+    msg.className = 'form-msg ok'
+    msg.textContent = (summary ? `Found ${summary}` : 'Document read') + ' — review below and confirm to save.'
+  }
+}
+
+async function extractFromDrive() {
+  const urlInput = $id('gdrive-url-input')
+  const nameIn   = $id('doc-name-input')
+  const btn      = $id('gdrive-btn')
+  const msg      = $id('extract-msg')
+  const preview  = $id('extract-preview')
+
+  const driveUrl = urlInput && urlInput.value.trim()
+  if (!driveUrl) {
+    msg.className = 'form-msg error'; msg.textContent = 'Please paste a Google Drive or Docs URL first.'; return
+  }
+
+  _lastDocName = (nameIn && nameIn.value.trim()) || ''
+  _lastFileHash = ''
+
+  btn.disabled = true; btn.textContent = 'Extracting…'
+  msg.className = 'form-msg'; msg.textContent = 'Fetching document and reading with AI — this takes about 15 seconds…'
+  preview.style.display = 'none'
+  _lastExtracted = null
+
+  try {
+    const parseHeaders = { 'Content-Type': 'application/json' }
+    if (isTokenView && _portalToken) {
+      parseHeaders['X-Access-Token'] = _portalToken
+    } else {
+      const { data: { session } } = await sb.auth.getSession()
+      if (!session) { msg.className='form-msg error'; msg.textContent='Not logged in.'; return }
+      parseHeaders['Authorization'] = `Bearer ${session.access_token}`
+    }
+
+    const res = await fetch('/api/parse-gdrive', {
+      method: 'POST',
+      headers: parseHeaders,
+      body: JSON.stringify({ driveUrl, fileName: _lastDocName, studentId: D.student?.id }),
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Extraction failed')
+
+    _lastDocName = _lastDocName || json.fileName || 'Google Drive document'
+    showExtractPreview(json.extracted, msg)
+
+  } catch (err) {
+    msg.className = 'form-msg error'; msg.textContent = err.message || 'Extraction failed.'
+  } finally {
+    btn.disabled = false; btn.textContent = 'Extract from Drive'
   }
 }
 
