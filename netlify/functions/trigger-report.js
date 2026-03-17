@@ -71,18 +71,24 @@ exports.handler = async (event) => {
     if (sErr || !s) return { statusCode: 404, headers, body: JSON.stringify({ error: 'Student not found' }) }
 
     // Fetch approved recommendations only — analyst must approve before report is built
-    const { data: recs, error: rErr } = await supabase
+    const { data: recsRaw, error: rErr } = await supabase
       .from('student_recommendations')
-      .select('school_name,score,approved')
+      .select('school_name,score,approved,highlighted')
       .eq('student_id', studentId)
       .eq('approved', true)
       .order('score', { ascending: false })
 
     if (rErr) throw rErr
 
-    if (!recs || !recs.length) {
+    if (!recsRaw || !recsRaw.length) {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'No approved schools yet. Use "Show to Parent" on the recommendations first.' }) }
     }
+
+    // Put highlighted school first, then rest by score
+    const highlightedRec = recsRaw.find(r => r.highlighted)
+    const recs = highlightedRec
+      ? [highlightedRec, ...recsRaw.filter(r => !r.highlighted)]
+      : recsRaw
 
     const name    = s.preferred_name || s.student_name
     const parent  = s.parent_name || 'Parent'
@@ -96,8 +102,9 @@ exports.handler = async (event) => {
     const command = `bash /Users/moodygarlic/.openclaw/skills/user/run-report.sh "${parent}" "${name}" ${age} "UK" "any" "${goal}" "${sport}" "${budget}" "${eng}" "above_average" ${pinned}`
 
     const schoolList = recs.map(r => {
+      const starMark = r.highlighted ? ' ★' : ''
       const tag = r.score === 0 ? '[advisor]' : `[${r.score}]`
-      return `  ${tag} ${r.school_name}`
+      return `  ${tag} ${r.school_name}${starMark}`
     }).join('\n')
 
     const msg =

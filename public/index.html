@@ -3229,6 +3229,7 @@ function renderRecommendations() {
   if (approved.length) {
     if (isAgent) html += `<p class="rec-section-label">Approved — Visible to Parents (${approved.length})</p>`
     html += approved.map(r => recCard(r, isAgent ? `
+      <button onclick="setHighlighted('${r.id}')" class="rec-btn" style="background:${r.highlighted ? 'rgba(184,150,46,.12)' : 'transparent'};border:1px solid ${r.highlighted ? 'var(--gold)' : '#444'};color:${r.highlighted ? 'var(--gold)' : '#888'};font-size:12px;letter-spacing:.04em;white-space:nowrap">${r.highlighted ? '&#9733; Top Rec' : '&#9734; Set as Top'}</button>
       ${r.moved_to_applying
         ? `<button class="rec-btn rec-btn-dark" style="background:#2d6a2d;color:#fff;opacity:0.8" disabled>In Schools Tab ✓</button>`
         : `<button onclick="moveToApplying('${r.id}')" class="rec-btn rec-btn-dark" style="color:#fff">Move to Applying</button>`}
@@ -3250,6 +3251,24 @@ function renderRecommendations() {
   html += `</div>`
   el.innerHTML = html
   if (isAgent) loadSchoolDatalist()
+}
+
+async function setHighlighted(id) {
+  const studentId = D.student?.id
+  if (!studentId) return
+  try {
+    const res = await fetch('/api/set-highlighted-school', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
+      body: JSON.stringify({ student_id: studentId, recommendation_id: id })
+    })
+    if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed') }
+    // Update local data and re-render
+    ;(D.recommendations || []).forEach(r => { r.highlighted = r.id === id })
+    showTab('recommendations')
+  } catch(e) {
+    alert('Error: ' + e.message)
+  }
 }
 
 async function approveRec(id) {
@@ -3342,6 +3361,14 @@ async function triggerReport() {
   if (!btn) return
   const recs = D.recommendations || []
   if (!recs.length) { alert('No recommendations found for this student. Add recommendations first.'); return }
+
+  // Gate: if multiple approved schools and none is starred, block and prompt
+  const approved = recs.filter(r => r.approved)
+  const highlighted = approved.find(r => r.highlighted)
+  if (approved.length > 1 && !highlighted) {
+    alert('Please star one school as the Top Recommendation before creating the report.\n\nClick the star button on the school you want to feature on the cover and in the recommendation summary.')
+    return
+  }
   btn.textContent = 'Sending...'
   btn.disabled = true
   try {
