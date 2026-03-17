@@ -30,7 +30,7 @@ exports.handler = async (event) => {
 
   try {
     const body = JSON.parse(event.body || '{}')
-    const { student_school_id, application_status, deadline } = body
+    const { student_school_id, application_status, deadline, target_year } = body
 
     if (!student_school_id) {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'student_school_id is required' }) }
@@ -39,6 +39,7 @@ exports.handler = async (event) => {
     const updates = {}
     if (application_status !== undefined) updates.application_status = application_status
     if (deadline !== undefined) updates.deadline = deadline || null
+    if (target_year !== undefined) updates.target_year = target_year || null
 
     if (!Object.keys(updates).length) {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'No fields to update' }) }

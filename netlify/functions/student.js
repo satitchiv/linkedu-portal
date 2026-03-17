@@ -55,6 +55,7 @@ function buildStudentObj(s, isParent) {
     goal:                    s.goal || '',
     destination:             s.destination || [],
     budgetGBP:               s.budget_gbp || null,
+    summerCampBudget:        s.summer_camp_budget_gbp || null,
     targetEntryYear:         s.target_entry_year || '',
     targetYearGroup:         s.target_year_group || '',
     status:                  s.status || 'active',
