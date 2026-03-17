@@ -19,15 +19,31 @@ exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' }
   if (event.httpMethod !== 'GET') return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) }
 
-  const jobId = event.queryStringParameters?.jobId
-  if (!jobId) return { statusCode: 400, headers, body: JSON.stringify({ error: 'jobId required' }) }
+  const jobId     = event.queryStringParameters?.jobId
+  const studentId = event.queryStringParameters?.studentId
+
+  if (!jobId && !studentId) {
+    return { statusCode: 400, headers, body: JSON.stringify({ error: 'jobId or studentId required' }) }
+  }
 
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('report_queue')
       .select('id, status, pdf_url, student_name, created_at, completed_at')
-      .eq('id', jobId)
-      .single()
+
+    if (jobId) {
+      query = query.eq('id', jobId)
+    } else {
+      // Latest done job with a PDF for this student
+      query = query
+        .eq('student_id', studentId)
+        .eq('status', 'done')
+        .not('pdf_url', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+    }
+
+    const { data, error } = await query.single()
 
     if (error || !data) {
       return { statusCode: 404, headers, body: JSON.stringify({ error: 'Job not found' }) }

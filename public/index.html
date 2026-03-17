@@ -3080,6 +3080,9 @@ function renderRecommendations() {
   const isAgent = isAnalystView
   const s       = D.student || {}
 
+  // Check for recent completed report (persists across reloads)
+  if (isAgent && s.id) checkRecentReport(s.id)
+
   // Tier: derive from score if not set correctly (old algorithm set everything to strong_match)
   function calcTier(r) {
     const sc = r.score || 0
@@ -3438,6 +3441,24 @@ async function pollReportJob(jobId, studentName, studentId, btn) {
       // pending / running: keep polling
     } catch (e) { /* network hiccup, keep polling */ }
   }, 5000)
+}
+
+// Check Supabase for a recent completed report for this student (survives page reloads)
+async function checkRecentReport(studentId) {
+  if (!studentId) return
+  window._reportCheckDone = window._reportCheckDone || {}
+  if (window._reportCheckDone[studentId]) return  // already checked this session
+  window._reportCheckDone[studentId] = true
+  try {
+    const res = await fetch(`/api/report-queue-status?studentId=${studentId}`)
+    if (!res.ok) return
+    const d = await res.json()
+    if (d.status === 'done') {
+      window._reportDone = window._reportDone || {}
+      window._reportDone[studentId] = { student: d.student_name, url: d.pdf_url }
+      renderRecommendations()
+    }
+  } catch(e) { /* silently ignore */ }
 }
 
 // School search dropdown
