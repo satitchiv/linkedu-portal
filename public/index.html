@@ -3358,13 +3358,15 @@ async function runRecs() {
 
 async function triggerReport() {
   const btn = $id('create-report-btn')
-  if (!btn) return
+  if (!btn) { console.log('[report] btn not found'); return }
   const recs = D.recommendations || []
+  console.log('[report] recs:', recs.length, 'student:', D.student?.id)
   if (!recs.length) { alert('No recommendations found for this student. Add recommendations first.'); return }
 
   // Gate: if multiple approved schools and none is starred, block and prompt
   const approved = recs.filter(r => r.approved)
   const highlighted = approved.find(r => r.highlighted)
+  console.log('[report] approved:', approved.length, 'highlighted:', highlighted?.school_name || 'none')
   if (approved.length > 1 && !highlighted) {
     alert('Please star one school as the Top Recommendation before creating the report.\n\nClick the star button on the school you want to feature on the cover and in the recommendation summary.')
     return
