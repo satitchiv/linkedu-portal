@@ -99,7 +99,25 @@ exports.handler = async (event) => {
     const eng     = s.english_level || 'none'
     const pinned  = recs.map(r => `"${r.school_name}"`).join(' ')
 
+    // Node command for the poller (runs create-report.js directly, synchronously)
+    const nodeCommand = `node /Users/moodygarlic/.openclaw/skills/user/create-report.js "${parent}" "${name}" ${age} "UK" "any" "${goal}" "${sport}" "${budget}" "${eng}" "above_average" ${pinned}`
+
+    // Legacy bash command (kept for reference / manual fallback)
     const command = `bash /Users/moodygarlic/.openclaw/skills/user/run-report.sh "${parent}" "${name}" ${age} "UK" "any" "${goal}" "${sport}" "${budget}" "${eng}" "above_average" ${pinned}`
+
+    // Insert into report_queue for auto-generation
+    let jobId = null
+    try {
+      const { data: queueJob, error: qErr } = await supabase
+        .from('report_queue')
+        .insert({ student_id: studentId, student_name: name, command: nodeCommand })
+        .select('id')
+        .single()
+      if (qErr) throw qErr
+      jobId = queueJob?.id
+    } catch (queueErr) {
+      console.error('Queue insert error (non-fatal):', queueErr.message)
+    }
 
     const schoolList = recs.map(r => {
       const starMark = r.highlighted ? ' ★' : ''
@@ -108,10 +126,10 @@ exports.handler = async (event) => {
     }).join('\n')
 
     const msg =
-      `<b>Report requested — ${name}</b>\n` +
-      `${recs.length} school${recs.length !== 1 ? 's' : ''} pinned\n\n` +
-      `<b>Schools:</b>\n${schoolList}\n\n` +
-      `<b>Run this in OpenClaw:</b>\n<code>${command}</code>`
+      `<b>Report queued — ${name}</b>\n` +
+      `${recs.length} school${recs.length !== 1 ? 's' : ''} pinned · generating automatically\n\n` +
+      `<b>Schools:</b>\n${schoolList}` +
+      (jobId ? `\n\nJob ID: <code>${jobId}</code>` : `\n\n<b>Manual fallback:</b>\n<code>${command}</code>`)
 
     if (BOT_TOKEN && CHAT_ID) {
       await tgSend(msg)
@@ -122,9 +140,9 @@ exports.handler = async (event) => {
       headers,
       body: JSON.stringify({
         ok: true,
+        jobId,
         student: name,
         schoolCount: recs.length,
-        command,
         telegramSent: !!(BOT_TOKEN && CHAT_ID),
       }),
     }

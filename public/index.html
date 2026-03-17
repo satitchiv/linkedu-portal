@@ -3204,6 +3204,13 @@ function renderRecommendations() {
         <button id="create-report-btn" onclick="triggerReport()" style="white-space:nowrap;padding:8px 16px;background:var(--gold);color:#111;border:none;border-radius:4px;font-size:13px;font-weight:600;cursor:pointer">Create Report</button>
       </div>
     </div>
+    ${(() => {
+      const done = (window._reportDone || {})[D.student?.id]
+      if (!done) return ''
+      const url = done.url
+      if (!url) return '<div style="margin-bottom:12px;padding:10px 14px;background:rgba(184,150,46,.08);border:1px solid rgba(184,150,46,.3);border-radius:4px;font-size:12px;color:var(--gold)">Report ready for ' + done.student + ' — PDF sent to Telegram.</div>'
+      return '<div style="margin-bottom:12px;padding:10px 14px;background:rgba(184,150,46,.08);border:1px solid rgba(184,150,46,.3);border-radius:4px;display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span style="font-size:13px;color:var(--gold)">Report ready for ' + done.student + '</span><a href="' + url + '" target="_blank" download style="padding:5px 14px;background:var(--gold);color:#111;border-radius:3px;font-size:12px;font-weight:600;text-decoration:none">Download PDF</a><button onclick="delete window._reportDone[\'${D.student?.id}\']; renderRecommendations()" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;padding:0">dismiss</button></div>'
+    })()}
     ${studentSummary()}
     <div class="rec-search-row">
       <div class="rec-search-wrap">
@@ -3358,20 +3365,19 @@ async function runRecs() {
 
 async function triggerReport() {
   const btn = $id('create-report-btn')
-  if (!btn) { console.log('[report] btn not found'); return }
+  if (!btn) return
   const recs = D.recommendations || []
-  console.log('[report] recs:', recs.length, 'student:', D.student?.id)
   if (!recs.length) { alert('No recommendations found for this student. Add recommendations first.'); return }
 
   // Gate: if multiple approved schools and none is starred, block and prompt
   const approved = recs.filter(r => r.approved)
   const highlighted = approved.find(r => r.highlighted)
-  console.log('[report] approved:', approved.length, 'highlighted:', highlighted?.school_name || 'none')
   if (approved.length > 1 && !highlighted) {
     alert('Please star one school as the Top Recommendation before creating the report.\n\nClick the star button on the school you want to feature on the cover and in the recommendation summary.')
     return
   }
-  btn.textContent = 'Sending...'
+
+  btn.textContent = 'Queuing...'
   btn.disabled = true
   try {
     const studentId = D.student?.id
@@ -3383,14 +3389,55 @@ async function triggerReport() {
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error || 'Failed')
-    btn.textContent = 'Report Sent'
-    setTimeout(() => { btn.textContent = 'Create Report'; btn.disabled = false }, 4000)
-    alert(`Report triggered for ${data.student} — ${data.schoolCount} school${data.schoolCount !== 1 ? 's' : ''} pinned.\n\nCommand sent to Telegram. Run it in OpenClaw to generate the PDF.`)
+
+    if (data.jobId) {
+      btn.textContent = 'Generating...'
+      window._reportDone = window._reportDone || {}
+      pollReportJob(data.jobId, data.student, studentId, btn)
+    } else {
+      // Fallback: queue table not set up yet
+      btn.textContent = 'Create Report'
+      btn.disabled = false
+      alert(`Report queued for ${data.student} — ${data.schoolCount} schools. Check Telegram for the manual run command.`)
+    }
   } catch(e) {
     alert('Error: ' + e.message)
     btn.textContent = 'Create Report'
     btn.disabled = false
   }
+}
+
+async function pollReportJob(jobId, studentName, studentId, btn) {
+  const MAX_POLLS = 120  // 10 min at 5s intervals
+  let polls = 0
+  const interval = setInterval(async () => {
+    polls++
+    if (polls > MAX_POLLS) {
+      clearInterval(interval)
+      btn.textContent = 'Create Report'
+      btn.disabled = false
+      alert('Report is taking longer than expected. Check Telegram — it may have been delivered there.')
+      return
+    }
+    try {
+      const res = await fetch(`/api/report-queue-status?jobId=${jobId}`)
+      const d = await res.json()
+      if (d.status === 'done') {
+        clearInterval(interval)
+        btn.textContent = 'Create Report'
+        btn.disabled = false
+        window._reportDone = window._reportDone || {}
+        window._reportDone[studentId] = { student: studentName, url: d.pdf_url }
+        renderRecommendations()
+      } else if (d.status === 'failed') {
+        clearInterval(interval)
+        btn.textContent = 'Create Report'
+        btn.disabled = false
+        alert('Report generation failed. Check the Mac Mini logs at /tmp/report-poller.log')
+      }
+      // pending / running: keep polling
+    } catch (e) { /* network hiccup, keep polling */ }
+  }, 5000)
 }
 
 // School search dropdown
