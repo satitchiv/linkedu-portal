@@ -14,7 +14,7 @@ const supabase = createClient(
 const PARENT_EDITABLE = new Set([
   'student_name', 'preferred_name', 'dob', 'nationality',
   'current_school', 'current_year_group', 'curriculum', 'english_level',
-  'primary_sport', 'goal', 'destination', 'budget_gbp', 'target_entry_year',
+  'primary_sport', 'goal', 'destination', 'budget_gbp', 'summer_camp_budget_gbp', 'target_entry_year',
   'photo_url',
   'parent_name', 'parent_email', 'parent_phone',
   'sport_notes', 'academic_notes', 'cert_notes',
@@ -52,6 +52,9 @@ exports.handler = async (event) => {
       if (fields.budget_gbp === '' || fields.budget_gbp === undefined) fields.budget_gbp = null
       else if (fields.budget_gbp !== null) fields.budget_gbp = parseInt(fields.budget_gbp) || null
 
+      if (fields.summer_camp_budget_gbp === '' || fields.summer_camp_budget_gbp === undefined) fields.summer_camp_budget_gbp = null
+      else if (fields.summer_camp_budget_gbp !== null) fields.summer_camp_budget_gbp = parseInt(fields.summer_camp_budget_gbp) || null
+
       const updates = { ...fields, updated_at: new Date().toISOString() }
       if (Object.keys(fields).length === 0) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: 'No fields to update' }) }
@@ -76,7 +79,7 @@ exports.handler = async (event) => {
         if (!PARENT_EDITABLE.has(key)) continue
         if (key === 'destination' && typeof val === 'string') {
           updates[key] = val.split(',').map(s => s.trim()).filter(Boolean)
-        } else if (key === 'budget_gbp') {
+        } else if (key === 'budget_gbp' || key === 'summer_camp_budget_gbp') {
           updates[key] = (val === '' || val === undefined || val === null) ? null : (parseInt(val) || null)
         } else {
           updates[key] = val

@@ -1797,7 +1797,7 @@ function renderJourney() {
   ;(D.schools || []).forEach(sc => {
     const curStage  = stsMapJ[sc.application_status] ?? 0
     const schoolName = sc.school_name || ''
-    const tYear = parseInt(D.student.targetEntryYear) || new Date().getFullYear() + 2
+    const tYear = parseInt(sc.target_year || D.student.targetEntryYear) || new Date().getFullYear() + 2
     const eDate = new Date(`${tYear}-09-01`)
 
     // Deadline
@@ -2025,7 +2025,7 @@ function renderSchools() {
 
     // ── Auto-calculated base timeline ─────────────────────────────────────────
     const schoolId = sc.id
-    const targetYear = parseInt(D.student.targetEntryYear) || new Date().getFullYear() + 2
+    const targetYear = parseInt(sc.target_year || D.student.targetEntryYear) || new Date().getFullYear() + 2
     const enrollDate = new Date(`${targetYear}-09-01`)
 
     const BASE_STAGES = [
@@ -2246,7 +2246,7 @@ function renderSchools() {
       <div class="sa-card-head">
         <div>
           <div class="sa-card-name">${sc.school_name}</div>
-          <div class="sa-card-meta">${sc.country||'UK'}${sc.region ? ' · '+sc.region : ''}</div>
+          <div class="sa-card-meta">${sc.country||'UK'}${sc.region ? ' · '+sc.region : ''}${sc.target_year ? ' · Entry '+sc.target_year : ''}</div>
           <div class="sa-card-fee">${feeStr}</div>
           ${fitStars}
         </div>
@@ -2272,7 +2272,14 @@ function renderSchools() {
       ${checklistHtml}
       <div class="sa-actions">
         <a href="https://line.me/R/ti/p/@linkedu" target="_blank" class="btn-sm btn-sm-primary">Ask Consultant</a>
-        ${isAnalystView ? `<button class="btn-sm" style="color:var(--muted);border-color:#333;font-size:11px" onclick="abandonSchool('${sc.id}','${sc.school_name}')">Abandon</button>` : ''}
+        ${isAnalystView ? `
+          <div style="display:flex;align-items:center;gap:6px">
+            <input type="text" id="sc-target-year-${sc.id}" value="${sc.target_year||''}" placeholder="Entry year"
+              style="width:90px;padding:5px 8px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:5px;font-size:11px;color:#ccc;outline:none"
+              onkeydown="if(event.key==='Enter')saveSchoolTargetYear('${sc.id}')" />
+            <button class="btn-sm" style="font-size:11px" onclick="saveSchoolTargetYear('${sc.id}')">Set Year</button>
+            <button class="btn-sm" style="color:var(--muted);border-color:#333;font-size:11px" onclick="abandonSchool('${sc.id}','${sc.school_name}')">Abandon</button>
+          </div>` : ''}
       </div>
     </div>`
   })
@@ -2413,6 +2420,7 @@ async function saveSection(id, fields) {
     } : fields.goal !== undefined ? {
       goal: fields.goal, destination: fields.destination ? fields.destination.split(',').map(s=>s.trim()).filter(Boolean) : D.student.destination,
       budgetGBP: fields.budget_gbp ? parseInt(fields.budget_gbp) : D.student.budgetGBP,
+      summerCampBudget: fields.summer_camp_budget_gbp ? parseInt(fields.summer_camp_budget_gbp) : D.student.summerCampBudget,
       targetEntryYear: fields.target_entry_year
     } : { primarySport: fields.primary_sport })
     cancelSection(id)
@@ -2654,7 +2662,8 @@ function renderProfile() {
   const s3read = `<div class="prof-grid-2">
     ${field('Goal', p.goal)}
     ${field('Destination', (p.destination||[]).join(', '))}
-    ${field('Annual Budget', p.budgetGBP ? '£'+p.budgetGBP.toLocaleString() : '')}
+    ${field('School Budget (annual)', p.budgetGBP ? '£'+p.budgetGBP.toLocaleString() : '')}
+    ${field('Summer Camp Budget', p.summerCampBudget ? '£'+p.summerCampBudget.toLocaleString() : '')}
     ${field('Target Entry Year', p.targetEntryYear)}
   </div>`
   const s3edit = `<div class="prof-edit-grid">
@@ -2662,14 +2671,16 @@ function renderProfile() {
       <textarea id="pe-goal" rows="3" style="resize:vertical">${(p.goal||'').replace(/</g,'&lt;')}</textarea></div>
     <div class="prof-edit-field"><label>Destination (e.g. UK, USA)</label>
       <input id="pe-dest" value="${(p.destination||[]).join(', ')}" placeholder="UK, USA" /></div>
-    <div class="prof-edit-field"><label>Annual Budget (£ GBP)</label>
+    <div class="prof-edit-field"><label>School Budget — annual (£ GBP)</label>
       <input type="number" id="pe-budget" value="${p.budgetGBP||''}" placeholder="45000" /></div>
+    <div class="prof-edit-field"><label>Summer Camp Budget (£ GBP)</label>
+      <input type="number" id="pe-camp-budget" value="${p.summerCampBudget||''}" placeholder="5000" /></div>
     <div class="prof-edit-field"><label>Target Entry Year</label>
       <input id="pe-year" value="${p.targetEntryYear||''}" placeholder="2026" /></div>
   </div>
   <div class="prof-edit-actions">
     <button class="btn-primary btn-sm" id="prof-savebtn-goals"
-      onclick="saveSection('goals',{goal:$id('pe-goal').value,destination:$id('pe-dest').value,budget_gbp:$id('pe-budget').value,target_entry_year:$id('pe-year').value})">Save</button>
+      onclick="saveSection('goals',{goal:$id('pe-goal').value,destination:$id('pe-dest').value,budget_gbp:$id('pe-budget').value,summer_camp_budget_gbp:$id('pe-camp-budget').value,target_entry_year:$id('pe-year').value})">Save</button>
     <button class="btn-sm" onclick="cancelSection('goals')">Cancel</button>
   </div>`
 
@@ -4474,6 +4485,26 @@ function toggleTimeline(schoolId) {
   panel.classList.toggle('open')
 }
 
+async function saveSchoolTargetYear(schoolId) {
+  const input = $id(`sc-target-year-${schoolId}`)
+  if (!input) return
+  const year = input.value.trim()
+  const sc = (D.schools || []).find(s => String(s.id) === String(schoolId))
+  if (sc) sc.target_year = year || null
+  try {
+    const res = await fetch('/api/update-school-status', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
+      body: JSON.stringify({ student_school_id: schoolId, target_year: year })
+    })
+    if (!res.ok) { const j = await res.json(); throw new Error(j.error) }
+    try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {}
+    renderSchools()
+  } catch(e) {
+    alert('Could not save target year: ' + e.message)
+  }
+}
+
 async function updateSchoolStatus(schoolId, newStatus) {
   // Optimistic: update D locally and re-render immediately — no full reload
   const sc = (D.schools || []).find(s => String(s.id) === String(schoolId))
@@ -4785,6 +4816,13 @@ if (isTokenView) {
             if (isAnalyst) {
               window._token = session.access_token
               isAnalystView = true
+              // Reload D with analyst-level data to get consultant_notes and other analyst fields
+              if (D && D.student && D.student.id) {
+                try {
+                  const _sr = await fetch(`/api/student?student_id=${D.student.id}`, { headers: { Authorization: 'Bearer ' + session.access_token } })
+                  if (_sr.ok) D = await _sr.json()
+                } catch(e) {}
+              }
               renderAll()
             }
           } catch (e) { /* network error — show overlay */ }
@@ -4905,7 +4943,22 @@ async function openStudentFromList(accessToken) {
   $id('students-list-screen').style.display = 'none'
   $id('loading').style.display = 'flex'
   try {
-    const data = await loadDataByToken(accessToken)
+    let data
+    if (isAnalystView && window._token) {
+      // Load via analyst JWT to get analyst-only fields (e.g. consultant_notes)
+      const found = _allStudents.find(s => s.accessToken === accessToken)
+      if (found && found.id) {
+        const res = await fetch(`/api/student?student_id=${found.id}`, {
+          headers: { Authorization: 'Bearer ' + window._token }
+        })
+        if (!res.ok) throw new Error(`Load failed`)
+        data = await res.json()
+      } else {
+        data = await loadDataByToken(accessToken)
+      }
+    } else {
+      data = await loadDataByToken(accessToken)
+    }
     D = data
     golfRounds = D.golfRounds || []
     userRole = 'parent'
@@ -5254,6 +5307,13 @@ sb.auth.onAuthStateChange(async (event, session) => {
   if ($id('btn-new-student')) $id('btn-new-student').style.display = 'inline-block'
   if ($id('btn-all-students')) $id('btn-all-students').style.display = 'inline-block'
   if (!D) return
+  // Reload D with analyst-level data to get consultant_notes and other analyst fields
+  if (D.student && D.student.id) {
+    try {
+      const _sr = await fetch(`/api/student?student_id=${D.student.id}`, { headers: { Authorization: 'Bearer ' + session.access_token } })
+      if (_sr.ok) D = await _sr.json()
+    } catch(e) {}
+  }
   renderAll()
 })
 </script>
