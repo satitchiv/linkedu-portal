@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>LinkedU Golf — Analyst</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:#111;color:#eee;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.screen{display:none;min-height:100vh;padding:0}
+.screen.active{display:flex;flex-direction:column}
+
+/* PIN */
+.pin-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px;background:#111}
+.pin-logo{font-size:11px;letter-spacing:0.25em;text-transform:uppercase;color:#B8962E;margin-bottom:32px;opacity:0.8}
+.pin-title{font-size:1.6rem;color:#eee;margin-bottom:8px;font-weight:400}
+.pin-sub{font-size:13px;color:#555;margin-bottom:32px}
+.pin-input{background:#1a1a1a;border:2px solid #333;border-radius:10px;color:#eee;font-size:1.4rem;letter-spacing:0.3em;padding:16px 24px;text-align:center;width:100%;max-width:320px;outline:none;font-family:'Inter',sans-serif;transition:border-color 0.2s}
+.pin-input:focus{border-color:#B8962E}
+.pin-btn{margin-top:16px;background:#B8962E;color:#1a1a1a;font-family:'Inter',sans-serif;font-weight:700;font-size:14px;letter-spacing:0.08em;text-transform:uppercase;padding:16px 48px;border-radius:8px;border:none;cursor:pointer;width:100%;max-width:320px;min-height:52px}
+.pin-error{color:#ca6d6d;font-size:13px;margin-top:12px;min-height:20px}
+
+/* Resume banner */
+.resume-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px;background:#111}
+.resume-card{background:#1a1a1a;border:1px solid #B8962E44;border-radius:12px;padding:28px;max-width:400px;width:100%;text-align:center}
+.resume-icon{font-size:36px;margin-bottom:12px}
+.resume-title{font-size:1.2rem;color:#eee;margin-bottom:8px}
+.resume-meta{font-size:13px;color:#888;margin-bottom:24px;line-height:1.6}
+.btn-gold{background:#B8962E;color:#1a1a1a;font-family:'Inter',sans-serif;font-weight:700;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;padding:14px 28px;border-radius:8px;border:none;cursor:pointer;width:100%;min-height:50px;margin-bottom:10px}
+.btn-ghost{background:transparent;color:#888;font-family:'Inter',sans-serif;font-size:13px;padding:12px;border:1px solid #333;border-radius:8px;cursor:pointer;width:100%;min-height:48px}
+.btn-ghost:hover{border-color:#555;color:#aaa}
+
+/* Setup */
+.setup-screen{background:#111;flex:1;overflow-y:auto}
+.setup-header{background:#1a1a1a;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;border-bottom:1px solid #222}
+.setup-header-title{font-size:14px;font-weight:600;color:#eee;letter-spacing:0.05em}
+.setup-badge{font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:#B8962E}
+.setup-body{padding:24px 20px 48px;max-width:640px;margin:0 auto}
+.form-group{margin-bottom:20px}
+.form-label{font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#B8962E;margin-bottom:8px;display:block}
+.form-input{width:100%;background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#eee;font-size:15px;padding:14px 16px;outline:none;font-family:'Inter',sans-serif;min-height:52px;transition:border-color 0.2s;-webkit-appearance:none;appearance:none}
+.form-input:focus{border-color:#B8962E}
+.form-select{width:100%;background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#eee;font-size:15px;padding:14px 16px;outline:none;font-family:'Inter',sans-serif;min-height:52px;cursor:pointer;transition:border-color 0.2s;-webkit-appearance:none;appearance:none}
+.form-select:focus{border-color:#B8962E}
+.seg-group{display:flex;gap:8px;flex-wrap:wrap}
+.seg-btn{background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#aaa;font-size:13px;padding:12px 16px;cursor:pointer;flex:1;min-height:48px;min-width:70px;text-align:center;transition:all 0.15s;font-family:'Inter',sans-serif}
+.seg-btn.active{background:#B8962E22;border-color:#B8962E;color:#B8962E;font-weight:600}
+.start-btn{background:#B8962E;color:#1a1a1a;font-family:'Inter',sans-serif;font-weight:700;font-size:15px;letter-spacing:0.08em;text-transform:uppercase;padding:18px 32px;border-radius:10px;border:none;cursor:pointer;width:100%;min-height:58px;margin-top:12px}
+.student-datalist-wrap{position:relative}
+.student-suggestions{position:absolute;top:100%;left:0;right:0;background:#1e1e1e;border:1px solid #333;border-radius:0 0 8px 8px;z-index:20;max-height:200px;overflow-y:auto;display:none}
+.student-suggestions.open{display:block}
+.suggestion-item{padding:12px 16px;cursor:pointer;font-size:14px;border-bottom:1px solid #2a2a2a}
+.suggestion-item:last-child{border-bottom:none}
+.suggestion-item:hover,.suggestion-item.highlighted{background:#2a2a2a;color:#B8962E}
+.photo-btn{background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#888;font-size:13px;padding:14px 20px;cursor:pointer;width:100%;min-height:52px;display:flex;align-items:center;justify-content:center;gap:8px;font-family:'Inter',sans-serif}
+.photo-thumb{width:60px;height:60px;object-fit:cover;border-radius:6px;margin-left:10px}
+.offline-banner{background:#2a1a00;border:1px solid #c9a830;color:#c9a830;font-size:12px;padding:8px 16px;text-align:center;display:none}
+.offline-banner.show{display:block}
+
+/* Hole tracking */
+.hole-screen{background:#0e0e0e;flex:1;display:flex;flex-direction:column;overflow:hidden}
+.hole-topbar{background:#1a1a1a;border-bottom:1px solid #222;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.hole-title{font-size:16px;font-weight:700;color:#eee}
+.hole-par{font-size:12px;color:#888}
+.hole-par-adj{display:flex;align-items:center;gap:10px;background:#111;border-radius:6px;padding:4px 8px}
+.par-btn{background:none;border:none;color:#B8962E;font-size:18px;cursor:pointer;padding:4px 8px;min-width:36px;min-height:36px;display:flex;align-items:center;justify-content:center}
+.par-val{font-size:15px;font-weight:700;color:#eee;min-width:24px;text-align:center}
+.progress-dots{display:flex;gap:4px;flex-wrap:wrap;max-width:200px;justify-content:flex-end}
+.pdot{width:10px;height:10px;border-radius:50%;background:#333;flex-shrink:0}
+.pdot.done{background:#B8962E}
+.pdot.current{background:#fff;box-shadow:0 0 0 2px #B8962E}
+.shot-counter{background:#1a1a1a;padding:8px 16px;font-size:12px;color:#888;text-align:center;border-bottom:1px solid #1e1e1e;flex-shrink:0}
+.shot-counter span{color:#B8962E;font-weight:600}
+
+/* Shot steps */
+.step-area{flex:1;overflow-y:auto;padding:16px}
+.step-title{font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#B8962E;margin-bottom:14px;font-weight:600}
+.club-grid{display:grid;gap:8px}
+.club-row{display:grid;gap:8px}
+.club-row-4{grid-template-columns:repeat(4,1fr)}
+.club-row-7{grid-template-columns:repeat(7,1fr)}
+.club-row-4b{grid-template-columns:repeat(4,1fr)}
+.club-row-1{grid-template-columns:1fr}
+.club-btn{background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#ccc;font-size:15px;font-weight:600;padding:0;min-height:56px;cursor:pointer;transition:all 0.15s;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center}
+.club-btn.active,.club-btn:active{background:#B8962E22;border-color:#B8962E;color:#B8962E}
+.club-btn.last-used{border-color:#555}
+.result-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.result-btn{background:#1a1a1a;border:1px solid #333;border-radius:10px;color:#ccc;font-size:15px;font-weight:500;padding:16px;min-height:64px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.15s;font-family:'Inter',sans-serif}
+.result-btn:active{transform:scale(0.97)}
+.result-btn.fairway{border-color:#5a9a5a44}
+.result-btn.rough{border-color:#c9a83044}
+.result-btn.green{border-color:#5a9a5a88}
+.result-btn.bunker{border-color:#c9a83066}
+.result-btn.penalty{border-color:#ca6d6d44}
+.result-btn.ob{border-color:#ca6d6d88}
+.result-btn.holed{border-color:#B8962E88;background:#B8962E11}
+.quality-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.quality-btn{background:#1a1a1a;border:1px solid #333;border-radius:10px;color:#ccc;font-size:14px;font-weight:600;padding:16px 8px;min-height:72px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;transition:all 0.15s;font-family:'Inter',sans-serif}
+.quality-btn .q-icon{font-size:26px}
+.quality-btn.pure{border-color:#5a9a5a88}
+.quality-btn.ok{border-color:#c9a83088}
+.quality-btn.mishit{border-color:#ca6d6d88}
+.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.contact-btn{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;color:#888;font-size:13px;padding:12px;min-height:50px;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.15s}
+.contact-btn.active{border-color:#B8962E;color:#B8962E;background:#B8962E11}
+.skip-link{color:#555;font-size:12px;text-decoration:underline;cursor:pointer;display:block;text-align:center;margin-top:14px;padding:8px}
+.shot-action-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 16px;border-top:1px solid #1e1e1e;background:#0e0e0e;flex-shrink:0}
+.shot-add-btn{background:#1a1a1a;border:1px solid #333;color:#eee;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;padding:14px;min-height:52px;border-radius:8px;cursor:pointer}
+.hole-finish-btn{background:#B8962E;color:#1a1a1a;font-family:'Inter',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:14px;min-height:52px;border-radius:8px;border:none;cursor:pointer}
+
+/* Hole completion */
+.hole-complete-area{flex:1;overflow-y:auto;padding:16px}
+.score-row{display:flex;align-items:center;justify-content:space-between;background:#1a1a1a;border-radius:10px;padding:16px 20px;margin-bottom:12px}
+.score-label{font-size:12px;color:#888;text-transform:uppercase;letter-spacing:0.1em}
+.score-adj{display:flex;align-items:center;gap:16px}
+.adj-btn{background:#222;border:1px solid #333;color:#eee;font-size:22px;width:44px;height:44px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:'Inter',sans-serif;flex-shrink:0}
+.adj-val{font-size:26px;font-weight:700;color:#eee;min-width:36px;text-align:center;font-family:'Inter',sans-serif}
+.mental-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.mental-btn{background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:14px 8px;min-height:70px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;transition:all 0.15s;font-family:'Inter',sans-serif}
+.mental-btn .m-icon{font-size:24px}
+.mental-btn .m-label{font-size:11px;color:#888;text-align:center;line-height:1.3}
+.mental-btn.active{border-color:#B8962E;background:#B8962E11}
+.note-type-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.note-type-btn{background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#aaa;font-size:13px;padding:12px;min-height:50px;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px}
+.note-type-btn.active{border-color:#B8962E;color:#B8962E;background:#B8962E11}
+.note-textarea{width:100%;background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#eee;font-size:14px;padding:14px;outline:none;font-family:'Inter',sans-serif;resize:vertical;min-height:100px;margin-bottom:12px}
+.note-textarea:focus{border-color:#B8962E}
+.record-btn{background:#1a1a1a;border:2px solid #333;border-radius:10px;color:#ccc;font-size:13px;padding:16px;min-height:58px;cursor:pointer;width:100%;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:12px;transition:all 0.2s}
+.record-btn.recording{border-color:#ca6d6d;color:#ca6d6d;background:#ca6d6d11;animation:pulse 1s infinite}
+.record-btn.has-audio{border-color:#5a9a5a;color:#5a9a5a;background:#5a9a5a11}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
+.media-btn{background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#888;font-size:13px;padding:12px 16px;cursor:pointer;width:100%;min-height:48px;display:flex;align-items:center;justify-content:center;gap:8px;font-family:'Inter',sans-serif;margin-bottom:12px}
+.media-previews{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.media-thumb{width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid #333}
+.next-hole-btn{background:#B8962E;color:#1a1a1a;font-family:'Inter',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:18px 32px;border-radius:10px;border:none;cursor:pointer;width:100%;min-height:58px;margin:12px 16px;width:calc(100% - 32px);flex-shrink:0}
+
+/* Post round */
+.post-screen{background:#111;flex:1;overflow-y:auto}
+.post-header{background:#1a1a1a;padding:16px 20px;border-bottom:1px solid #222;position:sticky;top:0;z-index:10}
+.post-body{padding:20px;max-width:640px;margin:0 auto;padding-bottom:48px}
+.summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px}
+.sum-tile{background:#1a1a1a;border-radius:8px;padding:14px;text-align:center;border:1px solid #222}
+.sum-val{font-size:1.5rem;font-weight:700;color:#B8962E;font-family:'Inter',sans-serif}
+.sum-lbl{font-size:10px;color:#555;margin-top:4px;text-transform:uppercase;letter-spacing:0.08em}
+.post-textarea{width:100%;background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#eee;font-size:14px;padding:14px;outline:none;font-family:'Inter',sans-serif;resize:vertical;min-height:120px;margin-bottom:4px;line-height:1.6}
+.post-textarea:focus{border-color:#B8962E}
+.submit-btn{background:#B8962E;color:#1a1a1a;font-family:'Inter',sans-serif;font-weight:700;font-size:15px;letter-spacing:0.08em;text-transform:uppercase;padding:18px;border-radius:10px;border:none;cursor:pointer;width:100%;min-height:60px;margin-top:16px}
+
+/* Confirm */
+.confirm-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px;background:#111;text-align:center}
+.confirm-icon{font-size:56px;margin-bottom:16px}
+.confirm-title{font-size:1.4rem;color:#eee;margin-bottom:8px}
+.confirm-sub{font-size:13px;color:#555;margin-bottom:32px;line-height:1.6}
+.confirm-actions{display:flex;flex-direction:column;gap:10px;width:100%;max-width:320px}
+
+/* section divider */
+.section-divider{font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#B8962E;margin:20px 0 12px;font-weight:600;border-top:1px solid #B8962E22;padding-top:14px}
+
+@media(max-width:390px){
+  .club-row-7{grid-template-columns:repeat(4,1fr)}
+  .summary-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<div id="offline-banner" class="offline-banner">⚠️ No connection — data saving to device only</div>
+
+<!-- ── SCREEN: PIN ────────────────────────────────────────────────────── -->
+<div id="screen-pin" class="screen active">
+  <div class="pin-wrap">
+    <div class="pin-logo">LINKEDU GOLF · ANALYST</div>
+    <div class="pin-title">Enter PIN to Continue</div>
+    <div class="pin-sub">Analyst access only</div>
+    <input id="pin-input" type="password" class="pin-input" placeholder="PIN" autocomplete="off" autocorrect="off" spellcheck="false">
+    <button class="pin-btn" onclick="checkPin()">Unlock</button>
+    <div id="pin-error" class="pin-error"></div>
+  </div>
+</div>
+
+<!-- ── SCREEN: RESUME ────────────────────────────────────────────────── -->
+<div id="screen-resume" class="screen">
+  <div class="resume-wrap">
+    <div class="resume-card">
+      <div class="resume-icon">⛳</div>
+      <div class="resume-title">Resume In-Progress Round?</div>
+      <div id="resume-meta" class="resume-meta"></div>
+      <button class="btn-gold" onclick="resumeRound()">Resume Round →</button>
+      <button class="btn-ghost" onclick="discardAndNew()">Discard & Start New Round</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── SCREEN: SETUP ─────────────────────────────────────────────────── -->
+<div id="screen-setup" class="screen">
+  <div class="setup-screen">
+    <div class="setup-header">
+      <div>
+        <div class="setup-badge">LINKEDU GOLF · ANALYST</div>
+        <div class="setup-header-title">Pre-Round Setup</div>
+      </div>
+    </div>
+    <div class="setup-body">
+
+      <div class="form-group">
+        <label class="form-label">Student Name</label>
+        <div class="student-datalist-wrap">
+          <input id="student-input" type="text" class="form-input" placeholder="Type to search..." autocomplete="off" oninput="filterStudents(this.value)" onfocus="openSuggestions()" onblur="closeSuggestionsDelayed()">
+          <input id="student-id-input" type="hidden" value="">
+          <div id="student-suggestions" class="student-suggestions"></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Course</label>
+        <select id="course-select" class="form-select" onchange="onCourseChange(this.value)">
+          <option value="">— Select course —</option>
+          <option value="Royal Gems Golf City">Royal Gems Golf City</option><option value="Nikanti Golf Club">Nikanti Golf Club</option><option value="Alpine Golf Club">Alpine Golf Club</option><option value="Thana City Golf & Country Club">Thana City Golf & Country Club</option><option value="Panya Indra Golf Club">Panya Indra Golf Club</option><option value="St. Andrews 2000">St. Andrews 2000</option><option value="Muang Ake">Muang Ake</option><option value="Springfield Royal Country Club">Springfield Royal Country Club</option><option value="Phoenix Gold Golf Club">Phoenix Gold Golf Club</option><option value="Siam Country Club Old Course">Siam Country Club Old Course</option><option value="Siam Country Club Plantation">Siam Country Club Plantation</option><option value="Siam Country Club Waterside">Siam Country Club Waterside</option><option value="Other">Other</option>
+        </select>
+        <input id="course-other" type="text" class="form-input" placeholder="Enter course name" style="display:none;margin-top:8px" autocomplete="off">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Tees Played</label>
+        <div class="seg-group" id="tees-group">
+          <button class="seg-btn active" data-val="Red"    onclick="pickSeg('tees','Red',this)">🔴 Red</button>
+          <button class="seg-btn"        data-val="White"  onclick="pickSeg('tees','White',this)">⚪ White</button>
+          <button class="seg-btn"        data-val="Yellow" onclick="pickSeg('tees','Yellow',this)">🟡 Yellow</button>
+          <button class="seg-btn"        data-val="Blue"   onclick="pickSeg('tees','Blue',this)">🔵 Blue</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Round Type</label>
+        <div class="seg-group" id="roundtype-group">
+          <button class="seg-btn active" data-val="Practice"            onclick="pickSeg('roundtype','Practice',this)">Practice</button>
+          <button class="seg-btn"        data-val="Academy Session"     onclick="pickSeg('roundtype','Academy Session',this)">Academy</button>
+          <button class="seg-btn"        data-val="Club Competition"    onclick="pickSeg('roundtype','Club Competition',this)">Club Comp</button>
+          <button class="seg-btn"        data-val="Ranked Tournament"   onclick="pickSeg('roundtype','Ranked Tournament',this)">Tournament</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Weather</label>
+        <div class="seg-group" id="weather-group">
+          <button class="seg-btn active" data-val="Sunny"  onclick="pickSeg('weather','Sunny',this)">☀️ Sunny</button>
+          <button class="seg-btn"        data-val="Cloudy" onclick="pickSeg('weather','Cloudy',this)">⛅ Cloudy</button>
+          <button class="seg-btn"        data-val="Windy"  onclick="pickSeg('weather','Windy',this)">💨 Windy</button>
+          <button class="seg-btn"        data-val="Rain"   onclick="pickSeg('weather','Rain',this)">🌧️ Rain</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Course Conditions</label>
+        <div class="seg-group" id="conditions-group">
+          <button class="seg-btn"        data-val="Soft"   onclick="pickSeg('conditions','Soft',this)">Soft</button>
+          <button class="seg-btn active" data-val="Normal" onclick="pickSeg('conditions','Normal',this)">Normal</button>
+          <button class="seg-btn"        data-val="Firm"   onclick="pickSeg('conditions','Firm',this)">Firm</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Scorecard Photo (optional)</label>
+        <button class="photo-btn" onclick="document.getElementById('scorecard-file').click()">
+          <span>📷</span> <span id="scorecard-label">Tap to capture / upload</span>
+          <img id="scorecard-thumb" class="photo-thumb" style="display:none">
+        </button>
+        <input id="scorecard-file" type="file" accept="image/*" capture="environment" style="display:none" onchange="onScorecardPhoto(this)">
+      </div>
+
+      <button class="start-btn" onclick="startRound()">Start Round →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── SCREEN: HOLE ──────────────────────────────────────────────────── -->
+<div id="screen-hole" class="screen">
+  <div class="hole-screen">
+    <div class="hole-topbar">
+      <div>
+        <div class="hole-title" id="hole-title">Hole 1</div>
+        <div class="hole-par" id="hole-par-label">Par 4</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px">
+        <div class="hole-par-adj">
+          <button class="par-btn" onclick="adjustPar(-1)">−</button>
+          <div class="par-val" id="par-display">4</div>
+          <button class="par-btn" onclick="adjustPar(1)">+</button>
+        </div>
+        <div class="progress-dots" id="progress-dots"></div>
+      </div>
+    </div>
+    <div class="shot-counter" id="shot-counter">Shot <span id="shot-num">1</span> — <span id="step-label">Select club</span></div>
+    <div id="step-area" class="step-area"></div>
+    <div id="shot-action-row" class="shot-action-row" style="display:none">
+      <button class="shot-add-btn" onclick="addAnotherShot()">+ Add Shot</button>
+      <button class="hole-finish-btn" onclick="goToHoleComplete()">Finish Hole</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── SCREEN: HOLE COMPLETE ────────────────────────────────────────── -->
+<div id="screen-hole-complete" class="screen">
+  <div class="hole-screen">
+    <div class="hole-topbar">
+      <div>
+        <div class="hole-title" id="hc-hole-title">Hole 1 Complete</div>
+        <div class="hole-par" id="hc-shots-summary">0 shots logged</div>
+      </div>
+      <div class="progress-dots" id="hc-progress-dots"></div>
+    </div>
+    <div class="hole-complete-area">
+      <div class="section-divider">Score &amp; Putts</div>
+      <div class="score-row">
+        <div class="score-label">Score</div>
+        <div class="score-adj">
+          <button class="adj-btn" onclick="adjustScore(-1)">−</button>
+          <div class="adj-val" id="score-display">4</div>
+          <button class="adj-btn" onclick="adjustScore(1)">+</button>
+        </div>
+      </div>
+      <div class="score-row">
+        <div class="score-label">Putts</div>
+        <div class="score-adj">
+          <button class="adj-btn" onclick="adjustPutts(-1)">−</button>
+          <div class="adj-val" id="putts-display">2</div>
+          <button class="adj-btn" onclick="adjustPutts(1)">+</button>
+        </div>
+      </div>
+
+      <div class="section-divider">Mental Game</div>
+      <div class="mental-grid">
+        <button class="mental-btn active" data-m="1" onclick="pickMental(1,this)">
+          <span class="m-icon">😊</span>
+          <span class="m-label">Composed</span>
+        </button>
+        <button class="mental-btn" data-m="2" onclick="pickMental(2,this)">
+          <span class="m-icon">😐</span>
+          <span class="m-label">Minor Reaction</span>
+        </button>
+        <button class="mental-btn" data-m="3" onclick="pickMental(3,this)">
+          <span class="m-icon">😤</span>
+          <span class="m-label">Struggled</span>
+        </button>
+      </div>
+
+      <div class="section-divider">Hole Note</div>
+      <div class="note-type-row">
+        <button class="note-type-btn active" id="note-voice-btn" onclick="switchNoteType('voice')">🎙️ Voice Memo</button>
+        <button class="note-type-btn" id="note-text-btn" onclick="switchNoteType('text')">📝 Text Note</button>
+      </div>
+      <div id="note-voice-area">
+        <button id="note-record-btn" class="record-btn" onclick="toggleHoleRecording()">
+          <span id="note-rec-icon">🎙️</span> <span id="note-rec-label">Hold to Record (15s max)</span>
+        </button>
+        <audio id="note-audio-player" controls style="width:100%;display:none;margin-bottom:12px"></audio>
+      </div>
+      <div id="note-text-area" style="display:none">
+        <textarea id="hole-note-text" class="note-textarea" placeholder="Type hole note here..."></textarea>
+      </div>
+
+      <div class="section-divider">Media (optional)</div>
+      <button class="media-btn" onclick="document.getElementById('hole-media-file').click()">
+        📷 Add Photo or Video (max 10s)
+      </button>
+      <input id="hole-media-file" type="file" accept="image/*,video/*" capture="environment" style="display:none" onchange="onHoleMedia(this)">
+      <div id="media-previews" class="media-previews"></div>
+    </div>
+    <button class="next-hole-btn" id="next-hole-btn" onclick="saveHoleAndNext()">Next Hole →</button>
+  </div>
+</div>
+
+<!-- ── SCREEN: POST ROUND ────────────────────────────────────────────── -->
+<div id="screen-post" class="screen">
+  <div class="post-screen">
+    <div class="post-header">
+      <div class="setup-badge">ROUND COMPLETE</div>
+      <div class="setup-header-title">Post-Round Debrief</div>
+    </div>
+    <div class="post-body">
+
+      <div id="post-summary-grid" class="summary-grid"></div>
+
+      <div class="section-divider">Round Voice Memo (60s max)</div>
+      <button id="round-record-btn" class="record-btn" onclick="toggleRoundRecording()">
+        <span id="round-rec-icon">🎙️</span>
+        <span id="round-rec-label">Speak your overall observations for the coach.</span>
+      </button>
+      <audio id="round-audio-player" controls style="width:100%;display:none;margin-bottom:12px"></audio>
+
+      <div class="section-divider">Coach Recommendation</div>
+      <textarea id="coach-rec" class="post-textarea" placeholder="What should the coach focus on at the next session? Be specific — e.g. 'Short iron misses consistently right, needs swing path work' or 'Mental game broke down after double bogey on 7, needs resilience drills.'"></textarea>
+
+      <div class="section-divider">Student Debrief Notes</div>
+      <textarea id="debrief-notes" class="post-textarea" placeholder="What did you discuss with the student after the round?"></textarea>
+
+      <button class="submit-btn" onclick="submitRound()">Submit Round</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── SCREEN: CONFIRM ───────────────────────────────────────────────── -->
+<div id="screen-confirm" class="screen">
+  <div class="confirm-wrap">
+    <div class="confirm-icon">✅</div>
+    <div class="confirm-title">Round Saved</div>
+    <div class="confirm-sub" id="confirm-sub">Round data saved successfully.</div>
+    <div class="confirm-actions">
+      <button class="btn-gold" onclick="startNewRound()">Start New Round</button>
+      <button class="btn-ghost" onclick="exitAnalyst()">Exit</button>
+    </div>
+  </div>
+</div>
+
+<script src="/golf-storage.js"></script>
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+const ANALYST_PIN = '2024golf';
+const COURSES     = ["Royal Gems Golf City", "Nikanti Golf Club", "Alpine Golf Club", "Thana City Golf & Country Club", "Panya Indra Golf Club", "St. Andrews 2000", "Muang Ake", "Springfield Royal Country Club", "Phoenix Gold Golf Club", "Siam Country Club Old Course", "Siam Country Club Plantation", "Siam Country Club Waterside", "Other"];
+
+const state = {
+  authenticated: false,
+  students: [],
+  formData: { studentName:'', studentId:'', course:'', tees:'Red', roundType:'Practice', weather:'Sunny', conditions:'Normal', scorecardPhotoUrl:null },
+  round: null,
+  currentHoleNum: 1,
+  currentHolePar: 4,
+  // shot tracking
+  shotPhase: 'club',  // club | result | quality | contact | done
+  currentShot: { club:'', result:'', quality:'', contactType:'Normal' },
+  currentShots: [],
+  lastClub: '',
+  // hole completion
+  holeScore: 4,
+  holePutts: 2,
+  holeMental: 1,
+  noteType: 'voice',
+  noteAudioUrl: null,
+  noteAudioRecording: false,
+  noteAudioTimer: null,
+  holeMedia: [],
+  // round recorder
+  roundAudioUrl: null,
+  roundAudioRecording: false,
+  roundAudioTimer: null,
+  mediaRecorder: null,
+  audioChunks: [],
+};
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  // Load students
+  await fetchStudents();
+
+  // Offline detection
+  updateOnlineStatus();
+  window.addEventListener('online',  updateOnlineStatus);
+  window.addEventListener('offline', updateOnlineStatus);
+
+  // Check auth from sessionStorage
+  if (sessionStorage.getItem('analyst_auth') === '1') {
+    state.authenticated = true;
+    fetchStudents().then(() => { checkResume(); applyStudentUrlParam(); });
+  }
+
+  // PIN on enter
+  document.getElementById('pin-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') checkPin();
+  });
+});
+
+function updateOnlineStatus() {
+  const b = document.getElementById('offline-banner');
+  if (!navigator.onLine) b.classList.add('show');
+  else b.classList.remove('show');
+}
+
+async function fetchStudents() {
+  try {
+    const sessionPin = sessionStorage.getItem('analyst_pin') || '';
+    const r = await fetch('/api/students-list', { headers: { 'X-Analyst-Pin': sessionPin } });
+    if (r.ok) {
+      const data = await r.json();
+      state.students = data.students || [];
+      GolfStorage.saveStudents(state.students);
+      return;
+    }
+  } catch(e) {}
+  // Fallback to cache
+  state.students = GolfStorage.getStudents();
+}
+
+// ── PIN ────────────────────────────────────────────────────────────────────
+function checkPin() {
+  const val = document.getElementById('pin-input').value.trim();
+  if (val === ANALYST_PIN) {
+    sessionStorage.setItem('analyst_auth','1');
+    sessionStorage.setItem('analyst_pin', val);
+    state.authenticated = true;
+    // Fetch students now that PIN is stored — initial fetch ran without it
+    fetchStudents().then(() => {
+      checkResume();
+      applyStudentUrlParam();
+    });
+  } else {
+    document.getElementById('pin-error').textContent = 'Incorrect PIN. Try again.';
+    document.getElementById('pin-input').value = '';
+  }
+}
+
+function checkResume() {
+  const inProgress = GolfStorage.getInProgress();
+  if (inProgress && inProgress.holes && inProgress.holes.length > 0) {
+    const meta = document.getElementById('resume-meta');
+    meta.innerHTML = `<strong style="color:#eee">${inProgress.studentName}</strong><br>
+      ${inProgress.course} · ${inProgress.date ? inProgress.date.slice(0,10) : 'Today'}<br>
+      <span style="color:#B8962E">${inProgress.holes.length} holes completed</span>`;
+    showScreen('resume');
+  } else {
+    showScreen('setup');
+  }
+}
+
+function resumeRound() {
+  const inProgress = GolfStorage.getInProgress();
+  if (!inProgress) { showScreen('setup'); return; }
+  state.round = inProgress;
+  state.currentHoleNum = (inProgress.holes || []).length + 1;
+  if (state.currentHoleNum > 18) { showPostRound(); return; }
+  state.formData.studentName = inProgress.studentName;
+  state.formData.studentId   = inProgress.studentId;
+  state.formData.course      = inProgress.course;
+  initHoleScreen();
+  showScreen('hole');
+}
+
+function discardAndNew() {
+  GolfStorage.clearInProgress();
+  showScreen('setup');
+}
+
+// ── Setup ──────────────────────────────────────────────────────────────────
+const segValues = { tees:'Red', roundtype:'Practice', weather:'Sunny', conditions:'Normal' };
+
+function pickSeg(group, val, el) {
+  segValues[group] = val;
+  const grp = document.getElementById(group + '-group');
+  grp.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function onCourseChange(val) {
+  const other = document.getElementById('course-other');
+  other.style.display = val === 'Other' ? 'block' : 'none';
+}
+
+function filterStudents(query) {
+  const list = document.getElementById('student-suggestions');
+  if (!query) { list.classList.remove('open'); return; }
+  const q = query.toLowerCase();
+  const matches = state.students.filter(s => s.name.toLowerCase().includes(q)).slice(0, 8);
+  if (!matches.length) { list.classList.remove('open'); return; }
+  list.innerHTML = matches.map((s,i) =>
+    `<div class="suggestion-item" data-id="${s.id}" data-name="${s.name}" onmousedown="selectStudent('${s.id}','${s.name}')">${s.name}</div>`
+  ).join('');
+  list.classList.add('open');
+}
+
+function selectStudent(id, name) {
+  document.getElementById('student-input').value = name;
+  document.getElementById('student-id-input').value = id;
+  document.getElementById('student-suggestions').classList.remove('open');
+  state.formData.studentName = name;
+  state.formData.studentId   = id;
+}
+
+function openSuggestions() {
+  filterStudents(document.getElementById('student-input').value);
+}
+
+function closeSuggestionsDelayed() {
+  setTimeout(() => document.getElementById('student-suggestions').classList.remove('open'), 200);
+}
+
+function resizeImage(dataUrl, maxPx, cb) {
+  const img = new Image();
+  img.onload = () => {
+    const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+    const canvas = document.createElement('canvas');
+    canvas.width  = Math.round(img.width  * scale);
+    canvas.height = Math.round(img.height * scale);
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+    cb(canvas.toDataURL('image/jpeg', 0.7));
+  };
+  img.src = dataUrl;
+}
+
+function onScorecardPhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    resizeImage(e.target.result, 1200, (resized) => {
+      state.formData.scorecardPhotoUrl = resized;
+      document.getElementById('scorecard-label').textContent = '✓ Photo captured';
+      const thumb = document.getElementById('scorecard-thumb');
+      thumb.src = resized;
+      thumb.style.display = 'block';
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
+function startRound() {
+  const studentName = document.getElementById('student-input').value.trim();
+  const studentId   = document.getElementById('student-id-input').value.trim() || ('manual_' + Date.now());
+  if (!studentName) { alert('Please select a student.'); return; }
+  const courseSelect = document.getElementById('course-select').value;
+  const course = courseSelect === 'Other'
+    ? document.getElementById('course-other').value.trim()
+    : courseSelect;
+  if (!course) { alert('Please select a course.'); return; }
+
+  state.round = {
+    roundId:          GolfStorage.generateId(),
+    studentId:        studentId,
+    studentName:      studentName,
+    date:             new Date().toISOString(),
+    course:           course,
+    tees:             segValues.tees,
+    roundType:        segValues.roundtype,
+    weather:          segValues.weather,
+    conditions:       segValues.conditions,
+    scorecardPhotoUrl: state.formData.scorecardPhotoUrl,
+    holes:            [],
+    roundAudioUrl:    null,
+    coachRecommendation: '',
+    debriefNotes:     '',
+    computed:         null
+  };
+
+  state.currentHoleNum = 1;
+  GolfStorage.saveInProgress(state.round);
+  initHoleScreen();
+  showScreen('hole');
+}
+
+// ── Hole screen ────────────────────────────────────────────────────────────
+function initHoleScreen() {
+  state.currentHolePar = 4;
+  state.currentShots   = [];
+  state.shotPhase      = 'club';
+  state.currentShot    = { club:'', result:'', quality:'', contactType:'Normal' };
+  renderHoleTopbar();
+  renderShotStep();
+  document.getElementById('shot-action-row').style.display = 'none';
+}
+
+function renderHoleTopbar() {
+  document.getElementById('hole-title').textContent = `Hole ${state.currentHoleNum} of 18`;
+  document.getElementById('hole-par-label').textContent = `Par ${state.currentHolePar}`;
+  document.getElementById('par-display').textContent = state.currentHolePar;
+  renderProgressDots('progress-dots', state.currentHoleNum);
+}
+
+function renderProgressDots(id, current) {
+  const el = document.getElementById(id);
+  el.innerHTML = '';
+  for (let i = 1; i <= 18; i++) {
+    const d = document.createElement('div');
+    d.className = 'pdot' + (i < current ? ' done' : (i === current ? ' current' : ''));
+    el.appendChild(d);
+  }
+}
+
+function adjustPar(delta) {
+  state.currentHolePar = Math.max(3, Math.min(5, state.currentHolePar + delta));
+  document.getElementById('par-display').textContent = state.currentHolePar;
+  document.getElementById('hole-par-label').textContent = `Par ${state.currentHolePar}`;
+}
+
+function updateShotCounter() {
+  document.getElementById('shot-num').textContent = state.currentShots.length + 1;
+  const labels = { club:'Select club', result:'Select result', quality:'Select quality', contact:'Select contact (optional)', done:'Shot complete' };
+  document.getElementById('step-label').textContent = labels[state.shotPhase] || '';
+}
+
+function renderShotStep() {
+  updateShotCounter();
+  const area = document.getElementById('step-area');
+
+  if (state.shotPhase === 'club') {
+    area.innerHTML = `
+      <div class="step-title">Step 1 — Club Used</div>
+      <div class="club-grid">
+        <div class="club-row club-row-4">
+          ${['Dr','3W','5W','Hy'].map(c => clubBtn(c)).join('')}
+        </div>
+        <div class="club-row club-row-7">
+          ${['3i','4i','5i','6i','7i','8i','9i'].map(c => clubBtn(c)).join('')}
+        </div>
+        <div class="club-row club-row-4b">
+          ${['PW','GW','SW','LW'].map(c => clubBtn(c)).join('')}
+        </div>
+        <div class="club-row club-row-1">
+          ${clubBtn('Putter')}
+        </div>
+      </div>`;
+  } else if (state.shotPhase === 'result') {
+    area.innerHTML = `
+      <div class="step-title">Step 2 — Shot Result</div>
+      <div class="result-grid">
+        <button class="result-btn fairway"  onclick="pickResult('Fairway')">🟢 Fairway</button>
+        <button class="result-btn rough"    onclick="pickResult('Rough')">🟡 Rough</button>
+        <button class="result-btn green"    onclick="pickResult('Green')">⛳ Green</button>
+        <button class="result-btn bunker"   onclick="pickResult('Bunker')">🏖️ Bunker</button>
+        <button class="result-btn penalty"  onclick="pickResult('Penalty')">💧 Penalty</button>
+        <button class="result-btn ob"       onclick="pickResult('OB')">❌ OB</button>
+        <button class="result-btn holed" style="grid-column:1/-1" onclick="pickResult('Holed')">🕳️ Holed</button>
+      </div>`;
+  } else if (state.shotPhase === 'quality') {
+    area.innerHTML = `
+      <div class="step-title">Step 3 — Shot Quality</div>
+      <div class="quality-grid">
+        <button class="quality-btn pure"   onclick="pickQuality('Pure')">
+          <span class="q-icon">👍</span><span>Pure</span>
+        </button>
+        <button class="quality-btn ok"     onclick="pickQuality('OK')">
+          <span class="q-icon">👌</span><span>OK</span>
+        </button>
+        <button class="quality-btn mishit" onclick="pickQuality('Mishit')">
+          <span class="q-icon">👎</span><span>Mishit</span>
+        </button>
+      </div>`;
+  } else if (state.shotPhase === 'contact') {
+    area.innerHTML = `
+      <div class="step-title">Step 4 — Contact (tap to confirm shot)</div>
+      <div class="contact-grid">
+        ${['Normal','Thin','Fat','Toe','Heel'].map(c =>
+          `<button class="contact-btn ${state.currentShot.contactType===c?'active':''}" onclick="pickContact('${c}')">${c}</button>`
+        ).join('')}
+      </div>`;
+  } else if (state.shotPhase === 'done') {
+    renderShotDone();
+  }
+}
+
+function clubBtn(c) {
+  const isLast   = c === state.lastClub;
+  const isActive = c === state.currentShot.club;
+  return `<button class="club-btn ${isActive?'active':''} ${isLast&&!isActive?'last-used':''}"
+    onclick="pickClub('${c}')">${c}</button>`;
+}
+
+function pickClub(c) {
+  state.currentShot.club = c;
+  state.shotPhase = 'result';
+  renderShotStep();
+}
+
+function pickResult(r) {
+  state.currentShot.result = r;
+  if (r === 'Holed') {
+    state.currentShot.quality      = 'Pure';
+    state.currentShot.contactType  = 'Normal';
+    commitShot();
+    return;
+  }
+  state.shotPhase = 'quality';
+  renderShotStep();
+}
+
+function pickQuality(q) {
+  state.currentShot.quality = q;
+  state.shotPhase = 'contact';
+  renderShotStep();
+}
+
+function pickContact(c) {
+  state.currentShot.contactType = c;
+  commitShot();
+}
+
+function commitShot() {
+  const shot = {
+    shotNumber:   state.currentShots.length + 1,
+    club:         state.currentShot.club,
+    result:       state.currentShot.result,
+    quality:      state.currentShot.quality,
+    contactType:  state.currentShot.contactType || 'Normal'
+  };
+  state.currentShots.push(shot);
+  state.lastClub = shot.club;
+  state.shotPhase = 'done';
+  renderShotStep();
+}
+
+function renderShotDone() {
+  const area = document.getElementById('step-area');
+  area.innerHTML = `
+    <div class="step-title">Shot ${state.currentShots.length} Logged</div>
+    <div style="background:#1a1a1a;border-radius:10px;padding:20px;text-align:center;margin-bottom:16px">
+      <div style="font-size:32px;margin-bottom:8px">✓</div>
+      <div style="color:#B8962E;font-size:18px;font-weight:700">${state.currentShot.club}</div>
+      <div style="color:#888;font-size:13px;margin-top:4px">${state.currentShot.result} · ${state.currentShot.quality}</div>
+      ${state.currentShot.contactType !== 'Normal' ? `<div style="color:#555;font-size:12px;margin-top:2px">${state.currentShot.contactType}</div>` : ''}
+    </div>
+    <div style="color:#555;font-size:13px;text-align:center">Total shots this hole: <span style="color:#eee;font-weight:700">${state.currentShots.length}</span></div>`;
+  document.getElementById('shot-action-row').style.display = 'grid';
+}
+
+function addAnotherShot() {
+  state.shotPhase   = 'club';
+  state.currentShot = { club:'', result:'', quality:'', contactType:'Normal' };
+  document.getElementById('shot-action-row').style.display = 'none';
+  renderShotStep();
+}
+
+function goToHoleComplete() {
+  // Init hole completion defaults
+  state.holeScore    = state.currentShots.length;
+  state.holePutts    = Math.min(state.currentShots.filter(s => s.club === 'Putter').length, state.holeScore);
+  state.holeMental   = 1;
+  state.noteType     = 'voice';
+  state.noteAudioUrl = null;
+  state.holeMedia    = [];
+
+  document.getElementById('score-display').textContent = state.holeScore;
+  document.getElementById('putts-display').textContent = state.holePutts;
+  document.getElementById('hc-hole-title').textContent = `Hole ${state.currentHoleNum} — Complete`;
+  document.getElementById('hc-shots-summary').textContent = `${state.currentShots.length} shot${state.currentShots.length!==1?'s':''} logged`;
+  renderProgressDots('hc-progress-dots', state.currentHoleNum);
+
+  // Reset mental buttons
+  document.querySelectorAll('.mental-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('[data-m="1"]').classList.add('active');
+
+  // Reset note
+  document.getElementById('hole-note-text').value = '';
+  document.getElementById('note-audio-player').style.display = 'none';
+  document.getElementById('note-rec-label').textContent = 'Hold to Record (15s max)';
+  document.getElementById('note-record-btn').className = 'record-btn';
+  document.getElementById('note-rec-icon').textContent  = '🎙️';
+  document.getElementById('media-previews').innerHTML = '';
+
+  // Reset next button label
+  const nextBtn = document.getElementById('next-hole-btn');
+  nextBtn.textContent = state.currentHoleNum === 18 ? 'Finish Round →' : `Next Hole →`;
+
+  showScreen('hole-complete');
+}
+
+function adjustScore(d) {
+  state.holeScore = Math.max(1, state.holeScore + d);
+  document.getElementById('score-display').textContent = state.holeScore;
+}
+
+function adjustPutts(d) {
+  state.holePutts = Math.max(0, Math.min(state.holeScore, state.holePutts + d));
+  document.getElementById('putts-display').textContent = state.holePutts;
+}
+
+function pickMental(val, el) {
+  state.holeMental = val;
+  document.querySelectorAll('.mental-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function switchNoteType(type) {
+  state.noteType = type;
+  document.getElementById('note-voice-area').style.display = type === 'voice' ? 'block' : 'none';
+  document.getElementById('note-text-area').style.display  = type === 'text'  ? 'block' : 'none';
+  document.getElementById('note-voice-btn').classList.toggle('active', type === 'voice');
+  document.getElementById('note-text-btn').classList.toggle('active', type === 'text');
+}
+
+// ── Audio recording (hole) ─────────────────────────────────────────────────
+async function toggleHoleRecording() {
+  if (state.noteAudioRecording) {
+    stopHoleRecording();
+  } else {
+    await startHoleRecording();
+  }
+}
+
+async function startHoleRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    state.audioChunks   = [];
+    state.mediaRecorder = new MediaRecorder(stream);
+    state.mediaRecorder.ondataavailable = e => state.audioChunks.push(e.data);
+    state.mediaRecorder.onstop = () => {
+      const blob   = new Blob(state.audioChunks, { type:'audio/webm' });
+      const reader = new FileReader();
+      reader.onload = e => {
+        state.noteAudioUrl = e.target.result;
+        const player = document.getElementById('note-audio-player');
+        player.src = e.target.result;
+        player.style.display = 'block';
+      };
+      reader.readAsDataURL(blob);
+      stream.getTracks().forEach(t => t.stop());
+    };
+    state.mediaRecorder.start();
+    state.noteAudioRecording = true;
+    document.getElementById('note-record-btn').className = 'record-btn recording';
+    document.getElementById('note-rec-icon').textContent  = '⏹';
+    document.getElementById('note-rec-label').textContent = 'Recording... tap to stop';
+    state.noteAudioTimer = setTimeout(() => stopHoleRecording(), 15000);
+  } catch(e) {
+    alert('Microphone access denied.');
+  }
+}
+
+function stopHoleRecording() {
+  if (!state.noteAudioRecording) return;
+  clearTimeout(state.noteAudioTimer);
+  state.noteAudioRecording = false;
+  if (state.mediaRecorder && state.mediaRecorder.state !== 'inactive') state.mediaRecorder.stop();
+  document.getElementById('note-record-btn').className = 'record-btn has-audio';
+  document.getElementById('note-rec-icon').textContent  = '✓';
+  document.getElementById('note-rec-label').textContent = 'Voice memo saved — tap to re-record';
+}
+
+// ── Audio recording (round) ────────────────────────────────────────────────
+async function toggleRoundRecording() {
+  if (state.roundAudioRecording) {
+    stopRoundRecording();
+  } else {
+    await startRoundRecording();
+  }
+}
+
+async function startRoundRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    state.audioChunks   = [];
+    state.mediaRecorder = new MediaRecorder(stream);
+    state.mediaRecorder.ondataavailable = e => state.audioChunks.push(e.data);
+    state.mediaRecorder.onstop = () => {
+      const blob   = new Blob(state.audioChunks, { type:'audio/webm' });
+      const reader = new FileReader();
+      reader.onload = e => {
+        state.roundAudioUrl = e.target.result;
+        const player = document.getElementById('round-audio-player');
+        player.src = e.target.result;
+        player.style.display = 'block';
+      };
+      reader.readAsDataURL(blob);
+      stream.getTracks().forEach(t => t.stop());
+    };
+    state.mediaRecorder.start();
+    state.roundAudioRecording = true;
+    document.getElementById('round-record-btn').className = 'record-btn recording';
+    document.getElementById('round-rec-icon').textContent  = '⏹';
+    document.getElementById('round-rec-label').textContent = 'Recording... tap to stop (60s max)';
+    state.roundAudioTimer = setTimeout(() => stopRoundRecording(), 60000);
+  } catch(e) {
+    alert('Microphone access denied.');
+  }
+}
+
+function stopRoundRecording() {
+  if (!state.roundAudioRecording) return;
+  clearTimeout(state.roundAudioTimer);
+  state.roundAudioRecording = false;
+  if (state.mediaRecorder && state.mediaRecorder.state !== 'inactive') state.mediaRecorder.stop();
+  document.getElementById('round-record-btn').className = 'record-btn has-audio';
+  document.getElementById('round-rec-icon').textContent  = '✓';
+  document.getElementById('round-rec-label').textContent = 'Voice memo saved — tap to re-record';
+}
+
+// ── Media ──────────────────────────────────────────────────────────────────
+function onHoleMedia(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const isVideo = file.type.startsWith('video');
+  const reader  = new FileReader();
+  reader.onload = e => {
+    const type    = isVideo ? 'video' : 'photo';
+    const dataUrl = e.target.result;
+    const container = document.getElementById('media-previews');
+    if (isVideo) {
+      state.holeMedia.push({ type, url: dataUrl });
+      const div = document.createElement('div');
+      div.style.cssText = 'width:64px;height:64px;background:#1a1a1a;border-radius:6px;border:1px solid #333;display:flex;align-items:center;justify-content:center;font-size:24px';
+      div.textContent = '🎥';
+      container.appendChild(div);
+    } else {
+      resizeImage(dataUrl, 1000, (resized) => {
+        state.holeMedia.push({ type, url: resized });
+        const img = document.createElement('img');
+        img.src = resized;
+        img.className = 'media-thumb';
+        container.appendChild(img);
+      });
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── Save hole ──────────────────────────────────────────────────────────────
+function saveHoleAndNext() {
+  const noteText = state.noteType === 'text'
+    ? document.getElementById('hole-note-text').value.trim()
+    : '';
+
+  const holeData = {
+    holeNumber:  state.currentHoleNum,
+    par:         state.currentHolePar,
+    shots:       [...state.currentShots],
+    score:       state.holeScore,
+    putts:       state.holePutts,
+    mentalRating: state.holeMental,
+    noteText:    noteText,
+    noteAudioUrl: state.noteType === 'voice' ? state.noteAudioUrl : null,
+    media:       [...state.holeMedia]
+  };
+
+  state.round.holes.push(holeData);
+  GolfStorage.saveInProgress(state.round);  // auto-save every hole
+
+  if (state.currentHoleNum === 18) {
+    showPostRound();
+  } else {
+    state.currentHoleNum++;
+    initHoleScreen();
+    showScreen('hole');
+  }
+}
+
+// ── Post round ─────────────────────────────────────────────────────────────
+function showPostRound() {
+  const comp = GolfStorage.computeRoundStats(state.round);
+  const totalPar = state.round.holes.reduce((s,h) => s+(h.par||4), 0);
+  const stp = comp.scoreToPar;
+  const stpStr = stp > 0 ? `+${stp}` : (stp < 0 ? `${stp}` : 'E');
+
+  const grid = document.getElementById('post-summary-grid');
+  grid.innerHTML = [
+    ['Total', comp.totalScore],
+    ['To Par', stpStr],
+    ['Putts', comp.totalPutts],
+    ['FIR', `${comp.fairwaysHit}/${comp.fairwaysApplicable}`],
+    ['GIR', `${comp.greensInRegulation}/18`],
+    ['Front 9', comp.front9Score],
+    ['Back 9', comp.back9Score],
+    ['Mental', mentalAvgLabel(comp.mentalRatingAvg)],
+    ['Shots', state.round.holes.reduce((s,h) => s+(h.shots||[]).length, 0)],
+  ].map(([l,v]) => `<div class="sum-tile"><div class="sum-val">${v}</div><div class="sum-lbl">${l}</div></div>`).join('');
+
+  showScreen('post');
+}
+
+function mentalAvgLabel(avg) {
+  if (avg <= 1.5) return '😊';
+  if (avg <= 2.5) return '😐';
+  return '😤';
+}
+
+function submitRound() {
+  const comp = GolfStorage.computeRoundStats(state.round);
+  state.round.roundAudioUrl        = state.roundAudioUrl;
+  state.round.coachRecommendation  = document.getElementById('coach-rec').value.trim();
+  state.round.debriefNotes         = document.getElementById('debrief-notes').value.trim();
+  state.round.computed             = comp;
+
+  GolfStorage.saveRound(state.round);  // saves locally + POSTs to server
+  GolfStorage.clearInProgress();
+
+  const stp = comp.scoreToPar;
+  const stpStr = stp > 0 ? `+${stp}` : (stp < 0 ? `${stp}` : 'E');
+  document.getElementById('confirm-sub').innerHTML =
+    `<strong style="color:#eee">${state.round.studentName}</strong> · ${state.round.course}<br>
+     Score: ${comp.totalScore} (${stpStr}) · ${comp.totalPutts} putts<br>
+     <span style="color:#5a9a5a">Saved to device successfully.</span>`;
+
+  showScreen('confirm');
+}
+
+// ── Confirm ────────────────────────────────────────────────────────────────
+function startNewRound() {
+  state.round        = null;
+  state.roundAudioUrl = null;
+  state.noteAudioUrl = null;
+  showScreen('setup');
+}
+
+function exitAnalyst() {
+  window.location.href = '/';
+}
+
+
+// ── URL param: ?student=<uuid> pre-populates student on setup screen ────────
+function applyStudentUrlParam() {
+  const params = new URLSearchParams(window.location.search);
+  const uuid = params.get('student');
+  if (!uuid) return;
+  const match = state.students.find(s => s.id === uuid);
+  if (match) selectStudent(match.id, match.name);
+}
+// ── Screen routing ─────────────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+}
+</script>
+</body>
+</html>

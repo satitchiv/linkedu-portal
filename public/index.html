@@ -1361,6 +1361,12 @@
           </button>
         </div>
         <div id="golf-panel-history" class="golf-sub-panel active">
+          <a id="golf-enter-round-btn" href="/playgolf" target="_blank" style="display:none;text-decoration:none;margin-bottom:18px;display:none">
+            <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:13px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:border-color 0.2s" onmouseover="this.style.borderColor='#B8962E'" onmouseout="this.style.borderColor='#2a2a2a'">
+              <span style="font-size:13px;color:#eee;font-weight:500">Enter a new round on-course</span>
+              <span style="font-size:12px;color:#B8962E;letter-spacing:0.05em">Open &#8599;</span>
+            </div>
+          </a>
           <div id="golf-history-list"></div>
           <div id="golf-detail" style="display:none"></div>
         </div>
@@ -4777,6 +4783,10 @@ function injectGolfCSS() {
 
 window.initGolfTab = function(studentId, studentName) {
   injectGolfCSS();
+  if (isAnalystView) {
+    const btn = document.getElementById('golf-enter-round-btn');
+    if (btn) { btn.href = '/playgolf?student=' + studentId; btn.style.display = 'block'; }
+  }
   renderList(studentId);
 };
 

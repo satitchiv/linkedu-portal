@@ -12,7 +12,7 @@ const supabase = createClient(
 exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-Analyst-Pin',
     'Content-Type': 'application/json',
   }
 
@@ -21,21 +21,34 @@ exports.handler = async (event) => {
   }
 
   try {
-    // Verify Supabase JWT
-    const token = (event.headers.authorization || '').replace('Bearer ', '')
-    if (!token) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) }
+    // ── Auth: X-Analyst-Pin OR Supabase JWT ──────────────────────────────────
+    const analystPin = event.headers['x-analyst-pin'] || event.headers['X-Analyst-Pin']
+    const isPinAuth  = analystPin && analystPin === process.env.ANALYST_PIN
 
-    const { data: { user }, error: authErr } = await supabase.auth.getUser(token)
-    if (authErr || !user) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Invalid token' }) }
+    let user, profile
+    if (isPinAuth) {
+      // PIN auth — synthetic analyst profile, no JWT needed
+      user    = { id: 'pin-auth' }
+      profile = { role: 'analyst', student_id: null, notion_student_id: null }
+    } else {
+      // Verify Supabase JWT
+      const token = (event.headers.authorization || '').replace('Bearer ', '')
+      if (!token) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) }
 
-    // Get user profile
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
+      const { data: { user: u }, error: authErr } = await supabase.auth.getUser(token)
+      if (authErr || !u) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Invalid token' }) }
+      user = u
 
-    if (!profile) return { statusCode: 404, headers, body: JSON.stringify({ error: 'Profile not found' }) }
+      // Get user profile
+      const { data: p } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      if (!p) return { statusCode: 404, headers, body: JSON.stringify({ error: 'Profile not found' }) }
+      profile = p
+    }
 
     // GET — fetch rounds
     if (event.httpMethod === 'GET') {
@@ -87,7 +100,7 @@ exports.handler = async (event) => {
         .insert({
           student_id:        targetStudentUUID,
           notion_student_id: targetNotionId,
-          entered_by_id: user.id,
+          entered_by_id: isPinAuth ? null : user.id,
           entered_by_role: profile.role,
           ...roundData
         })

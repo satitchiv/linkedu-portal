@@ -12,7 +12,7 @@ const supabase = createClient(
 exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-Admin-Secret',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-Admin-Secret, X-Analyst-Pin',
     'Content-Type': 'application/json',
   }
 
@@ -25,7 +25,10 @@ exports.handler = async (event) => {
     const secret = event.headers['x-admin-secret'] || event.headers['X-Admin-Secret']
     const isAdmin = secret && secret === process.env.ADMIN_SECRET
 
-    if (!isAdmin) {
+    const analystPin = event.headers['x-analyst-pin'] || event.headers['X-Analyst-Pin']
+    const isPinAuth  = analystPin && analystPin === process.env.ANALYST_PIN
+
+    if (!isAdmin && !isPinAuth) {
       const token = (event.headers.authorization || '').replace('Bearer ', '')
       if (!token) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) }
 
