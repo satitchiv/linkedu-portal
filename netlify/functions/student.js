@@ -25,6 +25,8 @@ async function fetchStudentData(studentId) {
     certificationsRes,
     extractionsRes,
     campRecsRes,
+    campAppsRes,
+    campTlRes,
   ] = await Promise.all([
     supabase.from('students').select('*').eq('id', studentId).single(),
     supabase.from('student_academics').select('*').eq('student_id', studentId).order('date', { ascending: false }),
@@ -37,12 +39,19 @@ async function fetchStudentData(studentId) {
     supabase.from('student_certifications').select('*').eq('student_id', studentId).order('date', { ascending: false, nullsFirst: false }),
     supabase.from('document_extractions').select('*').eq('student_id', studentId).order('extracted_at', { ascending: false }),
     supabase.from('student_camp_recommendations').select('*').eq('student_id', studentId).order('score', { ascending: false }),
+    supabase.from('student_camp_applications').select('*').eq('student_id', studentId).order('created_at', { ascending: true }),
+    supabase.from('camp_timeline_items').select('*').eq('student_id', studentId).order('date', { ascending: true, nullsFirst: false }),
   ])
 
   const s = studentRes.data || {}
   const timelineItems = timelineItemsRes.data || []
 
-  return { s, academicsRes, schoolsRes, timelineItems, milestonesRes, documentsRes, golfRes, recsRes, certificationsRes, extractionsRes, campRecsRes }
+  const campTlItems = campTlRes.data || []
+  const campAppsWithTl = (campAppsRes.data || []).map(app => ({
+    ...app,
+    timeline_items: campTlItems.filter(i => i.camp_application_id === app.id),
+  }))
+  return { s, academicsRes, schoolsRes, timelineItems, milestonesRes, documentsRes, golfRes, recsRes, certificationsRes, extractionsRes, campRecsRes, campAppsWithTl }
 }
 
 // Build the student object — pass isParent=true to strip admin-only fields
@@ -109,7 +118,7 @@ exports.handler = async (event) => {
         return { statusCode: 401, headers, body: JSON.stringify({ error: 'Invalid or expired link' }) }
       }
 
-      const { s, academicsRes, schoolsRes, timelineItems, milestonesRes, documentsRes, golfRes, recsRes, certificationsRes, extractionsRes, campRecsRes } =
+      const { s, academicsRes, schoolsRes, timelineItems, milestonesRes, documentsRes, golfRes, recsRes, certificationsRes, extractionsRes, campRecsRes, campAppsWithTl } =
         await fetchStudentData(student.id)
 
       return {
@@ -133,6 +142,7 @@ exports.handler = async (event) => {
           certifications:        certificationsRes.data || [],
           extractions:           extractionsRes.data   || [],
           camp_recommendations:  campRecsRes.data      || [],
+          camp_applications:     campAppsWithTl,
           role: 'parent',
         })
       }
@@ -171,7 +181,7 @@ exports.handler = async (event) => {
       }
     }
 
-    const { s, academicsRes, schoolsRes, timelineItems, milestonesRes, documentsRes, golfRes, recsRes, certificationsRes, extractionsRes, campRecsRes } =
+    const { s, academicsRes, schoolsRes, timelineItems, milestonesRes, documentsRes, golfRes, recsRes, certificationsRes, extractionsRes, campRecsRes, campAppsRes } =
       await fetchStudentData(studentIdToFetch)
 
     const isParent = profile.role === 'parent'
@@ -197,6 +207,7 @@ exports.handler = async (event) => {
         certifications:        certificationsRes.data || [],
         extractions:           extractionsRes.data   || [],
         camp_recommendations:  campRecsRes.data      || [],
+        camp_applications:     campAppsRes.data      || [],
         role: profile.role,
       })
     }
