@@ -569,6 +569,7 @@
     .comm-card { background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin-bottom:12px; }
     .comm-direction { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted2); }
     .comm-direction.outbound { color:var(--gold); }
+    .comm-direction.summary { color:#888; }
     .comm-school { font-size:14px;font-weight:600;color:var(--text); }
     .comm-subject { font-size:13px;color:var(--muted);margin-bottom:8px; }
     .comm-body { font-size:13px;color:var(--text);line-height:1.7;white-space:pre-wrap;word-break:break-word; }
@@ -1354,6 +1355,10 @@
             <span class="lang-en">Course Comparison</span>
             <span class="lang-th">เปรียบเทียบสนาม</span>
           </button>
+          <button class="golf-sub-btn" onclick="golfSubTab('performance')">
+            <span class="lang-en">Performance</span>
+            <span class="lang-th">Trackman</span>
+          </button>
         </div>
         <div id="golf-panel-history" class="golf-sub-panel active">
           <div id="golf-history-list"></div>
@@ -1361,6 +1366,9 @@
         </div>
         <div id="golf-panel-compare" class="golf-sub-panel">
           <div id="golf-compare-content"></div>
+        </div>
+        <div id="golf-panel-performance" class="golf-sub-panel">
+          <div id="trackman-root"></div>
         </div>
       </div>
     </div>
@@ -4752,6 +4760,17 @@ function injectGolfCSS() {
 .empty-sub{font-size:13px;line-height:1.6}
 .chart-wrap-golf{background:#fff;border:1px solid rgba(0,0,0,0.08);border-radius:8px;padding:20px;margin-bottom:16px}
 .chart-title{font-size:12px;font-weight:600;color:#555;margin-bottom:14px;letter-spacing:0.05em;text-transform:uppercase}
+/* ── Trackman Performance styles ────────────────────────────── */
+.tm-session-row{background:#161616;border:1px solid #1e1e1e;border-radius:8px;padding:16px;margin-bottom:10px}
+.tm-session-row:hover{border-color:#2a2a2a}
+.tm-club-pill{font-size:10px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;background:#1e1e1e;color:#666;border-radius:10px;padding:2px 8px;border:1px solid #2a2a2a}
+.tm-ai-card{background:#161616;border:1px solid #2a2a2a;border-radius:8px;padding:16px;margin-bottom:16px}
+.tm-ai-section-label{font-size:10px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#B8962E;margin-bottom:8px}
+.tm-metrics-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+@media(max-width:600px){.tm-metrics-grid{grid-template-columns:repeat(2,1fr)}}
+.tm-metric{background:#1a1a1a;border:1px solid #222;border-radius:6px;padding:10px 10px 8px}
+.tm-metric-label{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px}
+.tm-metric-val{font-size:15px;font-weight:600;color:#eee;font-family:'Playfair Display',serif}
 `;
   document.head.appendChild(s);
 }
@@ -4763,12 +4782,595 @@ window.initGolfTab = function(studentId, studentName) {
 
 window.golfSubTab = function(id) {
   document.querySelectorAll('.golf-sub-btn').forEach((b,i) => {
-    b.classList.toggle('active', ['history','compare'][i] === id);
+    b.classList.toggle('active', ['history','compare','performance'][i] === id);
   });
   document.getElementById('golf-panel-history').classList.toggle('active', id==='history');
   document.getElementById('golf-panel-compare').classList.toggle('active', id==='compare');
+  document.getElementById('golf-panel-performance').classList.toggle('active', id==='performance');
   if (id==='compare') renderCompare();
+  if (id==='performance') renderTrackman();
 };
+
+// ── Trackman Performance Tab ──────────────────────────────────────────────
+let tmSessions = [];
+let tmExpandedId = null;
+let tmClubCount = 0;
+let tmCurrentStudentId = null;
+
+const TM_CLUBS = ['Driver','3-Wood','5-Wood','3-Hybrid','4-Iron','5-Iron','6-Iron','7-Iron','8-Iron','9-Iron','PW','GW','SW','LW'];
+
+const TM_RANGES = {
+  ball_speed_avg:       [60,  200],
+  launch_angle_avg:     [-5,  50],
+  launch_direction_avg: [-30, 30],
+  spin_rate_avg:        [500, 12000],
+  spin_axis_avg:        [-45, 45],
+  carry_distance_avg:   [20,  400],
+  total_distance_avg:   [20,  450],
+  side_distance_avg:    [-100, 100],
+  smash_factor_avg:     [0.8, 1.6],
+  club_speed_avg:       [30,  150],
+  face_angle_avg:       [-15, 15],
+  club_path_avg:        [-15, 15],
+  attack_angle_avg:     [-15, 15],
+  dynamic_loft_avg:     [0,   45],
+};
+
+const TM_FIELD_META = {
+  ball_speed_avg:       { label:'Ball Speed',   unit:'mph' },
+  club_speed_avg:       { label:'Club Speed',   unit:'mph' },
+  smash_factor_avg:     { label:'Smash Factor', unit:''    },
+  launch_angle_avg:     { label:'Launch Angle', unit:'°'   },
+  launch_direction_avg: { label:'Launch Dir.',  unit:'°'   },
+  spin_rate_avg:        { label:'Spin Rate',    unit:'rpm' },
+  spin_axis_avg:        { label:'Spin Axis',    unit:'°'   },
+  carry_distance_avg:   { label:'Carry',        unit:'yds' },
+  total_distance_avg:   { label:'Total Dist.',  unit:'yds' },
+  side_distance_avg:    { label:'Side Dist.',   unit:'yds' },
+  face_angle_avg:       { label:'Face Angle',   unit:'°'   },
+  club_path_avg:        { label:'Club Path',    unit:'°'   },
+  attack_angle_avg:     { label:'Attack Angle', unit:'°'   },
+  dynamic_loft_avg:     { label:'Dynamic Loft', unit:'°'   },
+};
+
+window.renderTrackman = async function(studentId) {
+  const sid = studentId || (D && D.student && D.student.id);
+  tmCurrentStudentId = sid;
+  const root = document.getElementById('trackman-root');
+  if (!root) return;
+  root.innerHTML = '<div style="color:#555;padding:28px 0;text-align:center;font-size:13px">Loading sessions…</div>';
+
+  if (!sid) {
+    root.innerHTML = '<div style="color:#555;padding:28px 0;text-align:center;font-size:13px">No student selected.</div>';
+    return;
+  }
+
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) {
+      root.innerHTML = '<div style="color:#555;padding:28px 0;text-align:center">Not authenticated.</div>';
+      return;
+    }
+    const res = await fetch(`/api/golf-trackman?student_id=${encodeURIComponent(sid)}`, {
+      headers: { Authorization: `Bearer ${session.access_token}` }
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    tmSessions = json.sessions || [];
+  } catch(e) {
+    root.innerHTML = `<div style="color:#ca6d6d;padding:28px 0;text-align:center;font-size:13px">Failed to load Trackman sessions.</div>`;
+    return;
+  }
+
+  renderTrackmanList();
+};
+
+function renderTrackmanList() {
+  const root = document.getElementById('trackman-root');
+  if (!root) return;
+  const sid = tmCurrentStudentId;
+
+  const addBtn = isAnalystView
+    ? `<button onclick="showTrackmanModal('${sid}')" style="background:#B8962E;color:#111;border:none;padding:9px 18px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;cursor:pointer;float:right;margin-bottom:18px">Log Trackman Session</button>`
+    : '';
+
+  let html = `<div style="overflow:hidden;margin-bottom:4px">${addBtn}<div style="clear:both"></div></div>`;
+
+  if (!tmSessions.length) {
+    html += `<div class="empty-state">
+      <div class="empty-title" style="color:#555">No Trackman sessions yet</div>
+      <div class="empty-sub" style="color:#444">Sessions logged by your LINKEDU analyst will appear here after each practice session.</div>
+    </div>`;
+  } else {
+    html += tmSessions.map(s => tmSessionRowHTML(s)).join('');
+    const chartsHtml = tmChartsHTML(tmSessions);
+    if (chartsHtml) html += chartsHtml;
+  }
+
+  root.innerHTML = html;
+
+  // Render charts after DOM is ready
+  if (tmSessions.length >= 2) setTimeout(() => tmRenderCharts(tmSessions), 200);
+}
+
+function tmSessionRowHTML(s) {
+  const clubs = (s.club_data || []).map(c => `<span class="tm-club-pill">${c.club}</span>`).join('');
+  const dateStr = s.session_date
+    ? new Date(s.session_date + 'T00:00:00').toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'})
+    : '—';
+  const loc = s.location ? ` · ${s.location}` : '';
+  const expanded = tmExpandedId === s.id;
+  const sid = tmCurrentStudentId;
+
+  const aiSection = (s.ai_analysis && s.ai_analysis.pros && s.ai_analysis.pros.length)
+    ? tmAICardHTML(s.ai_analysis)
+    : '<div style="color:#444;font-size:12px;padding:8px 0;font-style:italic">AI analysis pending…</div>';
+
+  const analystActions = isAnalystView ? `
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button onclick="tmReanalyze('${s.id}')" style="background:none;border:1px solid #2a2a2a;color:#666;padding:6px 14px;border-radius:4px;font-size:11px;cursor:pointer;text-transform:uppercase;letter-spacing:0.06em">Re-analyse</button>
+      <button onclick="tmDelete('${s.id}')" style="background:none;border:1px solid #2a2a2a;color:#ca6d6d;padding:6px 14px;border-radius:4px;font-size:11px;cursor:pointer;text-transform:uppercase;letter-spacing:0.06em">Delete</button>
+    </div>` : '';
+
+  return `<div class="tm-session-row">
+    <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none" onclick="tmToggle('${s.id}')">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#ddd;margin-bottom:5px">${dateStr}${loc}</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">${clubs}</div>
+      </div>
+      <div style="color:#333;font-size:12px;flex-shrink:0;margin-left:12px">${expanded ? '▲' : '▼'}</div>
+    </div>
+    <div id="tm-exp-${s.id}" style="display:${expanded ? 'block' : 'none'};padding-top:16px;border-top:1px solid #1e1e1e;margin-top:12px">
+      ${aiSection}
+      ${tmMetricsGridHTML(s.club_data)}
+      ${analystActions}
+    </div>
+  </div>`;
+}
+
+window.tmToggle = function(id) {
+  tmExpandedId = (tmExpandedId === id) ? null : id;
+  renderTrackmanList();
+};
+
+function tmAICardHTML(ai) {
+  const pros = (ai.pros || []).map(p =>
+    `<div style="padding:4px 0;border-bottom:1px solid #1e1e1e;font-size:12px;color:#ccc;line-height:1.55">· ${p}</div>`
+  ).join('');
+  const cons = (ai.cons || []).map(c =>
+    `<div style="padding:4px 0;border-bottom:1px solid #1e1e1e;font-size:12px;color:#ccc;line-height:1.55">· ${c}</div>`
+  ).join('');
+  const drills = (ai.drills || []).map(d =>
+    `<div style="padding:6px 0;border-bottom:1px solid #1e1e1e"><div style="font-size:12px;font-weight:600;color:#B8962E">· ${d.title}</div><div style="font-size:12px;color:#888;margin-top:2px;line-height:1.5">${d.description}</div></div>`
+  ).join('');
+
+  const vs = ai.vs_last_session;
+  const vsHtml = (vs && ((vs.improved||[]).length + (vs.regressed||[]).length) > 0) ? `
+    <div style="margin-top:10px;font-size:11px">
+      ${(vs.improved||[]).length ? `<span style="color:#5a9a5a">Improved: ${vs.improved.join(', ')}</span>` : ''}
+      ${(vs.improved||[]).length && (vs.regressed||[]).length ? ' · ' : ''}
+      ${(vs.regressed||[]).length ? `<span style="color:#ca6d6d">Regressed: ${vs.regressed.join(', ')}</span>` : ''}
+    </div>` : '';
+
+  return `<div class="tm-ai-card">
+    ${ai.overall_assessment ? `<div style="font-size:13px;color:#ddd;line-height:1.65;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #2a2a2a">${ai.overall_assessment}</div>` : ''}
+    <div style="margin-bottom:14px">
+      <div class="tm-ai-section-label">What's working</div>
+      ${pros || '<div style="font-size:12px;color:#444">—</div>'}
+    </div>
+    <div style="margin-bottom:14px">
+      <div class="tm-ai-section-label">Areas to improve</div>
+      ${cons || '<div style="font-size:12px;color:#444">—</div>'}
+    </div>
+    <div>
+      <div class="tm-ai-section-label">Drills to work on</div>
+      ${drills || '<div style="font-size:12px;color:#444">—</div>'}
+    </div>
+    ${ai.benchmark_context ? `<div style="margin-top:12px;font-size:11px;color:#555;font-style:italic">${ai.benchmark_context}</div>` : ''}
+    ${vsHtml}
+  </div>`;
+}
+
+function tmMetricsGridHTML(clubData) {
+  if (!clubData || !clubData.length) return '';
+  const sections = clubData.map(c => {
+    const tiles = Object.entries(TM_FIELD_META)
+      .filter(([k]) => c[k] != null)
+      .map(([k, {label, unit}]) =>
+        `<div class="tm-metric"><div class="tm-metric-label">${label}</div><div class="tm-metric-val">${c[k]}${unit}</div></div>`
+      ).join('');
+    if (!tiles) return '';
+    return `<div style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#B8962E;margin-bottom:8px">${c.club}<span style="color:#333;font-weight:400;margin-left:6px">${c.shots ? c.shots + ' shots' : ''}</span></div>
+      <div class="tm-metrics-grid">${tiles}</div>
+    </div>`;
+  }).join('');
+  return `<div style="margin-top:16px"><div class="tm-ai-section-label" style="margin-bottom:10px">Full Metrics</div>${sections}</div>`;
+}
+
+function tmChartsHTML(sessions) {
+  const drvSessions = sessions.filter(s => (s.club_data||[]).find(c => c.club === 'Driver' && c.ball_speed_avg != null));
+  const i7Sessions  = sessions.filter(s => (s.club_data||[]).find(c => c.club === '7-Iron' && c.carry_distance_avg != null));
+  const pwSessions  = sessions.filter(s => (s.club_data||[]).find(c => c.club === 'PW' && c.spin_rate_avg != null));
+
+  if (drvSessions.length < 2 && i7Sessions.length < 2 && pwSessions.length < 2) return '';
+
+  let html = `<div style="margin-top:32px"><p class="sec-label" style="color:#555">Performance Trends</p>`;
+  if (drvSessions.length >= 2) {
+    html += `<div class="chart-wrap-golf" style="background:#161616;border-color:#222"><div class="chart-title" style="color:#666">Driver — Ball Speed (mph)</div><canvas id="tm-c-drv-bs" height="80"></canvas></div>`;
+    html += `<div class="chart-wrap-golf" style="background:#161616;border-color:#222"><div class="chart-title" style="color:#666">Driver — Smash Factor</div><canvas id="tm-c-drv-sf" height="80"></canvas></div>`;
+  }
+  if (i7Sessions.length >= 2) {
+    html += `<div class="chart-wrap-golf" style="background:#161616;border-color:#222"><div class="chart-title" style="color:#666">7-Iron — Carry Distance (yds)</div><canvas id="tm-c-7i-carry" height="80"></canvas></div>`;
+  }
+  if (pwSessions.length >= 2) {
+    html += `<div class="chart-wrap-golf" style="background:#161616;border-color:#222"><div class="chart-title" style="color:#666">PW — Spin Rate (rpm)</div><canvas id="tm-c-pw-spin" height="80"></canvas></div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
+function tmRenderCharts(sessions) {
+  if (!window.Chart) return;
+  const fmtD = d => new Date(d + 'T00:00:00').toLocaleDateString('en-GB', {day:'numeric', month:'short'});
+
+  function mkChart(id, labels, data, color) {
+    const ctx = document.getElementById(id);
+    if (!ctx) return;
+    const ex = Chart.getChart(ctx);
+    if (ex) ex.destroy();
+    new Chart(ctx, {
+      type: 'line',
+      data: { labels, datasets: [{ data, borderColor: color, backgroundColor: color + '22', borderWidth: 2, pointBackgroundColor: color, pointRadius: 4, fill: true, tension: 0.3 }] },
+      options: { plugins: { legend: { display: false } }, scales: {
+        y: { ticks: { font: { size: 11 }, color: '#555' }, grid: { color: '#1e1e1e' } },
+        x: { ticks: { font: { size: 10 }, color: '#555' }, grid: { display: false } }
+      }}
+    });
+  }
+
+  const drvS = sessions.filter(s => (s.club_data||[]).find(c => c.club === 'Driver' && c.ball_speed_avg != null)).slice(0,10).reverse();
+  const i7S  = sessions.filter(s => (s.club_data||[]).find(c => c.club === '7-Iron' && c.carry_distance_avg != null)).slice(0,10).reverse();
+  const pwS  = sessions.filter(s => (s.club_data||[]).find(c => c.club === 'PW' && c.spin_rate_avg != null)).slice(0,10).reverse();
+
+  if (drvS.length >= 2) {
+    mkChart('tm-c-drv-bs',    drvS.map(s=>fmtD(s.session_date)), drvS.map(s=>(s.club_data||[]).find(c=>c.club==='Driver')?.ball_speed_avg),   '#B8962E');
+    mkChart('tm-c-drv-sf',    drvS.map(s=>fmtD(s.session_date)), drvS.map(s=>(s.club_data||[]).find(c=>c.club==='Driver')?.smash_factor_avg), '#5a7aba');
+  }
+  if (i7S.length >= 2) {
+    mkChart('tm-c-7i-carry',  i7S.map(s=>fmtD(s.session_date)),  i7S.map(s=>(s.club_data||[]).find(c=>c.club==='7-Iron')?.carry_distance_avg), '#5a9a5a');
+  }
+  if (pwS.length >= 2) {
+    mkChart('tm-c-pw-spin',   pwS.map(s=>fmtD(s.session_date)),  pwS.map(s=>(s.club_data||[]).find(c=>c.club==='PW')?.spin_rate_avg), '#ca6d6d');
+  }
+}
+
+// ── Modal ──────────────────────────────────────────────────────────────────
+window.showTrackmanModal = function(studentId) {
+  tmClubCount = 0;
+  let modal = document.getElementById('tm-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'tm-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto';
+    document.body.appendChild(modal);
+  }
+  modal.style.display = 'flex';
+
+  modal.innerHTML = `
+    <div style="background:#111;border:1px solid #2a2a2a;border-radius:12px;width:100%;max-width:720px;padding:32px;margin:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px">
+        <div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#B8962E">Log Trackman Session</div>
+          <div style="font-size:12px;color:#444;margin-top:3px">Enter averages per club from the Trackman screen</div>
+        </div>
+        <button onclick="hideTrackmanModal()" style="background:none;border:none;color:#444;font-size:22px;cursor:pointer;padding:4px 8px;line-height:1">&times;</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div>
+          <div style="font-size:10px;color:#555;text-transform:uppercase;letter-spacing:0.09em;margin-bottom:6px">Date</div>
+          <input type="date" id="tm-date" value="${new Date().toISOString().slice(0,10)}" style="width:100%;background:#1a1a1a;border:1px solid #2a2a2a;color:#eee;padding:10px 12px;border-radius:6px;font-size:13px;box-sizing:border-box">
+        </div>
+        <div>
+          <div style="font-size:10px;color:#555;text-transform:uppercase;letter-spacing:0.09em;margin-bottom:6px">Location</div>
+          <input type="text" id="tm-location" placeholder="e.g. Thana City Range" style="width:100%;background:#1a1a1a;border:1px solid #2a2a2a;color:#eee;padding:10px 12px;border-radius:6px;font-size:13px;box-sizing:border-box">
+        </div>
+      </div>
+
+      <div style="margin-bottom:24px">
+        <div style="font-size:10px;color:#555;text-transform:uppercase;letter-spacing:0.09em;margin-bottom:6px">Session Notes (optional)</div>
+        <textarea id="tm-notes" rows="2" placeholder="Coach observations, focus areas, conditions…" style="width:100%;background:#1a1a1a;border:1px solid #2a2a2a;color:#eee;padding:10px 12px;border-radius:6px;font-size:13px;resize:vertical;box-sizing:border-box"></textarea>
+      </div>
+
+      <div id="tm-club-blocks"></div>
+      <button onclick="tmAddClub()" style="background:none;border:1px dashed #2a2a2a;color:#555;padding:9px 16px;border-radius:6px;font-size:11px;cursor:pointer;width:100%;margin-bottom:24px;text-transform:uppercase;letter-spacing:0.09em">+ Add Club</button>
+
+      <div style="margin-bottom:24px">
+        <div onclick="document.getElementById('tm-csv-wrap').style.display=document.getElementById('tm-csv-wrap').style.display==='none'?'block':'none'" style="cursor:pointer;display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-size:10px;color:#333;text-transform:uppercase;letter-spacing:0.09em">Paste Trackman CSV (optional)</span>
+          <span style="color:#333;font-size:10px">▼</span>
+        </div>
+        <div id="tm-csv-wrap" style="display:none">
+          <textarea id="tm-csv-input" rows="4" placeholder="Paste CSV export here — parser will attempt to auto-fill fields above" style="width:100%;background:#1a1a1a;border:1px solid #222;color:#555;padding:10px 12px;border-radius:6px;font-size:11px;resize:vertical;box-sizing:border-box;font-family:monospace"></textarea>
+          <button onclick="tmParseCSV()" style="background:none;border:1px solid #2a2a2a;color:#555;padding:6px 14px;border-radius:4px;font-size:11px;cursor:pointer;margin-top:8px;text-transform:uppercase;letter-spacing:0.06em">Parse CSV</button>
+        </div>
+      </div>
+
+      <div id="tm-form-err" style="color:#ca6d6d;font-size:12px;margin-bottom:12px;display:none"></div>
+
+      <div style="display:flex;gap:12px;justify-content:flex-end">
+        <button onclick="hideTrackmanModal()" style="background:none;border:1px solid #2a2a2a;color:#555;padding:10px 20px;border-radius:6px;font-size:12px;cursor:pointer">Cancel</button>
+        <button id="tm-submit-btn" onclick="tmSubmit('${studentId}')" style="background:#B8962E;color:#111;border:none;padding:10px 24px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:0.08em">Save Session</button>
+      </div>
+    </div>`;
+
+  // Add first club block
+  tmAddClub();
+};
+
+window.hideTrackmanModal = function() {
+  const m = document.getElementById('tm-modal');
+  if (m) m.style.display = 'none';
+};
+
+window.tmAddClub = function() {
+  const container = document.getElementById('tm-club-blocks');
+  if (!container) return;
+  const idx = tmClubCount++;
+  const opts = TM_CLUBS.map(c => `<option value="${c}">${c}</option>`).join('');
+  const block = document.createElement('div');
+  block.className = 'tm-club-block';
+  block.id = `tm-cb-${idx}`;
+  block.style.cssText = 'background:#161616;border:1px solid #222;border-radius:8px;padding:16px;margin-bottom:12px';
+  block.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="display:flex;gap:12px;align-items:flex-end">
+        <div>
+          <div style="font-size:10px;color:#555;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px">Club</div>
+          <select id="tm-club-${idx}" style="background:#1a1a1a;border:1px solid #2a2a2a;color:#eee;padding:8px 10px;border-radius:6px;font-size:13px">${opts}</select>
+        </div>
+        <div>
+          <div style="font-size:10px;color:#555;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px">Shots</div>
+          <input type="number" id="tm-shots-${idx}" placeholder="#" min="1" max="200" style="width:64px;background:#1a1a1a;border:1px solid #2a2a2a;color:#eee;padding:8px;border-radius:6px;font-size:13px;text-align:center">
+        </div>
+      </div>
+      ${idx > 0 ? `<button onclick="document.getElementById('tm-cb-${idx}').remove()" style="background:none;border:none;color:#333;font-size:18px;cursor:pointer;padding:4px 8px;line-height:1;margin-top:16px">&times;</button>` : ''}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+      ${tmInput(idx,'ball_speed_avg','Ball Speed','mph','60–200')}
+      ${tmInput(idx,'club_speed_avg','Club Speed','mph','30–150')}
+      ${tmInput(idx,'smash_factor_avg','Smash Factor','','0.8–1.6')}
+      ${tmInput(idx,'launch_angle_avg','Launch Angle','°','-5–50')}
+      ${tmInput(idx,'spin_rate_avg','Spin Rate','rpm','500–12000')}
+      ${tmInput(idx,'carry_distance_avg','Carry','yds','20–400')}
+      ${tmInput(idx,'total_distance_avg','Total Dist.','yds','20–450')}
+      ${tmInput(idx,'side_distance_avg','Side Dist.','yds','-100–100')}
+      ${tmInput(idx,'face_angle_avg','Face Angle','°','-15–15')}
+      ${tmInput(idx,'club_path_avg','Club Path','°','-15–15')}
+      ${tmInput(idx,'attack_angle_avg','Attack Angle','°','-15–15')}
+      ${tmInput(idx,'dynamic_loft_avg','Dynamic Loft','°','0–45')}
+      ${tmInput(idx,'launch_direction_avg','Launch Dir.','°','-30–30')}
+      ${tmInput(idx,'spin_axis_avg','Spin Axis','°','-45–45')}
+    </div>`;
+  container.appendChild(block);
+};
+
+function tmInput(idx, field, label, unit, range) {
+  return `<div>
+    <div style="font-size:10px;color:#555;margin-bottom:3px">${label}${unit ? ' (' + unit + ')' : ''}</div>
+    <input type="number" id="tm-${field}-${idx}" step="0.1" placeholder="${range}" style="width:100%;background:#1a1a1a;border:1px solid #2a2a2a;color:#eee;padding:7px 8px;border-radius:5px;font-size:12px;box-sizing:border-box">
+  </div>`;
+}
+
+window.tmParseCSV = function() {
+  const csv = document.getElementById('tm-csv-input')?.value?.trim();
+  if (!csv) return;
+  try {
+    const lines = csv.split('\n').map(l => l.split(',').map(v => v.trim().replace(/^"|"$/g, '')));
+    if (lines.length < 2) return;
+    const headers = lines[0].map(h => h.toLowerCase());
+    const getIdx = (...terms) => headers.findIndex(h => terms.some(t => h.includes(t)));
+    const clubIdx = getIdx('club');
+    if (clubIdx === -1) return;
+
+    const colMap = {
+      ball_speed_avg:       getIdx('ball speed','ball_speed'),
+      club_speed_avg:       getIdx('club speed','club_speed'),
+      smash_factor_avg:     getIdx('smash'),
+      launch_angle_avg:     getIdx('launch angle','launch_angle'),
+      spin_rate_avg:        getIdx('spin rate','spin_rate'),
+      carry_distance_avg:   getIdx('carry'),
+      total_distance_avg:   getIdx('total dist','total_dist'),
+      side_distance_avg:    getIdx('side dist','side_dist'),
+    };
+
+    const byClub = {};
+    lines.slice(1).forEach(row => {
+      const club = row[clubIdx]; if (!club) return;
+      if (!byClub[club]) byClub[club] = [];
+      byClub[club].push(row);
+    });
+
+    Object.entries(byClub).forEach(([club, rows]) => {
+      const avg = (colIdx) => {
+        if (colIdx === -1) return null;
+        const vals = rows.map(r => parseFloat(r[colIdx])).filter(v => !isNaN(v));
+        return vals.length ? +(vals.reduce((a,b) => a+b, 0) / vals.length).toFixed(1) : null;
+      };
+      const data = { shots: rows.length };
+      Object.entries(colMap).forEach(([k, ci]) => { const v = avg(ci); if (v != null) data[k] = v; });
+
+      let found = false;
+      document.querySelectorAll('.tm-club-block').forEach(block => {
+        const sel = block.querySelector('select');
+        if (sel && sel.value === club) {
+          found = true;
+          const idx = block.id.replace('tm-cb-','');
+          const shotEl = document.getElementById(`tm-shots-${idx}`);
+          if (shotEl) shotEl.value = data.shots;
+          Object.entries(data).forEach(([k, v]) => {
+            if (k === 'shots' || v == null) return;
+            const el = document.getElementById(`tm-${k}-${idx}`);
+            if (el) el.value = v;
+          });
+        }
+      });
+
+      if (!found) {
+        tmAddClub();
+        const newIdx = tmClubCount - 1;
+        const sel = document.getElementById(`tm-club-${newIdx}`);
+        if (sel) {
+          const opt = Array.from(sel.options).find(o =>
+            o.value.toLowerCase().includes(club.toLowerCase()) || club.toLowerCase().includes(o.value.toLowerCase())
+          );
+          if (opt) sel.value = opt.value;
+        }
+        const shotEl = document.getElementById(`tm-shots-${newIdx}`);
+        if (shotEl) shotEl.value = data.shots;
+        Object.entries(data).forEach(([k, v]) => {
+          if (k === 'shots' || v == null) return;
+          const el = document.getElementById(`tm-${k}-${newIdx}`);
+          if (el) el.value = v;
+        });
+      }
+    });
+  } catch(e) { /* fail silently */ }
+};
+
+window.tmSubmit = async function(studentId) {
+  const errEl = document.getElementById('tm-form-err');
+  const btn   = document.getElementById('tm-submit-btn');
+  if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+
+  const date     = document.getElementById('tm-date')?.value;
+  const location = document.getElementById('tm-location')?.value?.trim() || '';
+  const notes    = document.getElementById('tm-notes')?.value?.trim() || '';
+
+  if (!date) { tmShowErr('Please enter a session date.'); return; }
+
+  const blocks = document.querySelectorAll('.tm-club-block');
+  if (!blocks.length) { tmShowErr('Please add at least one club.'); return; }
+
+  const clubData = [];
+  let validErr = null;
+
+  blocks.forEach(block => {
+    if (validErr) return;
+    const idx   = block.id.replace('tm-cb-','');
+    const club  = document.getElementById(`tm-club-${idx}`)?.value;
+    const shots = parseInt(document.getElementById(`tm-shots-${idx}`)?.value) || null;
+    if (!club) return;
+    const entry = { club, shots };
+    Object.keys(TM_RANGES).forEach(field => {
+      if (validErr) return;
+      const el = document.getElementById(`tm-${field}-${idx}`);
+      if (!el || el.value === '') return;
+      const val = parseFloat(el.value);
+      if (isNaN(val)) { validErr = `Invalid value for ${TM_FIELD_META[field]?.label || field} (${club}).`; return; }
+      const [min, max] = TM_RANGES[field];
+      if (val < min || val > max) {
+        validErr = `${TM_FIELD_META[field]?.label || field} for ${club}: must be ${min}–${max}.`;
+        return;
+      }
+      entry[field] = val;
+    });
+    clubData.push(entry);
+  });
+
+  if (validErr) { tmShowErr(validErr); return; }
+  if (!clubData.length) { tmShowErr('Please add at least one club.'); return; }
+
+  const student = D && D.student;
+  const studentInfo = {
+    name:     student?.name || student?.student_name || '',
+    age:      student?.age  || '',
+    handicap: student?.handicap || student?.golf_handicap || '',
+  };
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) throw new Error('Not authenticated');
+
+    const res = await fetch('/api/golf-trackman', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        student_id:        studentId,
+        notion_student_id: student?.notion_student_id || student?.notionStudentId || null,
+        session_date:      date,
+        location,
+        session_notes:     notes,
+        club_data:         clubData,
+        student_info:      studentInfo,
+      })
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Save failed');
+
+    tmSessions.unshift(json.session);
+    hideTrackmanModal();
+    renderTrackmanList();
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Save Session'; }
+    tmShowErr('Save failed: ' + e.message);
+  }
+};
+
+function tmShowErr(msg) {
+  const el = document.getElementById('tm-form-err');
+  if (el) { el.textContent = msg; el.style.display = 'block'; }
+}
+
+window.tmDelete = async function(sessionId) {
+  if (!confirm('Delete this Trackman session? This cannot be undone.')) return;
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) return;
+    const res = await fetch(`/api/golf-trackman?session_id=${encodeURIComponent(sessionId)}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${session.access_token}` }
+    });
+    if (!res.ok) throw new Error('Delete failed');
+    tmSessions = tmSessions.filter(s => s.id !== sessionId);
+    if (tmExpandedId === sessionId) tmExpandedId = null;
+    renderTrackmanList();
+  } catch(e) {
+    alert('Delete failed: ' + e.message);
+  }
+};
+
+window.tmReanalyze = async function(sessionId) {
+  const btn = document.querySelector(`#tm-exp-${sessionId} button[onclick^="tmReanalyze"]`);
+  if (btn) { btn.disabled = true; btn.textContent = 'Re-analysing…'; }
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) return;
+    const student = D && D.student;
+    const studentInfo = {
+      name:     student?.name || student?.student_name || '',
+      age:      student?.age  || '',
+      handicap: student?.handicap || student?.golf_handicap || '',
+    };
+    const res = await fetch(`/api/golf-trackman?action=reanalyze&session_id=${encodeURIComponent(sessionId)}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ student_info: studentInfo })
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Reanalyze failed');
+    const idx = tmSessions.findIndex(s => s.id === sessionId);
+    if (idx !== -1) tmSessions[idx] = json.session;
+    renderTrackmanList();
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Re-analyse'; }
+    alert('Reanalyze failed: ' + e.message);
+  }
+};
+// ── End Trackman ──────────────────────────────────────────────────────────
 
 function fmtDateGolf(iso) {
   if (!iso) return '—';
@@ -5864,8 +6466,8 @@ function _renderCommsList() {
 }
 
 function buildCommCard(c) {
-  const dirClass = c.direction === 'outbound' ? 'outbound' : ''
-  const dirLabel = c.direction === 'outbound' ? 'Outbound' : 'Inbound'
+  const dirClass = c.direction === 'outbound' ? 'outbound' : c.direction === 'summary' ? 'summary' : ''
+  const dirLabel = c.direction === 'outbound' ? 'Outbound' : c.direction === 'summary' ? 'AI Summary' : 'Inbound'
   const dateStr = c.sent_at ? new Date(c.sent_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }) : ''
 
   const visibleBadge = c.visible_to_parent
@@ -5876,6 +6478,7 @@ function buildCommCard(c) {
     <button onclick="toggleCommVisibility('${escHtml(c.id)}', ${!c.visible_to_parent})" style="background:none;border:1px solid var(--border);border-radius:4px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--muted2)">${c.visible_to_parent ? 'Hide from parent' : 'Show to parent'}</button>
     <button onclick="editComm('${escHtml(c.id)}')" style="background:none;border:1px solid var(--border);border-radius:4px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--muted2)">Edit</button>
     <button onclick="deleteComm('${escHtml(c.id)}')" style="background:none;border:1px solid var(--border);border-radius:4px;padding:3px 10px;font-size:11px;cursor:pointer;color:#c0392b">Delete</button>
+    <button id="summarise-btn-${escHtml(c.id)}" onclick="summariseThread('${escHtml(c.school_name)}')" style="background:none;border:1px solid var(--border);border-radius:4px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--muted2)">Summarise thread</button>
   ` : ''
 
   const createdByHtml = isAnalystView && c.created_by
@@ -6021,6 +6624,75 @@ async function deleteComm(id) {
     _renderCommsList()
   } catch (e) {
     alert(e.message)
+  }
+}
+
+async function summariseThread(schoolName) {
+  // Collect non-summary emails for this school
+  const emails = _commsData.filter(c => c.school_name === schoolName && c.direction !== 'summary')
+  if (emails.length === 0) {
+    alert('No emails found for ' + schoolName)
+    return
+  }
+
+  // Disable all Summarise buttons for this school
+  const allCards = _commsData.filter(c => c.school_name === schoolName)
+  allCards.forEach(c => {
+    const btn = document.getElementById('summarise-btn-' + c.id)
+    if (btn) { btn.disabled = true; btn.textContent = 'Summarising...' }
+  })
+
+  try {
+    const authHeaders = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + (window._token || ''),
+    }
+
+    // Step 1: Get summary from Gemini
+    const res1 = await fetch('/api/summarize-communications', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        school_name: schoolName,
+        emails: emails.map(e => ({
+          direction: e.direction,
+          subject: e.subject,
+          sent_at: e.sent_at,
+          body_text: e.body_text,
+        })),
+      }),
+    })
+    const j1 = await res1.json()
+    if (!res1.ok) throw new Error((j1.error || 'Summarise failed') + (j1.detail ? ': ' + j1.detail : ''))
+
+    // Step 2: Save as new comm entry
+    const sid = D && D.student && D.student.id ? D.student.id : ''
+    const res2 = await fetch('/api/save-communication', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        student_id: sid,
+        school_name: schoolName,
+        direction: 'summary',
+        subject: j1.subject,
+        body_text: j1.summary,
+        visible_to_parent: false,
+      }),
+    })
+    const j2 = await res2.json()
+    if (!res2.ok) throw new Error(j2.error || 'Save failed')
+
+    // Prepend and re-render
+    _commsData.unshift(j2.communication)
+    _renderCommsList()
+
+  } catch (e) {
+    alert('Summarise failed: ' + e.message)
+    // Restore buttons
+    allCards.forEach(c => {
+      const btn = document.getElementById('summarise-btn-' + c.id)
+      if (btn) { btn.disabled = false; btn.textContent = 'Summarise thread' }
+    })
   }
 }
 

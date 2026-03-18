@@ -16,6 +16,12 @@
 [functions.gmail-sync]
   timeout = 26
 
+[functions.summarize-communications]
+  timeout = 26
+
+[functions.golf-trackman]
+  timeout = 26
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
