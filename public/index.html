@@ -565,6 +565,22 @@
     .urgent-days { color: #e74c3c; font-weight: 600; font-size: 12px; min-width: 60px; }
     .urgent-days.amber { color: var(--amber); }
 
+    /* ── Communications ─── */
+    .comm-card { background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin-bottom:12px; }
+    .comm-direction { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted2); }
+    .comm-direction.outbound { color:var(--gold); }
+    .comm-school { font-size:14px;font-weight:600;color:var(--text); }
+    .comm-subject { font-size:13px;color:var(--muted);margin-bottom:8px; }
+    .comm-body { font-size:13px;color:var(--text);line-height:1.7;white-space:pre-wrap;word-break:break-word; }
+    .comm-meta { display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:11px;color:var(--muted2); }
+    .comm-visible-badge { font-size:10px;text-transform:uppercase;letter-spacing:.1em;padding:2px 8px;border-radius:10px;background:#1e2e1e;color:#27ae60; }
+    .comm-hidden-badge { font-size:10px;text-transform:uppercase;letter-spacing:.1em;padding:2px 8px;border-radius:10px;background:var(--surface);color:var(--muted2);border:1px solid var(--border); }
+    #comm-modal { display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;align-items:center;justify-content:center;padding:20px; }
+    .comm-modal-inner { background:#111;border:1px solid #2a2a2a;border-radius:12px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto;padding:32px; }
+    #comm-modal label { display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#555;margin-bottom:5px;margin-top:16px; }
+    #comm-modal input,#comm-modal select,#comm-modal textarea { width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;font-size:13px;color:#eee;box-sizing:border-box;outline:none; }
+    #comm-modal input:focus,#comm-modal select:focus,#comm-modal textarea:focus { border-color:#B8962E; }
+
     /* ── Profile grid ──────────────────────────────────── */
     .profile-grid {
       display: grid;
@@ -631,6 +647,11 @@
 
       /* New student modal — !important needed to override inline style */
       #new-student-overlay > div { padding: 20px 16px !important; }
+
+      /* Communications modal */
+      .comm-modal-inner { padding: 20px 16px; }
+      .comm-card { padding: 16px; }
+      .comm-meta { gap: 8px; }
 
       /* Timeline add form — stack to 1 column */
       .sa-tl-add-form .tl-form-row { grid-template-columns: 1fr; }
@@ -1296,6 +1317,7 @@
     <button class="tab-btn" onclick="showTab('recommendations')">Recommendations</button>
     <button class="tab-btn" onclick="showTab('golf')">Golf</button>
     <button class="tab-btn" id="tab-btn-services" onclick="showTab('services')">Services</button>
+    <button class="tab-btn" id="tab-btn-communications" onclick="showTab('communications')">Communications</button>
     <button class="tab-btn" onclick="showTab('profile')">Profile</button>
   </div>
   <div id="main">
@@ -1303,6 +1325,7 @@
     <div class="tab-panel" id="tab-journey"><div id="journey-content"></div></div>
     <div class="tab-panel" id="tab-applying"><div id="schools-content"></div></div>
     <div class="tab-panel" id="tab-services"><div id="services-content"></div></div>
+    <div class="tab-panel" id="tab-communications"><div id="communications-content"></div></div>
     <div class="tab-panel" id="tab-profile"><div id="profile-content"></div></div>
     <div class="tab-panel" id="tab-recommendations">
       <div id="rec-subtab-nav">
@@ -1418,6 +1441,14 @@ let D = null          // all data from /api/student
 let golfRounds = []
 let currentTab = 'overview'
 let userRole = 'parent'
+let _commsData = []
+let _commsLoaded = false
+let _gmailEmails = []
+
+function escHtml(s) {
+  if (!s) return ''
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+}
 
 const _urlParams    = new URLSearchParams(window.location.search)
 const _portalToken  = _urlParams.get('token')
@@ -1724,12 +1755,13 @@ const SHORTLISTED_SCHOOLS = [
 // ── Tab switching ─────────────────────────────────────────────────────────────
 function showTab(name) {
   currentTab = name
-  const tabs = ['overview','journey','applying','recommendations','golf','services','profile']
+  const tabs = ['overview','journey','applying','recommendations','golf','services','communications','profile']
   document.querySelectorAll('.tab-btn').forEach((b, i) => {
     b.classList.toggle('active', tabs[i] === name)
   })
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'))
   $id(`tab-${name}`).classList.add('active')
+  if (name === 'communications' && !_commsLoaded) renderCommunications()
 }
 
 // ── Overview (cockpit) ────────────────────────────────────────────────────────
@@ -5765,6 +5797,457 @@ function scheduleUpdateSave(studentSchoolId) {
   }, 1200)
 }
 
+// ── Communications ────────────────────────────────────────────────────────────
+
+async function renderCommunications() {
+  _commsLoaded = true
+  const el = $id('communications-content')
+  if (!el) return
+  el.innerHTML = '<div style="color:var(--muted2);font-size:13px;padding:24px 0">Loading...</div>'
+
+  try {
+    const headers = { 'Content-Type': 'application/json' }
+    let url = '/api/school-communications'
+    if (isTokenView && _portalToken && !isAnalystView) {
+      headers['X-Access-Token'] = _portalToken
+    } else {
+      headers['Authorization'] = 'Bearer ' + (window._token || '')
+      const sid = D && D.student && D.student.id ? D.student.id : ''
+      url += '?student_id=' + sid
+    }
+
+    const res = await fetch(url, { headers })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Load failed')
+
+    _commsData = json.communications || []
+    _renderCommsList()
+
+  } catch (e) {
+    const el2 = $id('communications-content')
+    if (el2) el2.innerHTML = `<div style="color:#c0392b;font-size:13px;padding:24px 0">${escHtml(e.message)}</div>`
+  }
+}
+
+function _renderCommsList() {
+  const el = $id('communications-content')
+  if (!el) return
+
+  // Parent: hide tab if nothing visible
+  if (!isAnalystView && _commsData.length === 0) {
+    const btn = $id('tab-btn-communications')
+    if (btn) btn.style.display = 'none'
+    el.innerHTML = ''
+    return
+  }
+
+  let html = '<div style="padding:0 0 24px">'
+
+  if (isAnalystView) {
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted2)">${_commsData.length} email${_commsData.length !== 1 ? 's' : ''} logged</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="openGmailSync()" style="background:none;border:1px solid #2a2a2a;border-radius:6px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;color:#aaa">Sync Gmail</button>
+        <button onclick="openCommModal()" style="background:var(--gold);color:#111;border:none;border-radius:6px;padding:8px 18px;font-size:12px;font-weight:700;cursor:pointer">+ Add Email</button>
+      </div>
+    </div>`
+  }
+
+  if (_commsData.length === 0) {
+    html += '<div style="color:var(--muted2);font-size:13px;padding:16px 0">No emails logged yet.</div>'
+  } else {
+    _commsData.forEach(c => { html += buildCommCard(c) })
+  }
+
+  html += '</div>'
+  el.innerHTML = html
+}
+
+function buildCommCard(c) {
+  const dirClass = c.direction === 'outbound' ? 'outbound' : ''
+  const dirLabel = c.direction === 'outbound' ? 'Outbound' : 'Inbound'
+  const dateStr = c.sent_at ? new Date(c.sent_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }) : ''
+
+  const visibleBadge = c.visible_to_parent
+    ? `<span class="comm-visible-badge">Visible to parent</span>`
+    : `<span class="comm-hidden-badge">Hidden</span>`
+
+  const analystActions = isAnalystView ? `
+    <button onclick="toggleCommVisibility('${escHtml(c.id)}', ${!c.visible_to_parent})" style="background:none;border:1px solid var(--border);border-radius:4px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--muted2)">${c.visible_to_parent ? 'Hide from parent' : 'Show to parent'}</button>
+    <button onclick="editComm('${escHtml(c.id)}')" style="background:none;border:1px solid var(--border);border-radius:4px;padding:3px 10px;font-size:11px;cursor:pointer;color:var(--muted2)">Edit</button>
+    <button onclick="deleteComm('${escHtml(c.id)}')" style="background:none;border:1px solid var(--border);border-radius:4px;padding:3px 10px;font-size:11px;cursor:pointer;color:#c0392b">Delete</button>
+  ` : ''
+
+  const createdByHtml = isAnalystView && c.created_by
+    ? `<span>${escHtml(c.created_by)}</span>`
+    : ''
+
+  return `<div class="comm-card" id="comm-card-${escHtml(c.id)}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+      <div>
+        <div class="comm-direction ${dirClass}">${dirLabel}</div>
+        <div class="comm-school">${escHtml(c.school_name)}</div>
+      </div>
+      ${isAnalystView ? visibleBadge : ''}
+    </div>
+    ${c.subject ? `<div class="comm-subject">${escHtml(c.subject)}</div>` : ''}
+    <div class="comm-body">${escHtml(c.body_text)}</div>
+    <div class="comm-meta">
+      ${dateStr ? `<span>${escHtml(dateStr)}</span>` : ''}
+      ${createdByHtml}
+      ${analystActions}
+    </div>
+  </div>`
+}
+
+function openCommModal(id = null) {
+  $id('comm-edit-id').value = id || ''
+  $id('comm-modal-title').textContent = id ? 'Edit Email' : 'Log Email'
+  $id('comm-modal-msg').textContent = ''
+
+  if (id) {
+    const c = _commsData.find(x => x.id === id)
+    if (c) {
+      $id('comm-school-name').value = c.school_name || ''
+      $id('comm-direction').value = c.direction || 'outbound'
+      $id('comm-sent-at').value = c.sent_at ? c.sent_at.split('T')[0] : ''
+      $id('comm-subject').value = c.subject || ''
+      $id('comm-body').value = c.body_text || ''
+      $id('comm-created-by').value = c.created_by || ''
+    }
+  } else {
+    $id('comm-school-name').value = ''
+    $id('comm-direction').value = 'outbound'
+    $id('comm-sent-at').value = new Date().toISOString().split('T')[0]
+    $id('comm-subject').value = ''
+    $id('comm-body').value = ''
+    $id('comm-created-by').value = ''
+  }
+
+  const modal = $id('comm-modal')
+  modal.style.display = 'flex'
+}
+
+function closeCommModal() {
+  $id('comm-modal').style.display = 'none'
+}
+
+async function saveComm() {
+  const editId = $id('comm-edit-id').value
+  const school_name = $id('comm-school-name').value.trim()
+  const direction = $id('comm-direction').value
+  const sent_at = $id('comm-sent-at').value
+  const subject = $id('comm-subject').value.trim()
+  const body_text = $id('comm-body').value.trim()
+  const created_by = $id('comm-created-by').value.trim()
+  const msgEl = $id('comm-modal-msg')
+
+  if (!school_name) { msgEl.textContent = 'School name required'; return }
+  if (!body_text) { msgEl.textContent = 'Email body required'; return }
+
+  const btn = $id('comm-save-btn')
+  btn.disabled = true
+  btn.textContent = 'Saving...'
+  msgEl.textContent = ''
+
+  try {
+    const authHeaders = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + (window._token || ''),
+    }
+
+    if (editId) {
+      // PATCH
+      const body = { id: editId, body_text, subject: subject || null }
+      if (sent_at) body.sent_at = sent_at
+      const res = await fetch('/api/update-communication', { method: 'PATCH', headers: authHeaders, body: JSON.stringify(body) })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Update failed')
+      const idx = _commsData.findIndex(x => x.id === editId)
+      if (idx >= 0) _commsData[idx] = json.communication
+    } else {
+      // POST
+      const sid = D && D.student && D.student.id ? D.student.id : ''
+      const body = { student_id: sid, school_name, direction, body_text, subject: subject || null, sent_at: sent_at || null, created_by: created_by || null }
+      const res = await fetch('/api/save-communication', { method: 'POST', headers: authHeaders, body: JSON.stringify(body) })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Save failed')
+      _commsData.unshift(json.communication)
+    }
+
+    closeCommModal()
+    _renderCommsList()
+
+  } catch (e) {
+    msgEl.textContent = e.message
+  } finally {
+    btn.disabled = false
+    btn.textContent = 'Save'
+  }
+}
+
+async function toggleCommVisibility(id, newVisible) {
+  try {
+    const res = await fetch('/api/update-communication', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
+      body: JSON.stringify({ id, visible_to_parent: newVisible }),
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Update failed')
+    const idx = _commsData.findIndex(x => x.id === id)
+    if (idx >= 0) _commsData[idx] = json.communication
+    _renderCommsList()
+  } catch (e) {
+    alert(e.message)
+  }
+}
+
+function editComm(id) {
+  openCommModal(id)
+}
+
+async function deleteComm(id) {
+  if (!confirm('Delete this email log? This cannot be undone.')) return
+  try {
+    const res = await fetch('/api/delete-communication', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
+      body: JSON.stringify({ id }),
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Delete failed')
+    _commsData = _commsData.filter(x => x.id !== id)
+    _renderCommsList()
+  } catch (e) {
+    alert(e.message)
+  }
+}
+
+// ── Gmail Sync ──────────────────────────────────────────────────────────────
+
+async function openGmailSync() {
+  const modal = $id('gmail-sync-modal')
+  modal.style.display = 'flex'
+  $id('gmail-sync-list').innerHTML = '<div style="padding:24px;color:#555;font-size:13px;text-align:center">Loading emails...</div>'
+  $id('gmail-sync-status').textContent = 'Fetching last 30 days from Gmail...'
+  $id('gmail-filter').value = ''
+  $id('gmail-import-msg').textContent = ''
+  $id('gmail-import-btn').textContent = 'Import Selected (0)'
+
+  try {
+    const res = await fetch('/api/gmail-sync?days=30', {
+      headers: { 'Authorization': 'Bearer ' + (window._token || '') },
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Sync failed')
+
+    _gmailEmails = json.emails || []
+    _renderGmailStatus()
+    renderGmailList(_gmailEmails)
+  } catch (e) {
+    $id('gmail-sync-list').innerHTML = `<div style="padding:24px;color:#c0392b;font-size:13px;text-align:center">${escHtml(e.message)}</div>`
+    $id('gmail-sync-status').textContent = ''
+  }
+}
+
+function closeGmailSync() {
+  $id('gmail-sync-modal').style.display = 'none'
+}
+
+function _renderGmailStatus() {
+  const total   = _gmailEmails.length
+  const already = _gmailEmails.filter(e => e.already_imported).length
+  $id('gmail-sync-status').textContent = `Showing last 30 days · ${total} email${total !== 1 ? 's' : ''} found · ${already} already imported`
+}
+
+function _extractSchoolName(email) {
+  // Extract a friendly school name from an email address domain
+  // e.g. admissions@harrowschool.org.uk → Harrowschool
+  //      info@etoncollege.com → Etoncollege
+  try {
+    const addr = email.match(/@([^>\s]+)/)
+    if (!addr) return ''
+    const domain = addr[1].split('.')[0] // first label of domain
+    // Title-case it
+    return domain.charAt(0).toUpperCase() + domain.slice(1)
+  } catch (_) { return '' }
+}
+
+function renderGmailList(emails) {
+  const listEl = $id('gmail-sync-list')
+  if (!emails || emails.length === 0) {
+    listEl.innerHTML = '<div style="padding:24px;color:#555;font-size:13px;text-align:center">No emails found.</div>'
+    _updateImportCount()
+    return
+  }
+
+  const students = (D && D.students) ? D.students : (D && D.student ? [D.student] : [])
+  const currentStudentId = D && D.student && D.student.id ? D.student.id : ''
+
+  let html = ''
+  emails.forEach((e, i) => {
+    const dateStr = e.date ? new Date(e.date).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }) : ''
+    const isOut   = e.direction === 'outbound'
+    const dirBadge = isOut
+      ? `<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);background:#1a1400;padding:2px 7px;border-radius:10px">Outbound</span>`
+      : `<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#888;background:#1a1a1a;padding:2px 7px;border-radius:10px">Inbound</span>`
+
+    const counterpart = isOut ? e.to : e.from
+    const schoolDefault = _extractSchoolName(counterpart)
+
+    const alreadyBadge = e.already_imported
+      ? `<span style="font-size:9px;color:#555;background:#161616;padding:2px 8px;border-radius:10px;border:1px solid #222">Already logged</span>`
+      : ''
+
+    // Student dropdown
+    let studentSelect = ''
+    if (students.length > 1) {
+      const opts = students.map(s =>
+        `<option value="${escHtml(s.id)}" ${s.id === currentStudentId ? 'selected' : ''}>${escHtml(s.name || s.id)}</option>`
+      ).join('')
+      studentSelect = `<select class="gmail-row-student" data-idx="${i}" style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;font-size:11px;color:#aaa;padding:3px 6px;outline:none">${opts}</select>`
+    } else {
+      studentSelect = `<input type="hidden" class="gmail-row-student" data-idx="${i}" value="${escHtml(currentStudentId)}">`
+    }
+
+    const rowBg   = e.already_imported ? '#0e0e0e' : '#111'
+    const opacity = e.already_imported ? '0.5' : '1'
+
+    html += `<div style="border-bottom:1px solid #1a1a1a;padding:14px 16px;background:${rowBg};opacity:${opacity}">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <input type="checkbox" class="gmail-row-check" data-idx="${i}"
+          ${e.already_imported ? 'disabled' : ''}
+          onchange="_updateImportCount()"
+          style="margin-top:3px;accent-color:var(--gold);width:14px;height:14px;flex-shrink:0" />
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px">
+            ${dirBadge}
+            ${alreadyBadge}
+            <span style="font-size:12px;color:#aaa;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(e.subject || '(no subject)')}</span>
+            <span style="font-size:11px;color:#555;white-space:nowrap">${escHtml(dateStr)}</span>
+          </div>
+          <div style="font-size:11px;color:#666;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(counterpart)}</div>
+          <div style="font-size:12px;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:8px">${escHtml(e.snippet || '')}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <label style="font-size:11px;color:#555">School:</label>
+            <input type="text" class="gmail-row-school" data-idx="${i}" value="${escHtml(schoolDefault)}"
+              placeholder="School name"
+              style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;font-size:11px;color:#eee;padding:3px 8px;outline:none;width:160px" />
+            <label style="font-size:11px;color:#555">Student:</label>
+            ${studentSelect}
+          </div>
+        </div>
+      </div>
+    </div>`
+  })
+
+  listEl.innerHTML = html
+  _updateImportCount()
+}
+
+function filterGmailList() {
+  const q = ($id('gmail-filter').value || '').toLowerCase()
+  if (!q) {
+    renderGmailList(_gmailEmails)
+    return
+  }
+  const filtered = _gmailEmails.filter(e =>
+    (e.subject || '').toLowerCase().includes(q) ||
+    (e.from || '').toLowerCase().includes(q) ||
+    (e.to || '').toLowerCase().includes(q) ||
+    (e.snippet || '').toLowerCase().includes(q)
+  )
+  renderGmailList(filtered)
+}
+
+function _updateImportCount() {
+  const checks = document.querySelectorAll('.gmail-row-check:not(:disabled):checked')
+  const n = checks.length
+  $id('gmail-import-btn').textContent = `Import Selected (${n})`
+}
+
+async function importSelectedEmails() {
+  const checks = Array.from(document.querySelectorAll('.gmail-row-check:not(:disabled):checked'))
+  if (checks.length === 0) {
+    $id('gmail-import-msg').textContent = 'No emails selected.'
+    return
+  }
+
+  const btn = $id('gmail-import-btn')
+  const msgEl = $id('gmail-import-msg')
+  btn.disabled = true
+  msgEl.textContent = `Importing 0 / ${checks.length}...`
+
+  let done = 0
+  let errors = 0
+  const currentStudentId = D && D.student && D.student.id ? D.student.id : ''
+
+  for (const chk of checks) {
+    const idx = parseInt(chk.dataset.idx, 10)
+    // Find the actual email from _gmailEmails by matching the rendered idx
+    // (list may be filtered, but indices still refer to filtered array position)
+    const visibleEmails = _gmailEmails.filter(e => {
+      const q = ($id('gmail-filter').value || '').toLowerCase()
+      if (!q) return true
+      return (e.subject || '').toLowerCase().includes(q) ||
+             (e.from || '').toLowerCase().includes(q) ||
+             (e.to || '').toLowerCase().includes(q) ||
+             (e.snippet || '').toLowerCase().includes(q)
+    })
+    const email = visibleEmails[idx]
+    if (!email) continue
+
+    // Get school name and student from the row
+    const schoolInput  = document.querySelector(`.gmail-row-school[data-idx="${idx}"]`)
+    const studentInput = document.querySelector(`.gmail-row-student[data-idx="${idx}"]`)
+    const schoolName   = (schoolInput ? schoolInput.value.trim() : '') || 'Unknown'
+    const studentId    = (studentInput ? studentInput.value : '') || currentStudentId
+
+    try {
+      const res = await fetch('/api/save-communication', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
+        body: JSON.stringify({
+          student_id:       studentId,
+          school_name:      schoolName,
+          direction:        email.direction,
+          body_text:        email.body_text || email.snippet || '(no content)',
+          subject:          email.subject || null,
+          sent_at:          email.date || null,
+          gmail_message_id: email.id,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Save failed')
+
+      // Mark locally as imported
+      const globalIdx = _gmailEmails.findIndex(e => e.id === email.id)
+      if (globalIdx >= 0) _gmailEmails[globalIdx].already_imported = true
+      done++
+    } catch (e) {
+      console.error('Import error for', email.id, e.message)
+      errors++
+    }
+
+    msgEl.textContent = `Importing ${done + errors} / ${checks.length}...`
+  }
+
+  btn.disabled = false
+
+  if (errors > 0) {
+    msgEl.textContent = `Done — ${done} imported, ${errors} failed.`
+  } else {
+    msgEl.textContent = `${done} email${done !== 1 ? 's' : ''} imported.`
+    // Refresh comms tab and close after short delay
+    _commsLoaded = false
+    renderCommunications()
+    setTimeout(() => closeGmailSync(), 1200)
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function renderAll() {
   renderOverview()
   renderJourney()
@@ -6330,6 +6813,59 @@ sb.auth.onAuthStateChange(async (event, session) => {
       <button onclick="closeCampModal()" style="padding:9px 16px;background:none;border:1px solid var(--border);border-radius:5px;font-size:13px;color:var(--muted);cursor:pointer">Cancel</button>
     </div>
     <div style="font-size:11px;color:var(--muted);margin-top:12px">Dates are used to auto-calculate milestone deadlines. You can change them later.</div>
+  </div>
+</div>
+<!-- ── Gmail Sync modal ──────────────────────────────────────────────────────── -->
+<div id="gmail-sync-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:1010;align-items:flex-start;justify-content:center;padding:24px;overflow-y:auto">
+  <div style="background:#111;border:1px solid #2a2a2a;border-radius:12px;width:100%;max-width:760px;padding:32px;margin:auto">
+    <!-- Header -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)">Import from Gmail</div>
+      <button onclick="closeGmailSync()" style="background:none;border:none;color:#555;font-size:20px;cursor:pointer;padding:4px 8px;line-height:1">&times;</button>
+    </div>
+    <!-- Filter -->
+    <input type="text" id="gmail-filter" oninput="filterGmailList()" placeholder="Filter by school, subject, or address..." style="width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;font-size:13px;color:#eee;box-sizing:border-box;outline:none;margin-bottom:14px" />
+    <!-- Status line -->
+    <div id="gmail-sync-status" style="font-size:11px;color:#555;margin-bottom:16px"></div>
+    <!-- Email list -->
+    <div id="gmail-sync-list" style="max-height:420px;overflow-y:auto;border:1px solid #1a1a1a;border-radius:8px"></div>
+    <!-- Footer -->
+    <div style="display:flex;gap:10px;margin-top:18px;align-items:center">
+      <button onclick="importSelectedEmails()" id="gmail-import-btn" style="background:var(--gold);color:#111;border:none;border-radius:6px;padding:10px 24px;font-size:13px;font-weight:700;cursor:pointer">Import Selected (0)</button>
+      <button onclick="closeGmailSync()" style="background:none;border:1px solid #2a2a2a;border-radius:6px;padding:10px 16px;font-size:13px;cursor:pointer;color:#555">Cancel</button>
+      <span id="gmail-import-msg" style="font-size:12px;color:#555;flex:1;text-align:right"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ── Communications modal ─────────────────────────────────────────────────── -->
+<div id="comm-modal">
+  <div class="comm-modal-inner">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)" id="comm-modal-title">Log Email</div>
+      <button onclick="closeCommModal()" style="background:none;border:none;color:#555;font-size:20px;cursor:pointer;padding:4px 8px;line-height:1">&times;</button>
+    </div>
+    <input type="hidden" id="comm-edit-id" value="" />
+    <label for="comm-school-name">School</label>
+    <input type="text" id="comm-school-name" placeholder="Eton College" />
+    <label for="comm-direction">Direction</label>
+    <select id="comm-direction">
+      <option value="outbound">Outbound — we emailed them</option>
+      <option value="inbound">Inbound — they emailed us</option>
+    </select>
+    <label for="comm-sent-at">Date</label>
+    <input type="date" id="comm-sent-at" />
+    <label for="comm-subject">Subject (optional)</label>
+    <input type="text" id="comm-subject" placeholder="Re: Application enquiry" />
+    <label for="comm-body">Email body</label>
+    <textarea id="comm-body" rows="10" placeholder="Paste the email text here..."></textarea>
+    <label for="comm-created-by">Created by (optional)</label>
+    <input type="text" id="comm-created-by" placeholder="Your name or initials" />
+    <div style="display:flex;gap:10px;margin-top:24px">
+      <button onclick="saveComm()" style="background:var(--gold);color:#111;border:none;border-radius:6px;padding:10px 24px;font-size:13px;font-weight:700;cursor:pointer" id="comm-save-btn">Save</button>
+      <button onclick="closeCommModal()" style="background:none;border:1px solid #2a2a2a;border-radius:6px;padding:10px 16px;font-size:13px;cursor:pointer;color:#555">Cancel</button>
+      <span id="comm-modal-msg" style="font-size:12px;color:#555;align-self:center"></span>
+    </div>
   </div>
 </div>
 </body>

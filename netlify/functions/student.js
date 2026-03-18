@@ -181,7 +181,7 @@ exports.handler = async (event) => {
       }
     }
 
-    const { s, academicsRes, schoolsRes, timelineItems, milestonesRes, documentsRes, golfRes, recsRes, certificationsRes, extractionsRes, campRecsRes, campAppsRes } =
+    const { s, academicsRes, schoolsRes, timelineItems, milestonesRes, documentsRes, golfRes, recsRes, certificationsRes, extractionsRes, campRecsRes, campAppsWithTl } =
       await fetchStudentData(studentIdToFetch)
 
     const isParent = profile.role === 'parent'
@@ -207,7 +207,7 @@ exports.handler = async (event) => {
         certifications:        certificationsRes.data || [],
         extractions:           extractionsRes.data   || [],
         camp_recommendations:  campRecsRes.data      || [],
-        camp_applications:     campAppsRes.data      || [],
+        camp_applications:     campAppsWithTl        || [],
         role: profile.role,
       })
     }
