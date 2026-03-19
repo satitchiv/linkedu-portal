@@ -49,6 +49,12 @@
 - Netlify auto-deploys on push to main — pushing = live instantly
 - Always commit locally and wait for approval
 
+## Pre-deploy checklist — mandatory before any fix is "done" (top priority)
+Run these three checks every time, no exceptions:
+1. **`git status`** — every file touched must be committed. Untracked files = not deployed. This caught a function that existed locally but never reached Netlify (404 in prod).
+2. **Curl the live endpoint** — confirm it returns JSON, not HTML. HTML response = 404 (not deployed) or 502 (function crash). `curl -s -o /dev/null -w "%{http_code}" https://linkedu-parent-portal.netlify.app/api/<function-name>`
+3. **New function?** — verify it appears in `git log --oneline netlify/functions/<name>.js`. If no output, it was never committed.
+
 ## Worktree rule
 - Before any multi-file edit or new feature, assess if worktree is needed
 - If risky, parallel, or long-running → ask Satit first
