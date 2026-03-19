@@ -4977,7 +4977,12 @@ function tmAICardHTML(ai) {
       ${(vs.regressed||[]).length ? `<span style="color:#ca6d6d">Regressed: ${vs.regressed.join(', ')}</span>` : ''}
     </div>` : '';
 
+  const dataQualityHtml = ai.data_quality_note
+    ? `<div style="background:#1e1900;border:1px solid #3a3000;border-radius:6px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#b8962e;line-height:1.5">Data note: ${ai.data_quality_note}</div>`
+    : ''
+
   return `<div class="tm-ai-card">
+    ${dataQualityHtml}
     ${ai.overall_assessment ? `<div style="font-size:13px;color:#ddd;line-height:1.65;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #2a2a2a">${ai.overall_assessment}</div>` : ''}
     <div style="margin-bottom:14px">
       <div class="tm-ai-section-label">What's working</div>

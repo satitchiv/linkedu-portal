@@ -197,39 +197,99 @@ async function generateAIAnalysis(session, previousSession, studentInfo) {
   try {
     const { name = 'the student', age = '', handicap = '' } = studentInfo
 
+    // ── Pre-compute data quality flags ──────────────────────────────────────
+    const clubFlagSummaries = []
+    ;(session.club_data || []).forEach(c => {
+      const flags = []
+      const isDriver = (c.club || '').toLowerCase().includes('driver')
+
+      // Shot count null with metrics present
+      if (c.shots == null && (c.ball_speed_avg != null || c.carry_distance_avg != null)) {
+        flags.push('Shot count not recorded — metrics present but may represent a subset of swings')
+      }
+
+      // Carry vs total distance inconsistency
+      if (c.carry_distance_avg != null && c.total_distance_avg != null) {
+        if (c.total_distance_avg < c.carry_distance_avg) {
+          flags.push(`INCONSISTENCY: Total Distance (${c.total_distance_avg}yds) is less than Carry (${c.carry_distance_avg}yds) — physically impossible, data capture error`)
+        } else if (c.carry_distance_avg > 0 && c.total_distance_avg > c.carry_distance_avg * 2.5) {
+          flags.push(`INCONSISTENCY: Total Distance (${c.total_distance_avg}yds) is ${(c.total_distance_avg / c.carry_distance_avg).toFixed(1)}x Carry (${c.carry_distance_avg}yds) — implausible, likely data capture error`)
+        }
+      }
+
+      // Driver-specific sanity checks
+      if (isDriver) {
+        if (c.spin_rate_avg != null && c.spin_rate_avg < 1000) {
+          flags.push(`INCONSISTENCY: Spin rate ${c.spin_rate_avg}rpm is implausibly low for a driver (realistic minimum ~1,500rpm)`)
+        }
+        if (c.carry_distance_avg != null && c.carry_distance_avg < 50) {
+          flags.push(`INCONSISTENCY: Carry distance ${c.carry_distance_avg}yds is implausibly low for a driver`)
+        }
+        if (c.launch_angle_avg != null && c.launch_angle_avg > 25) {
+          flags.push(`INCONSISTENCY: Launch angle ${c.launch_angle_avg}° is unusually high for a driver — possible data capture error`)
+        }
+      }
+
+      // Spin axis — always flag regardless of data confidence
+      if (c.spin_axis_avg != null && Math.abs(c.spin_axis_avg) >= 20) {
+        const dir = c.spin_axis_avg > 0 ? 'slice' : 'hook'
+        flags.push(`HIGH-SIGNAL: Spin Axis ${c.spin_axis_avg}° indicates severe ${dir} bias — must appear in analysis regardless of data confidence`)
+      }
+
+      // Face/path delta — always flag regardless of data confidence
+      if (c.face_angle_avg != null && c.club_path_avg != null) {
+        const delta = Math.abs(c.face_angle_avg - c.club_path_avg)
+        if (delta >= 3) {
+          flags.push(`HIGH-SIGNAL: Face-to-Path delta ${delta.toFixed(1)}° (Face: ${c.face_angle_avg}°, Path: ${c.club_path_avg}°) — significant shot-shape driver, must appear in analysis`)
+        }
+      }
+
+      if (flags.length > 0) {
+        clubFlagSummaries.push(`${c.club}:\n` + flags.map(f => `  - ${f}`).join('\n'))
+      }
+    })
+
+    const flagSection = clubFlagSummaries.length > 0
+      ? `\nDATA FLAGS (pre-computed — address every one of these in your analysis):\n${clubFlagSummaries.join('\n')}\n`
+      : '\nDATA FLAGS: None — data appears internally consistent.\n'
+
+    // ── Format club data ────────────────────────────────────────────────────
     const formattedClubData = (session.club_data || []).map(c => {
-      const lines = [`Club: ${c.club} (${c.shots || 0} shots)`]
-      if (c.ball_speed_avg  != null) lines.push(`  Ball Speed: ${c.ball_speed_avg} mph`)
-      if (c.club_speed_avg  != null) lines.push(`  Club Speed: ${c.club_speed_avg} mph`)
-      if (c.smash_factor_avg != null) lines.push(`  Smash Factor: ${c.smash_factor_avg}`)
-      if (c.launch_angle_avg != null) lines.push(`  Launch Angle: ${c.launch_angle_avg}°`)
+      const shotStr = c.shots != null ? ` (${c.shots} shots)` : ' (shot count not recorded)'
+      const lines = [`Club: ${c.club}${shotStr}`]
+      if (c.ball_speed_avg    != null) lines.push(`  Ball Speed: ${c.ball_speed_avg} mph`)
+      if (c.club_speed_avg    != null) lines.push(`  Club Speed: ${c.club_speed_avg} mph`)
+      if (c.smash_factor_avg  != null) lines.push(`  Smash Factor: ${c.smash_factor_avg}`)
+      if (c.launch_angle_avg  != null) lines.push(`  Launch Angle: ${c.launch_angle_avg}°`)
       if (c.launch_direction_avg != null) lines.push(`  Launch Direction: ${c.launch_direction_avg}°`)
-      if (c.spin_rate_avg   != null) lines.push(`  Spin Rate: ${c.spin_rate_avg} rpm`)
-      if (c.spin_axis_avg   != null) lines.push(`  Spin Axis: ${c.spin_axis_avg}°`)
+      if (c.spin_rate_avg     != null) lines.push(`  Spin Rate: ${c.spin_rate_avg} rpm`)
+      if (c.spin_axis_avg     != null) lines.push(`  Spin Axis: ${c.spin_axis_avg}°`)
       if (c.carry_distance_avg != null) lines.push(`  Carry Distance: ${c.carry_distance_avg} yds`)
       if (c.total_distance_avg != null) lines.push(`  Total Distance: ${c.total_distance_avg} yds`)
       if (c.side_distance_avg  != null) lines.push(`  Side Distance: ${c.side_distance_avg} yds`)
-      if (c.face_angle_avg  != null) lines.push(`  Face Angle: ${c.face_angle_avg}°`)
-      if (c.club_path_avg   != null) lines.push(`  Club Path: ${c.club_path_avg}°`)
-      if (c.attack_angle_avg != null) lines.push(`  Attack Angle: ${c.attack_angle_avg}°`)
-      if (c.dynamic_loft_avg != null) lines.push(`  Dynamic Loft: ${c.dynamic_loft_avg}°`)
+      if (c.face_angle_avg    != null) lines.push(`  Face Angle: ${c.face_angle_avg}°`)
+      if (c.club_path_avg     != null) lines.push(`  Club Path: ${c.club_path_avg}°`)
+      if (c.attack_angle_avg  != null) lines.push(`  Attack Angle: ${c.attack_angle_avg}°`)
+      if (c.dynamic_loft_avg  != null) lines.push(`  Dynamic Loft: ${c.dynamic_loft_avg}°`)
       return lines.join('\n')
     }).join('\n\n')
 
-    let prevDataText = 'No prior session.'
+    // ── Format previous session ─────────────────────────────────────────────
+    let prevDataText = 'PREVIOUS SESSION: None on record.'
     if (previousSession && previousSession.club_data) {
       const prevLines = previousSession.club_data.map(c => {
         const parts = [`${c.club}:`]
-        if (c.ball_speed_avg  != null) parts.push(`Ball Speed ${c.ball_speed_avg}mph`)
-        if (c.smash_factor_avg != null) parts.push(`Smash ${c.smash_factor_avg}`)
+        if (c.ball_speed_avg    != null) parts.push(`Ball Speed ${c.ball_speed_avg}mph`)
+        if (c.smash_factor_avg  != null) parts.push(`Smash ${c.smash_factor_avg}`)
         if (c.carry_distance_avg != null) parts.push(`Carry ${c.carry_distance_avg}yds`)
-        if (c.spin_rate_avg   != null) parts.push(`Spin ${c.spin_rate_avg}rpm`)
+        if (c.spin_rate_avg     != null) parts.push(`Spin ${c.spin_rate_avg}rpm`)
         return parts.join(' · ')
       })
-      prevDataText = `PREVIOUS SESSION (${previousSession.session_date}):\n${prevLines.join('\n')}`
+      prevDataText = `PREVIOUS SESSION (${previousSession.session_date}) — label any insight drawn from here as [Prev session]:\n${prevLines.join('\n')}`
     }
 
-    const prompt = `You are a professional golf performance analyst specializing in junior golfer development for UK boarding school scholarship pathways.
+    // ── Prompt ──────────────────────────────────────────────────────────────
+    const prompt = `You are Jordan, a professional golf performance analyst specialising in junior golfer development for UK boarding school scholarship pathways.
 
 STUDENT: ${name}${age ? ', age ' + age : ''}${handicap ? ', handicap ' + handicap : ''}
 GOAL: UK boarding school golf scholarship
@@ -239,7 +299,7 @@ ${session.session_notes || ''}
 
 METRICS (averages per club):
 ${formattedClubData}
-
+${flagSection}
 ${prevDataText}
 
 BENCHMARKS (UK junior scholarship level, age 15-17):
@@ -247,11 +307,24 @@ BENCHMARKS (UK junior scholarship level, age 15-17):
 - 7-Iron: ball speed 100-115mph, carry 150-165yds, launch 18-22°
 - PW: carry 100-120yds, spin 6,000-8,000rpm
 
+RULES — follow every one without exception:
+
+1. NEVER conclude "no data recorded" if any metrics exist. Metrics are present — analyse them. If some are inconsistent, say so and analyse the rest. Partial analysis with caveats is always better than silence.
+
+2. DATA FLAGS must be addressed. For every INCONSISTENCY flag: explain the contradiction in plain English in data_quality_note and include it in cons. For every HIGH-SIGNAL flag (spin axis, face/path delta): include it in cons regardless of data confidence level.
+
+3. DRILLS must be specific. Every drill description must cover three things — (a) Physical action: exactly what the student does with their body or club, (b) Feel cue: what they should feel or notice during the swing, (c) Metric target: which specific Trackman number this drill moves and in which direction. "Use the launch monitor correctly" is not acceptable.
+
+4. PREVIOUS SESSION LABELLING. Any pros or cons drawn from previous session data must include "[Prev session]" at the start of the string. Never blend current and previous data into a single unlabelled statement.
+
+5. LOW-CONFIDENCE STRUCTURE. When data has inconsistencies: data_quality_note explains what's wrong → overall_assessment leads with what CAN be inferred despite the data issues → pros draws on [Prev session] if current data is unreliable → cons always includes flagged high-signal metrics → drills target the flagged metrics.
+
 Return ONLY valid JSON (no markdown, no code fences):
 {
-  "pros": ["metric-backed string", "metric-backed string", "metric-backed string"],
-  "cons": ["metric-backed string", "metric-backed string", "metric-backed string"],
-  "drills": [{"title":"","description":""}, {"title":"","description":""}, {"title":"","description":""}],
+  "data_quality_note": "One sentence: what was captured, what is inconsistent and why, what confidence level. Use empty string if data is clean.",
+  "pros": ["metric-backed string — prefix [Prev session] if drawn from previous data"],
+  "cons": ["metric-backed string — always include spin axis and face/path delta if flagged"],
+  "drills": [{"title":"","description":"(a) Physical action: ... (b) Feel cue: ... (c) Metric target: ..."}, {"title":"","description":"(a) Physical action: ... (b) Feel cue: ... (c) Metric target: ..."}, {"title":"","description":"(a) Physical action: ... (b) Feel cue: ... (c) Metric target: ..."}],
   "overall_assessment": "2-3 sentences for coach",
   "benchmark_context": "1 sentence vs scholarship benchmarks",
   "vs_last_session": { "improved": [], "regressed": [] },
