@@ -6460,14 +6460,6 @@ function _renderCommsList() {
   const el = $id('communications-content')
   if (!el) return
 
-  // Parent: hide tab if nothing visible
-  if (!isAnalystView && _commsData.length === 0) {
-    const btn = $id('tab-btn-communications')
-    if (btn) btn.style.display = 'none'
-    el.innerHTML = ''
-    return
-  }
-
   let html = '<div style="padding:0 0 24px">'
 
   if (isAnalystView) {
@@ -6481,7 +6473,8 @@ function _renderCommsList() {
   }
 
   if (_commsData.length === 0) {
-    html += '<div style="color:var(--muted2);font-size:13px;padding:16px 0">No emails logged yet.</div>'
+    const emptyMsg = isAnalystView ? 'No emails logged yet.' : 'No communications to display.'
+    html += `<div style="color:var(--muted2);font-size:13px;padding:16px 0">${emptyMsg}</div>`
   } else {
     _commsData.forEach(c => { html += buildCommCard(c) })
   }
