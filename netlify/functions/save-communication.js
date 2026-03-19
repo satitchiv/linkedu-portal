@@ -42,8 +42,8 @@ exports.handler = async (event) => {
     if (!school_name) return { statusCode: 400, headers, body: JSON.stringify({ error: 'school_name required' }) }
     if (!direction) return { statusCode: 400, headers, body: JSON.stringify({ error: 'direction required' }) }
     if (!body_text) return { statusCode: 400, headers, body: JSON.stringify({ error: 'body_text required' }) }
-    if (!['outbound', 'inbound'].includes(direction)) {
-      return { statusCode: 400, headers, body: JSON.stringify({ error: 'direction must be outbound or inbound' }) }
+    if (!['outbound', 'inbound', 'summary'].includes(direction)) {
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'direction must be outbound, inbound, or summary' }) }
     }
 
     const row = {
