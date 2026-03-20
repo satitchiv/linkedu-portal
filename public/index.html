@@ -2029,7 +2029,7 @@ function renderJourney() {
   ]
 
   const allSchoolItems = []
-  ;(D.schools || []).forEach(sc => {
+  ;(D.schools || []).filter(s => s.application_status !== 'abandoned').forEach(sc => {
     const curStage  = stsMapJ[sc.application_status] ?? 0
     const schoolName = sc.school_name || ''
     const tYear = parseInt(sc.target_year || D.student.targetEntryYear) || new Date().getFullYear() + 2
