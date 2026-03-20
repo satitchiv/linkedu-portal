@@ -68,7 +68,7 @@ Write a concise briefing note (max 200 words) with these three sections:
 
 **Current status** — where things stand right now, based on the most recent emails
 **Confirmed / agreed** — anything explicitly confirmed, accepted, or decided across the thread
-**Next steps** — specific actions pending, with any deadlines if mentioned
+**Next steps** — specific actions pending, with any deadlines if mentioned. Format each next step as a bullet point starting with "- ". If there are no next steps, write "- None identified."
 
 Be factual and specific. Use dates where relevant. Professional English, no filler.
 
