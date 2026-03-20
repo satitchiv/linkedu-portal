@@ -2584,7 +2584,7 @@ function renderSchools() {
       </div>
       ${checklistHtml}
       <div class="sa-actions">
-        <a href="https://line.me/R/ti/p/@linkedu" target="_blank" class="btn-sm btn-sm-primary">Ask Consultant</a>
+        <button class="btn-sm btn-sm-primary" data-topic="${escHtml(sc.school_name)}" onclick="contactConsultant(this,'school-${sc.id}')">Ask Consultant</button>
         ${isAnalystView ? `
           <div style="display:flex;align-items:center;gap:6px">
             <input type="text" id="sc-target-year-${sc.id}" value="${sc.target_year||''}" placeholder="Entry year"
@@ -2594,6 +2594,7 @@ function renderSchools() {
             <button class="btn-sm" style="color:var(--muted);border-color:#333;font-size:11px" onclick="abandonSchool('${sc.id}','${sc.school_name}')">Abandon</button>
           </div>` : ''}
       </div>
+      <div id="contact-wrap-school-${sc.id}"></div>
     </div>`
   })
 
@@ -2703,7 +2704,7 @@ function renderSchools() {
       </select>
       <button class="btn-sm" style="font-size:10px;color:var(--red);border-color:rgba(192,57,43,.3)" onclick="deleteCampApp('${app.id}')">Remove</button>` : ''
 
-    const campLink = app.camp_url ? `<a href="${app.camp_url}" target="_blank" style="font-size:11px;color:var(--muted)">View programme →</a>` : ''
+    const campLink = `<button data-topic="${escHtml(app.camp_name)}" onclick="contactConsultant(this,'campapp-${app.id}')" style="background:none;border:none;font-size:11px;color:var(--gold);cursor:pointer;padding:0;font-family:inherit">Ask Consultant →</button><div id="contact-wrap-campapp-${app.id}"></div>`
 
     // ── Camp timeline (mirrors school timeline) ────────────────────────────
     const dbItems    = (app.timeline_items || [])
@@ -4273,7 +4274,8 @@ function renderCampRecommendations() {
           <div class="camp-h-tier-badge" style="${tierBg}">${tierLabel[tier]}</div>
         ` : ''}
         ${buttons}
-        <a href="${link}" target="_blank" class="camp-h-view">View programme →</a>
+        <button data-topic="${escHtml(c.camp_name || c.name || '')}" onclick="contactConsultant(this,'camprec-${c.id}')" class="camp-h-view" style="background:none;border:none;cursor:pointer;font-family:inherit">Ask Consultant →</button>
+        <div id="contact-wrap-camprec-${c.id}"></div>
       </div>
     </div>`
   }
@@ -6270,6 +6272,69 @@ async function saveItemNote(itemId, stageKey) {
     renderSchools()
   } catch(err) {
     alert('Could not save note: ' + err.message)
+  }
+}
+
+// ── Contact Consultant flow ────────────────────────────────────────────────────
+function contactConsultant(btn, triggerId) {
+  const topic = btn.getAttribute('data-topic') || ''
+  const wrap  = document.getElementById('contact-wrap-' + triggerId)
+  if (!wrap) return
+
+  // Toggle off if already open
+  if (wrap.innerHTML.trim()) { wrap.innerHTML = ''; return }
+
+  // No phone on file — nudge to Profile tab
+  if (!D || !D.student || !D.student.parentPhone) {
+    wrap.innerHTML = `<div style="font-size:11px;color:#B8962E;margin-top:8px;padding:2px 0">
+      Please add your phone number in the
+      <a href="#" onclick="showTab('profile');return false;" style="color:#B8962E;text-decoration:underline">Profile tab</a>
+      first.</div>`
+    return
+  }
+
+  wrap.innerHTML = `
+    <div style="background:#161616;border:1px solid #2a2a2a;border-radius:6px;padding:12px 14px;margin-top:8px">
+      <div style="font-size:12px;color:#eee;margin-bottom:4px">Notify your consultant about <strong style="color:#B8962E">${escHtml(topic)}</strong>?</div>
+      <div style="font-size:11px;color:#555;margin-bottom:10px">They will contact you at ${escHtml(D.student.parentPhone)}</div>
+      <div style="display:flex;gap:8px">
+        <button id="contact-send-${triggerId}"
+          style="background:#B8962E;color:#111;border:none;border-radius:4px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer"
+          onclick="_sendContactNotification(${JSON.stringify(topic)},${JSON.stringify(triggerId)})">Send</button>
+        <button style="background:none;border:1px solid #333;border-radius:4px;padding:5px 12px;font-size:11px;color:#666;cursor:pointer"
+          onclick="document.getElementById('contact-wrap-${triggerId}').innerHTML=''">Cancel</button>
+      </div>
+      <div id="contact-status-${triggerId}" style="font-size:11px;margin-top:6px"></div>
+    </div>`
+}
+
+async function _sendContactNotification(topic, triggerId) {
+  const sendBtn  = document.getElementById('contact-send-' + triggerId)
+  const statusEl = document.getElementById('contact-status-' + triggerId)
+  if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Sending…' }
+
+  try {
+    const hdrs = { 'Content-Type': 'application/json' }
+    if (_portalToken) hdrs['X-Access-Token'] = _portalToken
+    else hdrs['Authorization'] = 'Bearer ' + (window._token || '')
+
+    const res  = await fetch('/api/notify-consultant', {
+      method: 'POST',
+      headers: hdrs,
+      body: JSON.stringify({ topic, student_id: D?.student?.id }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'Failed')
+
+    const wrap = document.getElementById('contact-wrap-' + triggerId)
+    if (wrap) wrap.innerHTML = `<div style="font-size:11px;color:#27ae60;margin-top:8px">Sent — your consultant will be in touch soon.</div>`
+    setTimeout(() => {
+      const w = document.getElementById('contact-wrap-' + triggerId)
+      if (w) w.innerHTML = ''
+    }, 5000)
+  } catch (err) {
+    if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Send' }
+    if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = 'Could not send. Please try again.' }
   }
 }
 
