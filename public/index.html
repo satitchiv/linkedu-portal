@@ -6754,43 +6754,68 @@ function _renderSuggestionCards(summaryCommId, schoolName, nextSteps) {
   const summaryCard = document.getElementById('comm-card-' + summaryCommId)
   if (!summaryCard) return
 
-  // Get existing timeline items for this school (from D.schools)
-  const schoolRecord = (D.schools || []).find(s => s.school_name.toLowerCase() === schoolName.toLowerCase())
-  const existingItems = schoolRecord ? (schoolRecord.timeline_items || []).map(i => i.title || '') : []
+  // Build school options from D.schools — analyst picks which school to add to
+  const schoolOptions = (D.schools || [])
+    .filter(s => s.application_status !== 'abandoned')
+    .map(s => `<option value="${escHtml(s.id)}" ${s.school_name.toLowerCase() === schoolName.toLowerCase() ? 'selected' : ''}>${escHtml(s.school_name)}</option>`)
+    .join('')
 
   const cards = nextSteps.map((step, idx) => {
-    // Check for duplicate
-    const dupItem = existingItems.find(t => _titleSimilar(t, step))
+    // Duplicate check across all schools
+    const allItems = (D.schools || []).flatMap(s => (s.timeline_items || []).map(i => ({ title: i.title || '', school: s.school_name })))
+    const dupItem = allItems.find(i => _titleSimilar(i.title, step))
     const dupWarning = dupItem ? `
-      <div style="margin-bottom:8px;padding:8px 10px;background:#1a1a1a;border:1px solid #333;border-radius:4px;font-size:11px;color:#aaa">
-        Possible duplicate: <span style="color:#ddd">${escHtml(dupItem)}</span>
+      <div style="margin-bottom:10px;padding:8px 10px;background:#1a1a1a;border:1px solid #333;border-radius:4px;font-size:11px;color:#aaa">
+        Possible duplicate in ${escHtml(dupItem.school)}: <span style="color:#ddd">${escHtml(dupItem.title)}</span>
         <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
           <button onclick="_dismissSuggestion(${idx},'${summaryCommId}')" style="background:none;border:1px solid #444;border-radius:4px;padding:3px 10px;font-size:11px;color:#888;cursor:pointer">Skip</button>
-          <button onclick="_addSuggestedToTimeline('${escHtml(schoolName)}',${idx},'${summaryCommId}',true)" style="background:none;border:1px solid #B8962E;border-radius:4px;padding:3px 10px;font-size:11px;color:#B8962E;cursor:pointer">Add Both</button>
+          <button onclick="_addSuggestedToTimeline(${idx},'${summaryCommId}')" style="background:none;border:1px solid #B8962E;border-radius:4px;padding:3px 10px;font-size:11px;color:#B8962E;cursor:pointer">Add Anyway</button>
         </div>
       </div>` : ''
 
     return `<div id="suggestion-card-${summaryCommId}-${idx}" style="background:#161616;border:1px solid #2a2a2a;border-radius:6px;padding:14px 16px;margin-bottom:8px">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#B8962E;margin-bottom:8px">Suggested Action</div>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#B8962E;margin-bottom:10px">Suggested Action</div>
       ${dupWarning}
-      <div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap">
-        <input id="sug-title-${summaryCommId}-${idx}" type="text" value="${escHtml(step)}"
-          style="flex:1;min-width:160px;background:#1a1a1a;border:1px solid #333;border-radius:4px;padding:6px 10px;font-size:13px;color:#eee;outline:none" />
-        <input id="sug-date-${summaryCommId}-${idx}" type="date"
-          style="background:#1a1a1a;border:1px solid #333;border-radius:4px;padding:6px 10px;font-size:13px;color:#eee;outline:none" />
-        ${dupItem ? '' : `<button onclick="_addSuggestedToTimeline('${escHtml(schoolName)}',${idx},'${summaryCommId}',false)"
-          style="background:#B8962E;color:#111;border:none;border-radius:4px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
-          + Add to Timeline
-        </button>`}
+      <div style="margin-bottom:8px">
+        <label style="font-size:11px;color:#555;display:block;margin-bottom:4px">Add to school</label>
+        <select id="sug-school-${summaryCommId}-${idx}"
+          style="width:100%;background:#1a1a1a;border:1px solid #333;border-radius:4px;padding:6px 10px;font-size:13px;color:#eee;outline:none">
+          ${schoolOptions}
+        </select>
       </div>
-      <div id="sug-msg-${summaryCommId}-${idx}" style="font-size:12px;margin-top:6px;display:none"></div>
+      <div style="margin-bottom:8px">
+        <label style="font-size:11px;color:#555;display:block;margin-bottom:4px">Title</label>
+        <input id="sug-title-${summaryCommId}-${idx}" type="text" value="${escHtml(step)}"
+          style="width:100%;box-sizing:border-box;background:#1a1a1a;border:1px solid #333;border-radius:4px;padding:6px 10px;font-size:13px;color:#eee;outline:none" />
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+        <div style="flex:1;min-width:130px">
+          <label style="font-size:11px;color:#555;display:block;margin-bottom:4px">Date (optional)</label>
+          <input id="sug-date-${summaryCommId}-${idx}" type="date"
+            style="width:100%;box-sizing:border-box;background:#1a1a1a;border:1px solid #333;border-radius:4px;padding:6px 10px;font-size:13px;color:#eee;outline:none" />
+        </div>
+      </div>
+      <div style="margin-bottom:10px">
+        <label style="font-size:11px;color:#555;display:block;margin-bottom:4px">Notes (optional)</label>
+        <input id="sug-notes-${summaryCommId}-${idx}" type="text" placeholder="Details..."
+          style="width:100%;box-sizing:border-box;background:#1a1a1a;border:1px solid #333;border-radius:4px;padding:6px 10px;font-size:13px;color:#eee;outline:none" />
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        ${!dupItem ? `<button onclick="_addSuggestedToTimeline(${idx},'${summaryCommId}')"
+          style="background:#B8962E;color:#111;border:none;border-radius:4px;padding:6px 16px;font-size:12px;font-weight:700;cursor:pointer">
+          + Add to Timeline
+        </button>` : ''}
+        <button onclick="_dismissSuggestion(${idx},'${summaryCommId}')"
+          style="background:none;border:1px solid #333;border-radius:4px;padding:6px 12px;font-size:12px;color:#666;cursor:pointer">Dismiss</button>
+      </div>
+      <div id="sug-msg-${summaryCommId}-${idx}" style="font-size:12px;margin-top:8px;display:none"></div>
     </div>`
   }).join('')
 
   const wrap = document.createElement('div')
   wrap.id = 'suggestions-wrap-' + summaryCommId
   wrap.style.cssText = 'margin-top:10px;padding:14px 16px;border-top:1px solid #1e1e1e'
-  wrap.innerHTML = `<div style="font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#555;margin-bottom:10px">Next Steps — Add to Timeline</div>${cards}`
+  wrap.innerHTML = `<div style="font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#555;margin-bottom:12px">Suggested Next Steps — Add to Timeline</div>${cards}`
   summaryCard.appendChild(wrap)
 }
 
@@ -6801,41 +6826,25 @@ function _dismissSuggestion(idx, summaryCommId) {
 }
 
 // ── Add suggested item to school timeline ────────────────────────────────────
-async function _addSuggestedToTimeline(schoolName, idx, summaryCommId, skipDupCheck) {
-  const titleEl = document.getElementById('sug-title-' + summaryCommId + '-' + idx)
-  const dateEl  = document.getElementById('sug-date-'  + summaryCommId + '-' + idx)
-  const msgEl   = document.getElementById('sug-msg-'   + summaryCommId + '-' + idx)
-  const title   = (titleEl ? titleEl.value.trim() : '')
-  const date    = dateEl ? (dateEl.value || null) : null
-  if (!title) return
+async function _addSuggestedToTimeline(idx, summaryCommId) {
+  const titleEl  = document.getElementById('sug-title-'  + summaryCommId + '-' + idx)
+  const dateEl   = document.getElementById('sug-date-'   + summaryCommId + '-' + idx)
+  const notesEl  = document.getElementById('sug-notes-'  + summaryCommId + '-' + idx)
+  const schoolEl = document.getElementById('sug-school-' + summaryCommId + '-' + idx)
+  const msgEl    = document.getElementById('sug-msg-'    + summaryCommId + '-' + idx)
+
+  const title          = titleEl  ? titleEl.value.trim()  : ''
+  const date           = dateEl   ? (dateEl.value || null) : null
+  const notes          = notesEl  ? (notesEl.value.trim() || null) : null
+  const studentSchoolId = schoolEl ? schoolEl.value : null
+
+  if (!title) { if (msgEl) { msgEl.style.display='block'; msgEl.style.color='var(--red)'; msgEl.textContent='Title required' } return }
+  if (!studentSchoolId) { if (msgEl) { msgEl.style.display='block'; msgEl.style.color='var(--red)'; msgEl.textContent='Select a school' } return }
 
   const authHeaders = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') }
   if (msgEl) { msgEl.style.display = 'block'; msgEl.style.color = '#888'; msgEl.textContent = 'Saving...' }
 
   try {
-    // Step 1: Ensure school exists in student_schools
-    let studentSchoolId = null
-    const existing = (D.schools || []).find(s => s.school_name.toLowerCase() === schoolName.toLowerCase())
-    if (existing) {
-      studentSchoolId = existing.id
-    } else {
-      // Auto-add school to Applying at Researching stage
-      const addRes = await fetch('/api/add-school-to-applying', {
-        method: 'POST',
-        headers: authHeaders,
-        body: JSON.stringify({ student_id: D.student.id, school_name: schoolName }),
-      })
-      const addData = await addRes.json()
-      if (!addRes.ok) throw new Error(addData.error || 'Could not add school')
-      studentSchoolId = addData.student_school.id
-      // Update local D.schools so subsequent suggestions use the same record
-      if (!addData.already_existed) {
-        if (!D.schools) D.schools = []
-        D.schools.push({ ...addData.student_school, timeline_items: [] })
-      }
-    }
-
-    // Step 2: Add timeline item
     const tlRes = await fetch('/api/school-timeline', {
       method: 'POST',
       headers: authHeaders,
@@ -6844,7 +6853,7 @@ async function _addSuggestedToTimeline(schoolName, idx, summaryCommId, skipDupCh
         student_id: D.student.id,
         title,
         date,
-        notes: 'Added from email summary',
+        notes,
         item_type: 'custom',
       }),
     })
@@ -6860,13 +6869,11 @@ async function _addSuggestedToTimeline(schoolName, idx, summaryCommId, skipDupCh
 
     // Mark card as done
     const card = document.getElementById('suggestion-card-' + summaryCommId + '-' + idx)
-    if (card) {
-      card.style.opacity = '0.5'
-      card.style.pointerEvents = 'none'
-    }
-    if (msgEl) { msgEl.style.color = 'var(--green)'; msgEl.textContent = 'Added to ' + schoolName + ' timeline' }
+    if (card) { card.style.opacity = '0.5'; card.style.pointerEvents = 'none' }
+    const schoolName = schoolEl.options[schoolEl.selectedIndex]?.text || ''
+    if (msgEl) { msgEl.style.color = 'var(--green)'; msgEl.textContent = 'Added to ' + schoolName }
 
-    // Re-render schools so the new item appears in the Applying tab immediately
+    // Re-render Applying tab immediately
     renderSchools()
 
   } catch (err) {
