@@ -13,7 +13,10 @@
 - **Database:** Supabase (PostgreSQL) — `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`
 - **Auth:** Supabase JWT — `sb.auth.getUser(token)` to validate sessions
 - **Telegram bot:** `netlify/functions/telegram-bot.js` — Gemini Flash powered, natural language
-- **Local dev:** `netlify dev` on port 8904
+- **Local dev:** `netlify dev` on port 8904 — run from `/Users/moodygarlic/.openclaw/workspace/projects/website/portal/`
+  - **WARNING:** There is an old `portal_server.py` (Python) that also binds to port 8904. If that's running, kill it first: `kill $(lsof -ti:8904)` then re-run `netlify dev --port 8904`
+  - Analyst URL: `http://localhost:8904/?token=7aa33227efd22104` — analyst overlay appears, sign in with `satit@linkedu.hk` / `Linkedu2024!`
+  - Parent URL: `http://localhost:8904/?token=7aa33227efd22104` — click "Continue as parent view" to skip login
 
 ## Key env vars (set in Netlify dashboard)
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`

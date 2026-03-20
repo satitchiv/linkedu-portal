@@ -43,28 +43,36 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'No emails to summarise' }) }
     }
 
-    // Sort chronologically for Gemini
-    const sorted = [...emails].sort((a, b) => new Date(a.sent_at) - new Date(b.sent_at))
+    // Sort chronologically: oldest first, newest last
+    const sorted = [...emails].sort((a, b) => {
+      const da = a.sent_at ? new Date(a.sent_at) : null
+      const db = b.sent_at ? new Date(b.sent_at) : null
+      if (!da && !db) return 0
+      if (!da) return 1   // undated goes to end (treat as unknown, not ancient)
+      if (!db) return -1
+      return da - db
+    })
 
-    const emailsText = sorted.map(e => {
+    const emailsText = sorted.map((e, i) => {
       const date = e.sent_at ? new Date(e.sent_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Unknown date'
       const dir = e.direction === 'outbound' ? 'Outbound (LinkedU → School)' : 'Inbound (School → LinkedU)'
-      return `${date} | ${dir} | ${e.subject || '(no subject)'}\n${e.body_text}\n---`
+      const label = i === sorted.length - 1 ? ' [MOST RECENT]' : ''
+      return `${date}${label} | ${dir} | ${e.subject || '(no subject)'}\n${e.body_text || '(no body)'}\n---`
     }).join('\n')
 
     const prompt = `You are a consultant assistant for LINKEDU, a Bangkok boarding school consulting firm.
 
-Below are all logged email communications between the LINKEDU consultant and ${school_name}, on behalf of one Thai student. Emails are in chronological order.
+Below are all logged email communications between the LINKEDU consultant and ${school_name}, on behalf of one Thai student. Emails are in chronological order — oldest first, newest last. The last email is the most recent and should anchor the "Current status" section.
 
 Write a concise briefing note (max 200 words) with these three sections:
 
-**Current status** — where things stand right now with this school
-**Confirmed / agreed** — anything explicitly confirmed, accepted, or decided
+**Current status** — where things stand right now, based on the most recent emails
+**Confirmed / agreed** — anything explicitly confirmed, accepted, or decided across the thread
 **Next steps** — specific actions pending, with any deadlines if mentioned
 
 Be factual and specific. Use dates where relevant. Professional English, no filler.
 
---- EMAILS ---
+--- EMAILS (oldest → newest) ---
 ${emailsText}`
 
     const genAI = new GoogleGenerativeAI(getGeminiKey())
