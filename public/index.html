@@ -6709,6 +6709,12 @@ async function summariseThread(schoolName) {
     _commsData.unshift(j2.communication)
     _renderCommsList()
 
+    // Step 3: Parse next steps and render suggestion cards below summary card
+    const nextSteps = _parseNextSteps(j1.summary)
+    if (nextSteps.length > 0 && nextSteps[0] !== 'None identified.') {
+      _renderSuggestionCards(j2.communication.id, schoolName, nextSteps)
+    }
+
   } catch (e) {
     alert('Summarise failed: ' + e.message)
     // Restore buttons
@@ -6716,6 +6722,155 @@ async function summariseThread(schoolName) {
       const btn = document.getElementById('summarise-btn-' + c.id)
       if (btn) { btn.disabled = false; btn.textContent = 'Summarise thread' }
     })
+  }
+}
+
+// ── Parse Next Steps from summary text ────────────────────────────────────────
+function _parseNextSteps(summaryText) {
+  // Extract everything after **Next steps** heading
+  const match = summaryText.match(/\*\*Next steps\*\*:?[^\n]*\n([\s\S]*)$/i)
+  if (!match) return []
+  const section = match[1].trim()
+  // Split on bullet lines (-, *, •, or numbered 1.)
+  return section
+    .split(/\n/)
+    .map(line => line.replace(/^[\s\-\*\•\d\.]+/, '').trim())
+    .filter(line => line.length > 3)
+}
+
+// ── Duplicate detection: word-overlap similarity ───────────────────────────────
+function _titleSimilar(a, b) {
+  const stopWords = new Set(['the','a','an','to','for','of','in','on','at','by','with','and','or','is','are','be','this','that'])
+  const words = str => str.toLowerCase().replace(/[^a-z0-9\s]/g,'').split(/\s+/).filter(w => w.length > 2 && !stopWords.has(w))
+  const wa = new Set(words(a))
+  const wb = new Set(words(b))
+  if (wa.size === 0 || wb.size === 0) return false
+  const overlap = [...wa].filter(w => wb.has(w)).length
+  return overlap / Math.max(wa.size, wb.size) >= 0.6
+}
+
+// ── Render suggestion cards below the summary comm card ────────────────────────
+function _renderSuggestionCards(summaryCommId, schoolName, nextSteps) {
+  const summaryCard = document.getElementById('comm-card-' + summaryCommId)
+  if (!summaryCard) return
+
+  // Get existing timeline items for this school (from D.schools)
+  const schoolRecord = (D.schools || []).find(s => s.school_name.toLowerCase() === schoolName.toLowerCase())
+  const existingItems = schoolRecord ? (schoolRecord.timeline_items || []).map(i => i.title || '') : []
+
+  const cards = nextSteps.map((step, idx) => {
+    // Check for duplicate
+    const dupItem = existingItems.find(t => _titleSimilar(t, step))
+    const dupWarning = dupItem ? `
+      <div style="margin-bottom:8px;padding:8px 10px;background:#1a1a1a;border:1px solid #333;border-radius:4px;font-size:11px;color:#aaa">
+        Possible duplicate: <span style="color:#ddd">${escHtml(dupItem)}</span>
+        <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+          <button onclick="_dismissSuggestion(${idx},'${summaryCommId}')" style="background:none;border:1px solid #444;border-radius:4px;padding:3px 10px;font-size:11px;color:#888;cursor:pointer">Skip</button>
+          <button onclick="_addSuggestedToTimeline('${escHtml(schoolName)}',${idx},'${summaryCommId}',true)" style="background:none;border:1px solid #B8962E;border-radius:4px;padding:3px 10px;font-size:11px;color:#B8962E;cursor:pointer">Add Both</button>
+        </div>
+      </div>` : ''
+
+    return `<div id="suggestion-card-${summaryCommId}-${idx}" style="background:#161616;border:1px solid #2a2a2a;border-radius:6px;padding:14px 16px;margin-bottom:8px">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#B8962E;margin-bottom:8px">Suggested Action</div>
+      ${dupWarning}
+      <div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap">
+        <input id="sug-title-${summaryCommId}-${idx}" type="text" value="${escHtml(step)}"
+          style="flex:1;min-width:160px;background:#1a1a1a;border:1px solid #333;border-radius:4px;padding:6px 10px;font-size:13px;color:#eee;outline:none" />
+        <input id="sug-date-${summaryCommId}-${idx}" type="date"
+          style="background:#1a1a1a;border:1px solid #333;border-radius:4px;padding:6px 10px;font-size:13px;color:#eee;outline:none" />
+        ${dupItem ? '' : `<button onclick="_addSuggestedToTimeline('${escHtml(schoolName)}',${idx},'${summaryCommId}',false)"
+          style="background:#B8962E;color:#111;border:none;border-radius:4px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
+          + Add to Timeline
+        </button>`}
+      </div>
+      <div id="sug-msg-${summaryCommId}-${idx}" style="font-size:12px;margin-top:6px;display:none"></div>
+    </div>`
+  }).join('')
+
+  const wrap = document.createElement('div')
+  wrap.id = 'suggestions-wrap-' + summaryCommId
+  wrap.style.cssText = 'margin-top:10px;padding:14px 16px;border-top:1px solid #1e1e1e'
+  wrap.innerHTML = `<div style="font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#555;margin-bottom:10px">Next Steps — Add to Timeline</div>${cards}`
+  summaryCard.appendChild(wrap)
+}
+
+// ── Dismiss a suggestion card ─────────────────────────────────────────────────
+function _dismissSuggestion(idx, summaryCommId) {
+  const card = document.getElementById('suggestion-card-' + summaryCommId + '-' + idx)
+  if (card) card.style.display = 'none'
+}
+
+// ── Add suggested item to school timeline ────────────────────────────────────
+async function _addSuggestedToTimeline(schoolName, idx, summaryCommId, skipDupCheck) {
+  const titleEl = document.getElementById('sug-title-' + summaryCommId + '-' + idx)
+  const dateEl  = document.getElementById('sug-date-'  + summaryCommId + '-' + idx)
+  const msgEl   = document.getElementById('sug-msg-'   + summaryCommId + '-' + idx)
+  const title   = (titleEl ? titleEl.value.trim() : '')
+  const date    = dateEl ? (dateEl.value || null) : null
+  if (!title) return
+
+  const authHeaders = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') }
+  if (msgEl) { msgEl.style.display = 'block'; msgEl.style.color = '#888'; msgEl.textContent = 'Saving...' }
+
+  try {
+    // Step 1: Ensure school exists in student_schools
+    let studentSchoolId = null
+    const existing = (D.schools || []).find(s => s.school_name.toLowerCase() === schoolName.toLowerCase())
+    if (existing) {
+      studentSchoolId = existing.id
+    } else {
+      // Auto-add school to Applying at Researching stage
+      const addRes = await fetch('/api/add-school-to-applying', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ student_id: D.student.id, school_name: schoolName }),
+      })
+      const addData = await addRes.json()
+      if (!addRes.ok) throw new Error(addData.error || 'Could not add school')
+      studentSchoolId = addData.student_school.id
+      // Update local D.schools so subsequent suggestions use the same record
+      if (!addData.already_existed) {
+        if (!D.schools) D.schools = []
+        D.schools.push({ ...addData.student_school, timeline_items: [] })
+      }
+    }
+
+    // Step 2: Add timeline item
+    const tlRes = await fetch('/api/school-timeline', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        student_school_id: studentSchoolId,
+        student_id: D.student.id,
+        title,
+        date,
+        notes: 'Added from email summary',
+        item_type: 'custom',
+      }),
+    })
+    const tlData = await tlRes.json()
+    if (!tlRes.ok) throw new Error(tlData.error || 'Could not save timeline item')
+
+    // Update local cache
+    const schoolRec = (D.schools || []).find(s => s.id === studentSchoolId)
+    if (schoolRec) {
+      if (!schoolRec.timeline_items) schoolRec.timeline_items = []
+      schoolRec.timeline_items.push(tlData.item)
+    }
+
+    // Mark card as done
+    const card = document.getElementById('suggestion-card-' + summaryCommId + '-' + idx)
+    if (card) {
+      card.style.opacity = '0.5'
+      card.style.pointerEvents = 'none'
+    }
+    if (msgEl) { msgEl.style.color = 'var(--green)'; msgEl.textContent = 'Added to ' + schoolName + ' timeline' }
+
+    // Re-render schools so the new item appears in the Applying tab immediately
+    renderSchools()
+
+  } catch (err) {
+    if (msgEl) { msgEl.style.color = 'var(--red)'; msgEl.textContent = err.message }
   }
 }
 
