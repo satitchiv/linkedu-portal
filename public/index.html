@@ -6299,8 +6299,9 @@ function contactConsultant(btn, triggerId) {
       <div style="font-size:11px;color:#555;margin-bottom:10px">They will contact you at ${escHtml(D.student.parentPhone)}</div>
       <div style="display:flex;gap:8px">
         <button id="contact-send-${triggerId}"
+          data-topic="${escHtml(topic)}" data-triggerid="${escHtml(triggerId)}"
           style="background:#B8962E;color:#111;border:none;border-radius:4px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer"
-          onclick="_sendContactNotification(${JSON.stringify(topic)},${JSON.stringify(triggerId)})">Send</button>
+          onclick="_sendContactNotification(this)">Send</button>
         <button style="background:none;border:1px solid #333;border-radius:4px;padding:5px 12px;font-size:11px;color:#666;cursor:pointer"
           onclick="document.getElementById('contact-wrap-${triggerId}').innerHTML=''">Cancel</button>
       </div>
@@ -6308,8 +6309,10 @@ function contactConsultant(btn, triggerId) {
     </div>`
 }
 
-async function _sendContactNotification(topic, triggerId) {
-  const sendBtn  = document.getElementById('contact-send-' + triggerId)
+async function _sendContactNotification(btn) {
+  const topic      = btn.getAttribute('data-topic')
+  const triggerId  = btn.getAttribute('data-triggerid')
+  const sendBtn    = btn
   const statusEl = document.getElementById('contact-status-' + triggerId)
   if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Sending…' }
 
