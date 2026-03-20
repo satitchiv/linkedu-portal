@@ -1316,7 +1316,7 @@
     <button class="tab-btn" onclick="showTab('journey')">Journey</button>
     <button class="tab-btn" onclick="showTab('applying')">Applying</button>
     <button class="tab-btn" onclick="showTab('recommendations')">Recommendations</button>
-    <button class="tab-btn" onclick="showTab('golf')">Golf</button>
+    <button class="tab-btn" id="tab-btn-golf" onclick="showTab('golf')">Golf</button>
     <button class="tab-btn" id="tab-btn-services" onclick="showTab('services')">Services</button>
     <button class="tab-btn" id="tab-btn-communications" onclick="showTab('communications')">Communications</button>
     <button class="tab-btn" onclick="showTab('profile')">Profile</button>
@@ -1342,15 +1342,6 @@
     </div>
     <div class="tab-panel" id="tab-golf">
       <div id="golf-root">
-        <a href="https://marvelous-duckanoo-07066b.netlify.app" target="_blank" rel="noopener" style="display:block;text-decoration:none;margin-bottom:20px">
-          <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:border-color 0.2s" onmouseover="this.style.borderColor='#B8962E'" onmouseout="this.style.borderColor='#2a2a2a'">
-            <div>
-              <div style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#B8962E;margin-bottom:4px">Tournament Planner</div>
-              <div style="font-size:13px;color:#eee;font-weight:500">Annual Tournament Planner — 1,049 events scored for your child</div>
-            </div>
-            <span style="font-size:12px;color:#B8962E;letter-spacing:0.05em;white-space:nowrap;padding-left:16px">Open &#8599;</span>
-          </div>
-        </a>
         <p class="sec-label">
           <span class="lang-en">On-Course Reports</span>
           <span class="lang-th">รายงานการเล่นสนาม</span>
@@ -4801,6 +4792,19 @@ window.initGolfTab = function(studentId, studentName) {
   if (isAnalystView) {
     const btn = document.getElementById('golf-enter-round-btn');
     if (btn) { btn.href = '/playgolf?student=' + studentId; btn.style.display = 'block'; }
+    // Visibility toggle bar (analyst only)
+    const existingBar = document.getElementById('golf-visibility-bar');
+    if (!existingBar) {
+      const root = document.getElementById('golf-root');
+      if (root) {
+        const bar = document.createElement('div');
+        bar.id = 'golf-visibility-bar';
+        bar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;margin-bottom:16px';
+        bar.innerHTML = `<span style="font-size:11px;color:#555;text-transform:uppercase;letter-spacing:.1em">Parent visibility · Golf</span><div style="display:flex;align-items:center;gap:10px"><span id="golf-vis-label" style="font-size:11px"></span><button onclick="toggleGolfVisibility()" id="golf-vis-btn" style="background:none;border:1px solid #333;border-radius:4px;padding:3px 12px;font-size:11px;cursor:pointer"></button></div>`;
+        root.insertBefore(bar, root.firstChild);
+      }
+    }
+    _updateGolfVisBar();
   }
   renderList(studentId);
 };
@@ -7116,6 +7120,50 @@ function renderAll() {
   renderUniversityRecs()
   renderTutoringRecs()
   renderGolf()
+  applyTabVisibility()
+}
+
+function applyTabVisibility() {
+  const golfBtn = document.getElementById('tab-btn-golf')
+  if (!golfBtn) return
+  if (isAnalystView) {
+    golfBtn.style.display = ''
+  } else {
+    golfBtn.style.display = D && D.student && D.student.show_golf_to_parent ? '' : 'none'
+  }
+}
+
+function _updateGolfVisBar() {
+  const label = document.getElementById('golf-vis-label')
+  const btn   = document.getElementById('golf-vis-btn')
+  if (!label || !btn) return
+  const visible = D && D.student && D.student.show_golf_to_parent
+  label.textContent = visible ? 'Visible to parents' : 'Hidden from parents'
+  label.style.color = visible ? '#B8962E' : '#555'
+  btn.textContent   = visible ? 'Hide' : 'Show'
+  btn.style.color   = visible ? '#888' : '#B8962E'
+  btn.style.borderColor = visible ? '#333' : '#B8962E44'
+}
+
+async function toggleGolfVisibility() {
+  if (!D || !D.student) return
+  const newVal = !D.student.show_golf_to_parent
+  const btn = document.getElementById('golf-vis-btn')
+  if (btn) { btn.disabled = true; btn.textContent = '...' }
+  try {
+    const res = await fetch('/api/update-student', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
+      body: JSON.stringify({ student_id: D.student.id, show_golf_to_parent: newVal }),
+    })
+    if (!res.ok) throw new Error('Save failed')
+    D.student.show_golf_to_parent = newVal
+    _updateGolfVisBar()
+    applyTabVisibility()
+  } catch (e) {
+    alert('Could not update visibility: ' + e.message)
+    if (btn) { btn.disabled = false; _updateGolfVisBar() }
+  }
 }
 
 
