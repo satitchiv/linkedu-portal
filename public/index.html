@@ -7134,7 +7134,11 @@ function applyTabVisibility() {
   }
   const enterRoundBtn = document.getElementById('golf-enter-round-btn')
   if (enterRoundBtn) {
-    enterRoundBtn.style.display = isAnalystView ? 'block' : 'none'
+    const golfEnabled = isAnalystView || (D && D.student && D.student.show_golf_to_parent)
+    enterRoundBtn.style.display = golfEnabled ? 'block' : 'none'
+    if (golfEnabled && D && D.student && D.student.id) {
+      enterRoundBtn.href = '/playgolf?student=' + D.student.id
+    }
   }
 }
 
