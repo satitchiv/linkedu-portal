@@ -1289,6 +1289,11 @@
 <!-- Students list (analyst only) -->
 <div id="students-list-screen" style="display:none;min-height:100vh;background:var(--bg);padding:40px 32px">
   <div style="max-width:900px;margin:0 auto">
+    <!-- Top bar: logo + sign out -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:32px">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:1.3rem;color:var(--gold);letter-spacing:0.08em">LINKEDU</div>
+      <button onclick="signOut()" style="background:none;border:1px solid #333;border-radius:4px;padding:6px 14px;font-size:12px;color:#888;cursor:pointer;font-weight:600;letter-spacing:0.05em;text-transform:uppercase">Sign Out</button>
+    </div>
     <!-- Tab toggle: Students / Free Accounts -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;gap:16px">
       <div style="display:flex;gap:4px;background:#161616;border:1px solid #222;border-radius:6px;padding:3px">
@@ -1701,8 +1706,12 @@ async function signOut() {
   await sb.auth.signOut()
   D = null
   golfRounds = []
+  isAnalystView = false
+  window._token = null
   $id('app').classList.remove('visible')
   $id('app').style.display = 'none'
+  const slScreen = $id('students-list-screen')
+  if (slScreen) slScreen.style.display = 'none'
   resetAuthForm()
   $id('auth-email').value = ''
   $id('auth-screen').style.display = 'flex'
@@ -6439,8 +6448,12 @@ function contactConsultant(btn, triggerId) {
   wrap.innerHTML = `
     <div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:4px;padding:16px 18px;margin-top:10px">
       <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);margin-bottom:6px">Confirm contact request</div>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:4px">Notify your consultant about <strong style="color:var(--text)">${escHtml(topic)}</strong>.</p>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:12px">They will contact you at <strong style="color:var(--text)">${escHtml(D.student.parentPhone)}</strong>.</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:10px">Notify your consultant about <strong style="color:var(--text)">${escHtml(topic)}</strong>.</p>
+      <div style="margin-bottom:12px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:5px">Contact number — edit if needed:</div>
+        <input type="tel" id="contact-phone-edit-${triggerId}" value="${escHtml(D.student.parentPhone)}"
+          style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px;color:var(--text);background:var(--surface2,#f0ebe0);outline:none;box-sizing:border-box" />
+      </div>
       <div style="display:flex;gap:8px">
         <button id="contact-send-${triggerId}"
           data-topic="${escHtml(topic)}" data-triggerid="${escHtml(triggerId)}"
@@ -6459,6 +6472,25 @@ async function _sendContactNotification(btn) {
   const sendBtn    = btn
   const statusEl = document.getElementById('contact-status-' + triggerId)
   if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Sending…' }
+
+  // If phone was edited, save the updated number first
+  const phoneEditInput = document.getElementById('contact-phone-edit-' + triggerId)
+  if (phoneEditInput) {
+    const editedPhone = phoneEditInput.value.trim()
+    if (editedPhone && D?.student && editedPhone !== D.student.parentPhone) {
+      try {
+        const patchHdrs = { 'Content-Type': 'application/json' }
+        if (_portalToken) patchHdrs['X-Access-Token'] = _portalToken
+        else patchHdrs['Authorization'] = 'Bearer ' + (window._token || '')
+        await fetch('/api/update-student', {
+          method: 'PATCH',
+          headers: patchHdrs,
+          body: JSON.stringify({ student_id: D.student.id, parent_phone: editedPhone }),
+        })
+        D.student.parentPhone = editedPhone
+      } catch(e) { /* non-fatal — continue sending notification */ }
+    }
+  }
 
   try {
     const hdrs = { 'Content-Type': 'application/json' }
@@ -8003,6 +8035,7 @@ async function loadFreeUsers() {
         <td style="padding:12px 16px;font-size:12px;color:#555">${fmtDate(u.created_at)}</td>
         <td style="padding:12px 0 12px 16px;text-align:right">
           <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
+            ${u.portal_token ? `<button onclick="window.open(window.location.origin+'/?token=${u.portal_token}','_blank')" style="background:var(--gold);color:#111;border:none;padding:5px 12px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600;letter-spacing:0.04em">Open Portal</button>` : ''}
             <button id="notify-btn-${u.id}" onclick="notifyFreeUser('${u.email}','${u.status}',${u.tools_used},'${u.id}')"
               style="background:none;border:1px solid #B8962E;color:#B8962E;padding:5px 12px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600;letter-spacing:0.04em">Notify</button>
             <button id="promote-btn-${u.id}" onclick="showPromoteForm('${u.id}','${u.email.replace(/'/g,"\\'").replace(/"/g,'&quot;')}','${(u.parent_name||'').replace(/'/g,"\\'").replace(/"/g,'&quot;')}')"
@@ -8124,6 +8157,15 @@ async function promoteToStudent(userId, email) {
       </div>`
     const promoteBtn = $id('promote-btn-' + userId)
     if (promoteBtn) { promoteBtn.textContent = 'In Students'; promoteBtn.style.color = '#4CAF50'; promoteBtn.style.borderColor = '#4CAF50'; promoteBtn.disabled = true }
+    // Inject "Open Portal" button into the action cell
+    const notifyBtn = $id('notify-btn-' + userId)
+    if (notifyBtn && notifyBtn.parentNode) {
+      const openBtn = document.createElement('button')
+      openBtn.textContent = 'Open Portal'
+      openBtn.style.cssText = 'background:var(--gold);color:#111;border:none;padding:5px 12px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600;letter-spacing:0.04em'
+      openBtn.onclick = () => window.open(portalLink, '_blank')
+      notifyBtn.parentNode.insertBefore(openBtn, notifyBtn)
+    }
   } catch (err) {
     if (btn) { btn.textContent = 'Create Student'; btn.disabled = false }
     if (statusEl) statusEl.textContent = err.message || 'Something went wrong.'

@@ -59,6 +59,19 @@ exports.handler = async (event) => {
 
     if (toolsErr) throw toolsErr
 
+    // ── Fetch promoted student records (free users who became students) ────────
+    const emails = (users || []).map(u => u.email).filter(Boolean)
+    let promotedMap = {}
+    if (emails.length > 0) {
+      const { data: promotedStudents } = await supabase
+        .from('students')
+        .select('parent_email, access_token')
+        .in('parent_email', emails)
+      ;(promotedStudents || []).forEach(s => {
+        if (s.parent_email && s.access_token) promotedMap[s.parent_email] = s.access_token
+      })
+    }
+
     // ── Join and compute engagement status ────────────────────────────────────
     const result = (users || []).map(u => {
       const userTools = (allTools || []).filter(t => t.user_id === u.id)
@@ -78,6 +91,7 @@ exports.handler = async (event) => {
         tool_names: toolNames,
         last_active: lastActive,
         status,
+        portal_token: promotedMap[u.email] || null,
       }
     })
 
