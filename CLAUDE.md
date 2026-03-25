@@ -52,6 +52,10 @@
 - Netlify auto-deploys on push to main — pushing = live instantly
 - Always commit locally and wait for approval
 
+## Playwright Proof Test — mandatory before handoff (top priority)
+
+After any new feature or UI change, run `/proof-test` before calling it done. The test must open a real browser, complete the full user flow (click buttons, fill forms, submit), and verify results appear. Never tell Satit to test or deploy without this passing. No exceptions.
+
 ## Pre-deploy checklist — mandatory before any fix is "done" (top priority)
 Run these three checks every time, no exceptions:
 1. **`git status`** — every file touched must be committed. Untracked files = not deployed. This caught a function that existed locally but never reached Netlify (404 in prod).

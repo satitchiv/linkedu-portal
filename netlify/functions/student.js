@@ -170,6 +170,25 @@ exports.handler = async (event) => {
     }
 
     if (!studentIdToFetch) {
+      // Free-tier user — no student record, return tool results only
+      if (profile.account_type === 'free') {
+        const { data: toolResults } = await supabase
+          .from('saved_tool_results')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('updated_at', { ascending: false })
+
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({
+            role: 'free',
+            student: null,
+            toolResults: toolResults || [],
+          })
+        }
+      }
+
       return {
         statusCode: 200,
         headers,
@@ -182,8 +201,15 @@ exports.handler = async (event) => {
       }
     }
 
-    const { s, academicsRes, schoolsRes, timelineItems, milestonesRes, documentsRes, golfRes, recsRes, certificationsRes, extractionsRes, campRecsRes, campAppsWithTl } =
-      await fetchStudentData(studentIdToFetch)
+    const [
+      studentData,
+      toolResultsRes,
+    ] = await Promise.all([
+      fetchStudentData(studentIdToFetch),
+      supabase.from('saved_tool_results').select('*').eq('user_id', user.id).order('updated_at', { ascending: false }),
+    ])
+
+    const { s, academicsRes, schoolsRes, timelineItems, milestonesRes, documentsRes, golfRes, recsRes, certificationsRes, extractionsRes, campRecsRes, campAppsWithTl } = studentData
 
     const isParent = profile.role === 'parent'
 
@@ -209,6 +235,7 @@ exports.handler = async (event) => {
         extractions:           extractionsRes.data   || [],
         camp_recommendations:  campRecsRes.data      || [],
         camp_applications:     campAppsWithTl        || [],
+        toolResults:           toolResultsRes.data   || [],
         role: profile.role,
       })
     }

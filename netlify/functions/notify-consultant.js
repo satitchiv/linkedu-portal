@@ -45,7 +45,33 @@ exports.handler = async (event) => {
     return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) }
 
   try {
-    const { topic, student_id } = JSON.parse(event.body || '{}')
+    const { topic, student_id, direct_message } = JSON.parse(event.body || '{}')
+
+    // ── Direct message path (for free users, admin secret OR analyst JWT) ────
+    if (direct_message) {
+      const secret = event.headers['x-admin-secret'] || event.headers['X-Admin-Secret']
+      const isAdminDirect = secret && secret === process.env.ADMIN_SECRET
+      if (!isAdminDirect) {
+        // Also allow analyst JWT
+        const token = (event.headers.authorization || '').replace('Bearer ', '')
+        if (token) {
+          const { data: { user }, error: authErr } = await supabase.auth.getUser(token)
+          if (authErr || !user) {
+            return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) }
+          }
+          const { data: profile } = await supabase
+            .from('user_profiles').select('role').eq('id', user.id).single()
+          if (!profile || profile.role !== 'analyst') {
+            return { statusCode: 403, headers, body: JSON.stringify({ error: 'Analysts only' }) }
+          }
+        } else {
+          return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) }
+        }
+      }
+      await sendTelegram(`<b>LINKEDU — Free User Alert</b>\n\n${direct_message}`)
+      return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) }
+    }
+
     if (!topic) return { statusCode: 400, headers, body: JSON.stringify({ error: 'topic is required' }) }
 
     // ── Resolve student ──────────────────────────────────────────────────────

@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Students — LinkedU Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: #111; color: #eee; min-height: 100vh; }
+
+  /* Header */
+  .hdr { background: #0a0a0a; border-bottom: 1px solid #222; padding: 0 32px; height: 56px;
+    display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .hdr-logo { font-family: 'Playfair Display', serif; color: #B8962E; font-size: 18px; letter-spacing: .04em; }
+  .hdr-title { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: #555; margin-top: 2px; }
+  .hdr-right { display: flex; align-items: center; gap: 12px; }
+  .hdr-count { font-size: 12px; color: #555; }
+
+  /* Page body */
+  .page { max-width: 1100px; margin: 0 auto; padding: 32px 24px 80px; }
+
+  /* Title row */
+  .page-hdr { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 24px; }
+  .page-title { font-family: 'Playfair Display', serif; font-size: 26px; color: #B8962E; }
+  .page-meta { font-size: 12px; color: #555; margin-top: 4px; }
+  .refresh-link { font-size: 12px; color: #555; text-decoration: none; cursor: pointer; background: none; border: none; }
+  .refresh-link:hover { color: #B8962E; }
+
+  /* Table */
+  .tbl-wrap { border: 1px solid #1e1e1e; border-radius: 8px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { background: #161616; padding: 10px 14px; font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .1em; color: #555; text-align: left; white-space: nowrap; }
+  tbody tr { border-bottom: 1px solid #1a1a1a; transition: background .1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #161616; }
+  tbody tr.editing { background: #141414; }
+  td { padding: 12px 14px; font-size: 13px; color: #ccc; vertical-align: middle; }
+  td.name-cell { color: #eee; font-weight: 500; }
+  td.muted { color: #555; font-size: 12px; }
+
+  /* Stage badge */
+  .stage-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px;
+    font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  .stage-researching { background: #1e1e1e; color: #777; }
+  .stage-applied     { background: rgba(184,150,46,.12); color: #B8962E; }
+  .stage-interview   { background: rgba(184,150,46,.2); color: #d4a93a; }
+  .stage-offer       { background: rgba(39,174,96,.12); color: #27ae60; }
+  .stage-accepted    { background: rgba(39,174,96,.2); color: #2ecc71; }
+  .stage-enrolled    { background: rgba(39,174,96,.3); color: #58d68d; }
+  .stage-none        { background: #1a1a1a; color: #444; }
+
+  /* Status badge */
+  .status-active   { color: #27ae60; font-size: 11px; }
+  .status-inactive { color: #555; font-size: 11px; }
+  .status-prospect { color: #B8962E; font-size: 11px; }
+
+  /* Action buttons */
+  .actions { display: flex; gap: 6px; flex-wrap: nowrap; align-items: center; }
+  .btn { padding: 5px 11px; border-radius: 5px; font-size: 11px; font-weight: 600;
+    cursor: pointer; border: none; white-space: nowrap; transition: all .15s; letter-spacing: .02em; }
+  .btn-portal { background: #B8962E; color: #111; }
+  .btn-portal:hover { background: #caa938; }
+  .btn-copy { background: #1e1e1e; color: #aaa; border: 1px solid #2a2a2a; }
+  .btn-copy:hover { color: #B8962E; border-color: #B8962E; }
+  .btn-edit { background: none; color: #666; border: 1px solid #2a2a2a; }
+  .btn-edit:hover { color: #eee; border-color: #444; }
+  .btn-delete { background: none; color: #555; border: 1px solid transparent; }
+  .btn-delete:hover { color: #e74c3c; border-color: rgba(231,76,60,.3); }
+  .btn-save { background: #27ae60; color: #fff; }
+  .btn-save:hover { background: #2ecc71; }
+  .btn-cancel { background: none; color: #555; border: 1px solid #2a2a2a; }
+  .btn-cancel:hover { color: #aaa; }
+
+  /* Edit row */
+  .edit-row { display: none; }
+  .edit-row.open { display: table-row; }
+  .edit-row td { background: #141414; border-bottom: 2px solid #B8962E22; padding: 16px 14px; }
+  .edit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .edit-field label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .1em;
+    color: #555; margin-bottom: 5px; font-weight: 600; }
+  .edit-field input, .edit-field select {
+    width: 100%; padding: 8px 10px; background: #1a1a1a; border: 1px solid #2a2a2a;
+    border-radius: 5px; font-size: 13px; color: #eee; outline: none; font-family: 'Inter', sans-serif; }
+  .edit-field input:focus, .edit-field select:focus { border-color: #B8962E; }
+  .edit-actions { display: flex; gap: 8px; margin-top: 14px; align-items: center; }
+  .edit-msg { font-size: 12px; color: #B8962E; margin-left: 8px; }
+
+  /* Delete confirm */
+  .del-confirm { display: none; background: rgba(231,76,60,.08); border: 1px solid rgba(231,76,60,.25);
+    border-radius: 6px; padding: 10px 14px; margin-top: 10px; font-size: 12px; color: #e74c3c; }
+  .del-confirm.show { display: block; }
+  .del-confirm-btns { display: flex; gap: 8px; margin-top: 8px; }
+  .btn-confirm-del { background: #e74c3c; color: #fff; padding: 5px 14px; border-radius: 4px;
+    border: none; font-size: 12px; cursor: pointer; font-weight: 600; }
+  .btn-confirm-del:hover { background: #c0392b; }
+  .btn-no-del { background: none; border: 1px solid #333; color: #777; padding: 5px 14px;
+    border-radius: 4px; font-size: 12px; cursor: pointer; }
+
+  /* Copy feedback */
+  .copied { color: #27ae60 !important; }
+
+  /* Empty / error states */
+  .state-msg { text-align: center; padding: 60px 20px; color: #444; font-size: 14px; }
+
+  /* Auth overlay */
+  #auth-overlay { position: fixed; inset: 0; background: #111; display: flex; align-items: center;
+    justify-content: center; z-index: 999; }
+  .auth-box { background: #161616; border: 1px solid #2a2a2a; border-radius: 10px; padding: 36px 32px;
+    width: 340px; text-align: center; }
+  .auth-box h2 { font-family: 'Playfair Display', serif; color: #B8962E; font-size: 20px; margin-bottom: 6px; }
+  .auth-box p { font-size: 12px; color: #555; margin-bottom: 20px; }
+  .auth-box input { width: 100%; padding: 10px 12px; background: #1a1a1a; border: 1px solid #2a2a2a;
+    border-radius: 6px; font-size: 14px; color: #eee; outline: none; text-align: center;
+    letter-spacing: .15em; font-family: 'Inter', sans-serif; }
+  .auth-box input:focus { border-color: #B8962E; }
+  .auth-box .auth-btn { margin-top: 12px; width: 100%; padding: 10px; background: #B8962E; color: #111;
+    border: none; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .auth-box .auth-btn:hover { background: #caa938; }
+  .auth-error { color: #e74c3c; font-size: 12px; margin-top: 8px; display: none; }
+</style>
+</head>
+<body>
+
+<!-- Auth overlay (shown when no secret in URL) -->
+<div id="auth-overlay" style="display:none">
+  <div class="auth-box">
+    <h2>LinkedU Admin</h2>
+    <p>Sign in with your analyst account</p>
+    <input type="email" id="secret-input" placeholder="your@email.com" onkeydown="if(event.key==='Enter')document.getElementById('secret-pwd').focus()" style="margin-bottom:8px" />
+    <input type="password" id="secret-pwd" placeholder="Password" onkeydown="if(event.key==='Enter')checkSecret()" />
+    <button class="auth-btn" onclick="checkSecret()">Sign In</button>
+    <div class="auth-error" id="auth-err">Incorrect email or password.</div>
+  </div>
+</div>
+
+<div class="hdr">
+  <div>
+    <div class="hdr-logo">LINKEDU</div>
+    <div class="hdr-title">Admin · Students</div>
+  </div>
+  <div class="hdr-right">
+    <span class="hdr-count" id="hdr-count"></span>
+    <a href="/admin/recommendations.html" style="font-size:12px;color:#555;text-decoration:none">Recommendations →</a>
+  </div>
+</div>
+
+<div class="page">
+  <div class="page-hdr">
+    <div>
+      <div class="page-title">All Students</div>
+      <div class="page-meta" id="page-meta">Loading…</div>
+    </div>
+    <button class="refresh-link" onclick="loadStudents()">↻ Refresh</button>
+  </div>
+
+  <div id="table-wrap" class="tbl-wrap" style="display:none">
+    <table>
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>School</th>
+          <th>Stage</th>
+          <th>Sport · Year</th>
+          <th>Parent</th>
+          <th>Status</th>
+          <th style="text-align:right">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+  <div id="state-msg" class="state-msg">Loading students…</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+const { createClient } = window.supabase
+const sb = createClient('https://ufspivvuevllmkxmivbe.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmc3BpdnZ1ZXZsbG1reG1pdmJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxMTU2MDUsImV4cCI6MjA4ODY5MTYwNX0.aybHZVeG4_gl5RDXjrhfTAKNq0sUEdYslwuwTdghIpk')
+const BASE = window.location.origin
+let authToken = ''
+let students = []
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+function initAuth() {
+  document.getElementById('auth-overlay').style.display = 'flex'
+}
+
+async function checkSecret() {
+  const email = (document.getElementById('secret-input').value || '').trim()
+  const password = (document.getElementById('secret-pwd').value || '').trim()
+  const errEl = document.getElementById('auth-err')
+  errEl.style.display = 'none'
+  if (!email || !password) { errEl.textContent = 'Please enter email and password.'; errEl.style.display = 'block'; return }
+
+  const { data, error } = await sb.auth.signInWithPassword({ email, password })
+  if (error || !data.session) { errEl.textContent = 'Incorrect email or password.'; errEl.style.display = 'block'; return }
+
+  authToken = data.session.access_token
+  document.getElementById('auth-overlay').style.display = 'none'
+  loadStudents()
+}
+
+// ── Load students ─────────────────────────────────────────────────────────────
+async function loadStudents() {
+  document.getElementById('state-msg').textContent = 'Loading students…'
+  document.getElementById('state-msg').style.display = 'block'
+  document.getElementById('table-wrap').style.display = 'none'
+
+  try {
+    const res = await fetch('/api/students-list', {
+      headers: { 'Authorization': 'Bearer ' + authToken }
+    })
+    const json = await res.json()
+    if (res.status === 401) { initAuth(); return }
+    if (!res.ok) throw new Error(json.error || 'Failed to load')
+    students = json.students || []
+    renderTable()
+  } catch (err) {
+    document.getElementById('state-msg').textContent = 'Error: ' + err.message
+  }
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function stageClass(stage) {
+  const map = { researching:'researching', applied:'applied', interview:'interview',
+    offer:'offer', visit:'offer', accepted:'accepted', visa:'enrolled', enrolled:'enrolled' }
+  return 'stage-' + (map[stage] || 'none')
+}
+
+function stageLabel(stage) {
+  const map = { researching:'Researching', applied:'Applied', interview:'Interview',
+    offer:'Offer', visit:'Visit', accepted:'Accepted', visa:'VISA', tb_test:'TB Test',
+    guardianship:'Guardianship', enrolled:'Enrolled' }
+  return map[stage] || (stage || '—')
+}
+
+function statusClass(status) {
+  return 'status-' + (status || 'active')
+}
+
+function fmtDate(d) {
+  if (!d) return '—'
+  return new Date(d).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })
+}
+
+function renderTable() {
+  const tbody = document.getElementById('tbody')
+
+  if (!students.length) {
+    document.getElementById('state-msg').textContent = 'No students found.'
+    return
+  }
+
+  document.getElementById('state-msg').style.display = 'none'
+  document.getElementById('table-wrap').style.display = 'block'
+  document.getElementById('hdr-count').textContent = students.length + ' students'
+  document.getElementById('page-meta').textContent = students.length + ' students · Last loaded ' + new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' })
+
+  tbody.innerHTML = students.map((s, i) => {
+    const analystUrl = s.accessToken ? `${BASE}/?token=${s.accessToken}` : ''
+    const parentUrl  = s.accessToken ? `${BASE}/?token=${s.accessToken}&view=parent` : ''
+    const sportYear  = [s.primarySport, s.targetEntryYear].filter(Boolean).join(' · ') || '—'
+    const parentInfo = s.parentName || s.parentEmail || '—'
+
+    return `
+    <tr id="row-${i}" onclick="rowClick(event,${i})">
+      <td class="name-cell">${s.name}${s.studentName && s.studentName !== s.name ? `<div style="font-size:11px;color:#555;margin-top:1px">${s.studentName}</div>` : ''}</td>
+      <td class="muted">${s.currentSchool || '—'}</td>
+      <td><span class="stage-badge ${stageClass(s.stage)}">${stageLabel(s.stage)}</span></td>
+      <td class="muted">${sportYear}</td>
+      <td>
+        <div style="font-size:13px;color:#ccc">${s.parentName || '—'}</div>
+        ${s.parentEmail ? `<div style="font-size:11px;color:#555">${s.parentEmail}</div>` : ''}
+      </td>
+      <td><span class="${statusClass(s.status)}">${s.status || 'active'}</span></td>
+      <td style="text-align:right">
+        <div class="actions">
+          ${analystUrl ? `<button class="btn btn-portal" onclick="event.stopPropagation();window.open('${analystUrl}','_blank')">Open Portal</button>` : '<span style="color:#333;font-size:11px">No link</span>'}
+          ${parentUrl  ? `<button class="btn btn-copy" id="copy-${i}" onclick="event.stopPropagation();copyParentLink(${i},'${parentUrl}')">Copy Parent Link</button>` : ''}
+          <button class="btn btn-edit" onclick="event.stopPropagation();toggleEdit(${i})">Edit</button>
+          <button class="btn btn-delete" onclick="event.stopPropagation();showDelete(${i})">Delete</button>
+        </div>
+      </td>
+    </tr>
+    <tr class="edit-row" id="edit-row-${i}">
+      <td colspan="7">
+        <div class="edit-grid">
+          <div class="edit-field">
+            <label>Student Name</label>
+            <input id="ef-name-${i}" value="${esc(s.studentName)}" placeholder="Full name" />
+          </div>
+          <div class="edit-field">
+            <label>Preferred Name</label>
+            <input id="ef-pname-${i}" value="${esc(s.preferredName)}" placeholder="Preferred name" />
+          </div>
+          <div class="edit-field">
+            <label>Parent Name</label>
+            <input id="ef-parent-${i}" value="${esc(s.parentName)}" placeholder="Parent / guardian name" />
+          </div>
+          <div class="edit-field">
+            <label>Parent Email</label>
+            <input id="ef-email-${i}" value="${esc(s.parentEmail)}" placeholder="parent@email.com" type="email" />
+          </div>
+          <div class="edit-field">
+            <label>Parent Phone</label>
+            <input id="ef-phone-${i}" value="${esc(s.parentPhone)}" placeholder="+66 81 234 5678" />
+          </div>
+          <div class="edit-field">
+            <label>Status</label>
+            <select id="ef-status-${i}">
+              <option value="active"   ${s.status==='active'   ?'selected':''}>Active</option>
+              <option value="prospect" ${s.status==='prospect' ?'selected':''}>Prospect</option>
+              <option value="inactive" ${s.status==='inactive' ?'selected':''}>Inactive</option>
+              <option value="enrolled" ${s.status==='enrolled' ?'selected':''}>Enrolled</option>
+            </select>
+          </div>
+          <div class="edit-field">
+            <label>Current School</label>
+            <input id="ef-school-${i}" value="${esc(s.currentSchool)}" placeholder="Current school name" />
+          </div>
+          <div class="edit-field">
+            <label>Target Entry Year</label>
+            <input id="ef-year-${i}" value="${esc(s.targetEntryYear)}" placeholder="2026" />
+          </div>
+        </div>
+        <div class="edit-actions">
+          <button class="btn btn-save" onclick="saveEdit(${i})">Save</button>
+          <button class="btn btn-cancel" onclick="toggleEdit(${i})">Cancel</button>
+          <span class="edit-msg" id="edit-msg-${i}"></span>
+        </div>
+        <div class="del-confirm" id="del-confirm-${i}">
+          Remove <strong>${esc(s.name)}</strong> permanently? This cannot be undone.
+          <div class="del-confirm-btns">
+            <button class="btn-confirm-del" onclick="deleteStudent(${i})">Yes, delete</button>
+            <button class="btn-no-del" onclick="hideDelete(${i})">Cancel</button>
+          </div>
+        </div>
+      </td>
+    </tr>`
+  }).join('')
+}
+
+// ── Row click — expand edit row ───────────────────────────────────────────────
+function rowClick(event, i) {
+  // Only expand if clicking on the row itself (not a button)
+  if (event.target.tagName === 'BUTTON') return
+  toggleEdit(i)
+}
+
+function toggleEdit(i) {
+  const editRow = document.getElementById(`edit-row-${i}`)
+  const row = document.getElementById(`row-${i}`)
+  const isOpen = editRow.classList.contains('open')
+  // Close all other edit rows
+  document.querySelectorAll('.edit-row.open').forEach(r => r.classList.remove('open'))
+  document.querySelectorAll('tbody tr:not(.edit-row)').forEach(r => r.classList.remove('editing'))
+  if (!isOpen) {
+    editRow.classList.add('open')
+    row.classList.add('editing')
+  }
+}
+
+// ── Save edit ─────────────────────────────────────────────────────────────────
+async function saveEdit(i) {
+  const s = students[i]
+  const msg = document.getElementById(`edit-msg-${i}`)
+  msg.textContent = 'Saving…'
+  msg.style.color = '#B8962E'
+
+  const updates = {
+    student_id:      s.id,
+    student_name:    document.getElementById(`ef-name-${i}`).value.trim(),
+    preferred_name:  document.getElementById(`ef-pname-${i}`).value.trim(),
+    parent_name:     document.getElementById(`ef-parent-${i}`).value.trim(),
+    parent_email:    document.getElementById(`ef-email-${i}`).value.trim(),
+    parent_phone:    document.getElementById(`ef-phone-${i}`).value.trim(),
+    status:          document.getElementById(`ef-status-${i}`).value,
+    current_school:  document.getElementById(`ef-school-${i}`).value.trim(),
+    target_entry_year: document.getElementById(`ef-year-${i}`).value.trim(),
+  }
+
+  try {
+    const res = await fetch('/api/update-student', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+      body: JSON.stringify(updates)
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Save failed')
+
+    // Update local data
+    students[i] = { ...s,
+      studentName:    updates.student_name,
+      preferredName:  updates.preferred_name,
+      name:           updates.preferred_name || updates.student_name || s.name,
+      parentName:     updates.parent_name,
+      parentEmail:    updates.parent_email,
+      parentPhone:    updates.parent_phone,
+      status:         updates.status,
+      currentSchool:  updates.current_school,
+      targetEntryYear: updates.target_entry_year,
+    }
+
+    msg.textContent = 'Saved'
+    msg.style.color = '#27ae60'
+    setTimeout(() => { renderTable() }, 800)
+
+  } catch (err) {
+    msg.textContent = 'Error: ' + err.message
+    msg.style.color = '#e74c3c'
+  }
+}
+
+// ── Delete ────────────────────────────────────────────────────────────────────
+function showDelete(i) {
+  // Ensure edit row is open first
+  const editRow = document.getElementById(`edit-row-${i}`)
+  const row = document.getElementById(`row-${i}`)
+  if (!editRow.classList.contains('open')) {
+    document.querySelectorAll('.edit-row.open').forEach(r => r.classList.remove('open'))
+    document.querySelectorAll('tbody tr:not(.edit-row)').forEach(r => r.classList.remove('editing'))
+    editRow.classList.add('open')
+    row.classList.add('editing')
+  }
+  document.getElementById(`del-confirm-${i}`).classList.add('show')
+}
+
+function hideDelete(i) {
+  document.getElementById(`del-confirm-${i}`).classList.remove('show')
+}
+
+async function deleteStudent(i) {
+  const s = students[i]
+  try {
+    const res = await fetch('/api/delete-student', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+      body: JSON.stringify({ student_id: s.id })
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Delete failed')
+
+    students.splice(i, 1)
+    renderTable()
+  } catch (err) {
+    alert('Delete failed: ' + err.message)
+  }
+}
+
+// ── Copy parent link ──────────────────────────────────────────────────────────
+function copyParentLink(i, url) {
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById(`copy-${i}`)
+    if (!btn) return
+    btn.textContent = 'Copied'
+    btn.classList.add('copied')
+    setTimeout(() => { btn.textContent = 'Copy Parent Link'; btn.classList.remove('copied') }, 2000)
+  })
+}
+
+// ── Util ──────────────────────────────────────────────────────────────────────
+function esc(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+initAuth()
+</script>
+</body>
+</html>
