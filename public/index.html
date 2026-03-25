@@ -7225,187 +7225,149 @@ function renderToolsTab(results) {
   const el = $id('tools-content')
   if (!el) return
 
-  const toolLabels = {
-    'fee-calculator': 'Fee Calculator',
-    'school-comparison': 'School Comparison',
-    'personality-match': 'Personality Match',
-    'culture-fit': 'Culture Fit Assessor',
-    'sports-pathway': 'Sports Pathway'
-  }
-
   const toolLinks = {
-    'fee-calculator': 'https://linkeduth.netlify.app/tools/fees-calculator-v2c.html',
+    'fee-calculator':    'https://linkeduth.netlify.app/tools/fees-calculator-v2c.html',
     'school-comparison': 'https://linkeduth.netlify.app/tools/school-comparison.html',
     'personality-match': 'https://linkeduth.netlify.app/tools/personality-match.html',
-    'culture-fit': 'https://linkeduth.netlify.app/tools/boarding-school-culture-fit-assessor.html',
-    'sports-pathway': 'https://linkeduth.netlify.app/tools/sports-pathway.html'
+    'culture-fit':       'https://linkeduth.netlify.app/tools/boarding-school-culture-fit-assessor.html',
+    'sports-pathway':    'https://linkeduth.netlify.app/tools/sports-pathway.html'
   }
 
-  // ── Shared card styles ──────────────────────────────────────────────────────
-  const cardStyle = `background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;padding:28px 32px;margin-bottom:24px;max-width:720px`
-  const labelStyle = `font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:#B8962E;margin-bottom:4px`
-  const cardTitle = `font-family:'Playfair Display',serif;font-size:1.15rem;color:#eee;margin-bottom:4px;font-weight:600`
-  const dateStyle = `font-size:11px;color:#555;margin-bottom:20px`
-  const retakeStyle = `font-size:12px;color:#B8962E;text-decoration:none;display:inline-block;margin-top:16px`
-
-  // ── Bar chart (horizontal, SVG) ─────────────────────────────────────────────
-  function barChart(schools, uniqueId) {
-    if (!schools || schools.length === 0) return '<div style="color:#555;font-size:13px">No school data saved</div>'
-    const maxScore = Math.max(...schools.map(s => s.score || 0), 1)
-    const rows = schools.map((s, i) => {
-      const pct = maxScore > 0 ? Math.round((s.score / maxScore) * 100) : 0
-      const barId = `bar-${uniqueId}-${i}`
-      return `
-        <g transform="translate(0,${i * 36})">
-          <text x="0" y="16" font-family="'Inter',sans-serif" font-size="12" fill="#aaa" dominant-baseline="middle">${escHtml(s.name || '')}</text>
-          <rect x="190" y="4" width="0" height="18" rx="2" fill="#2a2a2a" id="${barId}-bg"/>
-          <rect x="190" y="4" width="${pct * 2.4}" height="18" rx="2" fill="#B8962E" id="${barId}" style="transition:width 0.8s ease"/>
-          <text x="${190 + pct * 2.4 + 6}" y="16" font-family="'Inter',sans-serif" font-size="11" fill="#B8962E" dominant-baseline="middle">${s.score || 0}%</text>
-        </g>
-      `
-    }).join('')
-    const svgH = schools.length * 36 + 8
-    setTimeout(() => {
-      schools.forEach((s, i) => {
-        const el = document.getElementById(`bar-${uniqueId}-${i}`)
-        if (el) {
-          el.style.width = '0'
-          requestAnimationFrame(() => {
-            const pct = maxScore > 0 ? Math.round((s.score / maxScore) * 100) : 0
-            el.style.width = (pct * 2.4) + 'px'
-          })
-        }
-      })
-    }, 80)
-    return `<svg width="100%" viewBox="0 0 440 ${svgH}" style="display:block;overflow:visible">${rows}</svg>`
-  }
-
-  // ── Spider/radar chart (SVG, hexagonal) ─────────────────────────────────────
-  function spiderChart(dimensions) {
-    if (!dimensions) return ''
-    const dims = [
-      { key: 'structure', label: 'Structure' },
-      { key: 'independence', label: 'Independence' },
-      { key: 'social', label: 'Social' },
-      { key: 'academics', label: 'Academics' },
-      { key: 'co_curricular', label: 'Co-curricular' },
-      { key: 'support', label: 'Support' }
-    ]
-    const cx = 140, cy = 130, r = 90
-    const n = dims.length
-    const angleStep = (2 * Math.PI) / n
-    const startAngle = -Math.PI / 2
-
-    function pt(i, radius) {
-      const a = startAngle + i * angleStep
-      return { x: cx + radius * Math.cos(a), y: cy + radius * Math.sin(a) }
-    }
-
-    // Background grid rings
-    const rings = [0.25, 0.5, 0.75, 1.0].map(f => {
-      const pts = dims.map((_, i) => pt(i, r * f))
-      return `<polygon points="${pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')}" fill="none" stroke="#2a2a2a" stroke-width="1"/>`
-    }).join('')
-
-    // Axis lines
-    const axes = dims.map((_, i) => {
-      const p = pt(i, r)
-      return `<line x1="${cx}" y1="${cy}" x2="${p.x.toFixed(1)}" y2="${p.y.toFixed(1)}" stroke="#2a2a2a" stroke-width="1"/>`
-    }).join('')
-
-    // Data polygon
-    const dataPts = dims.map((d, i) => {
-      const val = Math.min(100, Math.max(0, dimensions[d.key] || 0))
-      return pt(i, r * (val / 100))
-    })
-    const polygon = `<polygon points="${dataPts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')}" fill="#B8962E" fill-opacity="0.25" stroke="#B8962E" stroke-width="2"/>`
-
-    // Dot markers
-    const dots = dataPts.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="#B8962E"/>`).join('')
-
-    // Labels
-    const labels = dims.map((d, i) => {
-      const labelR = r + 22
-      const p = pt(i, labelR)
-      const anchor = p.x < cx - 5 ? 'end' : p.x > cx + 5 ? 'start' : 'middle'
-      return `<text x="${p.x.toFixed(1)}" y="${p.y.toFixed(1)}" font-family="'Inter',sans-serif" font-size="10" fill="#888" text-anchor="${anchor}" dominant-baseline="middle">${d.label}</text>`
-    }).join('')
-
-    return `<svg width="280" height="260" viewBox="0 0 280 260" style="display:block;margin:0 auto">${rings}${axes}${polygon}${dots}${labels}</svg>`
-  }
-
-  // ── Score circle ─────────────────────────────────────────────────────────────
-  function scoreCircle(score) {
-    const s = Math.min(100, Math.max(0, score || 0))
-    const r = 48, cx = 60, cy = 60
-    const circ = 2 * Math.PI * r
-    const dash = (s / 100) * circ
-    return `
-      <svg width="120" height="120" viewBox="0 0 120 120" style="display:block">
-        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#2a2a2a" stroke-width="8"/>
-        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#B8962E" stroke-width="8"
-          stroke-dasharray="${dash.toFixed(1)} ${circ.toFixed(1)}"
-          stroke-dashoffset="${(circ * 0.25).toFixed(1)}"
-          stroke-linecap="round"
-          transform="rotate(-90 ${cx} ${cy})"/>
-        <text x="${cx}" y="${cy}" font-family="'Playfair Display',serif" font-size="18" fill="#B8962E" text-anchor="middle" dominant-baseline="central">${s}%</text>
-      </svg>
-    `
-  }
+  // ── Portal design tokens (matches the rest of the portal) ───────────────────
+  const card    = `background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:28px 32px;margin-bottom:20px;max-width:760px`
+  const lbl     = `font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--gold);font-weight:700;margin-bottom:6px`
+  const heading = `font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--text);font-weight:600;margin-bottom:4px`
+  const sub     = `font-size:12px;color:var(--muted2);margin-bottom:20px`
+  const retake  = `display:inline-block;margin-top:20px;padding:9px 20px;background:var(--gold);color:#111;border-radius:4px;font-size:13px;font-weight:600;text-decoration:none`
+  const noData  = `<div style="padding:20px 24px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;border-left:3px solid var(--gold)">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold);margin-bottom:6px">No data saved for this section</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Re-take the assessment to generate your results, or speak with a consultant for a personalised report.</p>
+      <a href="https://linkeduth.netlify.app/contact.html" target="_blank" style="font-size:13px;font-weight:600;color:var(--gold);text-decoration:none">Book a free consultation \u2192</a>
+    </div>`
 
   // ── Format currency ──────────────────────────────────────────────────────────
   function fmtGBP(n) {
-    if (!n) return '—'
+    if (!n) return '\u2014'
     return '\u00a3' + Number(n).toLocaleString('en-GB')
   }
 
-  // ── Per-tool card renderers ──────────────────────────────────────────────────
+  // ── Bar chart — light background, gold bars ─────────────────────────────────
+  function barChart(schools, uid) {
+    if (!schools || schools.length === 0) return noData
+    const maxScore = Math.max(...schools.map(s => s.score || 0), 1)
+    const ROW_H = 40, LABEL_W = 180, BAR_W = 240
+    const rows = schools.map((s, i) => {
+      const pct = Math.round((s.score / maxScore) * 100)
+      const barPx = Math.round(pct * BAR_W / 100)
+      const bid = `bc-${uid}-${i}`
+      return `
+        <g transform="translate(0,${i * ROW_H})">
+          <text x="${LABEL_W - 8}" y="${ROW_H / 2}" font-family="Inter,sans-serif" font-size="13" fill="#1a1a1a" text-anchor="end" dominant-baseline="middle">${escHtml((s.name || '').substring(0, 28))}</text>
+          <rect x="${LABEL_W}" y="${ROW_H/2 - 9}" width="${BAR_W}" height="18" rx="3" fill="rgba(0,0,0,0.06)"/>
+          <rect x="${LABEL_W}" y="${ROW_H/2 - 9}" width="${barPx}" height="18" rx="3" fill="var(--gold)" id="${bid}"/>
+          <text x="${LABEL_W + barPx + 6}" y="${ROW_H/2}" font-family="Inter,sans-serif" font-size="12" fill="var(--gold)" dominant-baseline="middle" font-weight="600">${pct}%</text>
+        </g>`
+    }).join('')
+    const svgH = schools.length * ROW_H + 4
+    setTimeout(() => schools.forEach((s, i) => {
+      const el = document.getElementById(`bc-${uid}-${i}`)
+      if (el) { const w = el.getAttribute('width'); el.setAttribute('width','0'); requestAnimationFrame(() => el.setAttribute('width', w)) }
+    }), 60)
+    return `<svg width="100%" viewBox="0 0 ${LABEL_W + BAR_W + 60} ${svgH}" style="display:block;overflow:visible">${rows}</svg>`
+  }
+
+  // ── Spider chart — light background ─────────────────────────────────────────
+  function spiderChart(dimensions) {
+    if (!dimensions) return noData
+    const dims = [
+      { key: 'structure', label: 'Structure' }, { key: 'independence', label: 'Independence' },
+      { key: 'social', label: 'Social' }, { key: 'academics', label: 'Academics' },
+      { key: 'co_curricular', label: 'Co-curricular' }, { key: 'support', label: 'Support' }
+    ]
+    const cx = 140, cy = 120, r = 85, n = dims.length
+    const step = (2 * Math.PI) / n, start = -Math.PI / 2
+    const pt = (i, rad) => ({ x: cx + rad * Math.cos(start + i * step), y: cy + rad * Math.sin(start + i * step) })
+    const rings = [0.25, 0.5, 0.75, 1.0].map(f => {
+      const pts = dims.map((_, i) => pt(i, r * f))
+      return `<polygon points="${pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')}" fill="none" stroke="rgba(0,0,0,0.08)" stroke-width="1"/>`
+    }).join('')
+    const axes = dims.map((_, i) => { const p = pt(i, r); return `<line x1="${cx}" y1="${cy}" x2="${p.x.toFixed(1)}" y2="${p.y.toFixed(1)}" stroke="rgba(0,0,0,0.08)" stroke-width="1"/>` }).join('')
+    const dataPts = dims.map((d, i) => pt(i, r * (Math.min(100, Math.max(0, dimensions[d.key] || 0)) / 100)))
+    const polygon = `<polygon points="${dataPts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')}" fill="rgba(184,150,46,0.15)" stroke="var(--gold)" stroke-width="2"/>`
+    const dots = dataPts.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="var(--gold)"/>`).join('')
+    const labels = dims.map((d, i) => {
+      const p = pt(i, r + 22)
+      const anchor = p.x < cx - 5 ? 'end' : p.x > cx + 5 ? 'start' : 'middle'
+      return `<text x="${p.x.toFixed(1)}" y="${p.y.toFixed(1)}" font-family="Inter,sans-serif" font-size="11" fill="var(--muted)" text-anchor="${anchor}" dominant-baseline="middle">${d.label}</text>`
+    }).join('')
+    return `<svg width="280" height="250" viewBox="0 0 280 250" style="display:block;margin:0 auto">${rings}${axes}${polygon}${dots}${labels}</svg>`
+  }
+
+  // ── Score circle — light background ─────────────────────────────────────────
+  function scoreCircle(score) {
+    const s = Math.min(100, Math.max(0, score || 0))
+    const r = 46, cx = 58, cy = 58
+    const circ = 2 * Math.PI * r
+    const dash = (s / 100) * circ
+    return `
+      <svg width="116" height="116" viewBox="0 0 116 116">
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(0,0,0,0.08)" stroke-width="8"/>
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--gold)" stroke-width="8"
+          stroke-dasharray="${dash.toFixed(1)} ${circ.toFixed(1)}"
+          stroke-dashoffset="${(circ * 0.25).toFixed(1)}"
+          stroke-linecap="round" transform="rotate(-90 ${cx} ${cy})"/>
+        <text x="${cx}" y="${cy}" font-family="'Playfair Display',serif" font-size="17" fill="var(--gold)" text-anchor="middle" dominant-baseline="central" font-weight="600">${s}%</text>
+      </svg>`
+  }
+
+  // ── Per-tool result card renderers ───────────────────────────────────────────
   function cardPersonalityMatch(r) {
     const d = r.result_data || {}
     const schools = d.topSchools || []
     const hasScores = schools.length > 0 && typeof schools[0] === 'object' && schools[0].score > 0
     const schoolsNorm = hasScores ? schools : schools.map((s, i) => ({ name: typeof s === 'string' ? s : s.name, score: Math.max(100 - i * 15, 25) }))
+    const chart = schoolsNorm.length > 0 ? barChart(schoolsNorm, 'pm-' + (r.id || Math.random().toString(36).slice(2))) : noData
     return `
-      <div style="${cardStyle}">
-        <div style="${labelStyle}">Personality Match</div>
-        <div style="${cardTitle}">Your top school matches</div>
-        <div style="${dateStyle}">Saved ${fmtDate(r.updated_at)}</div>
-        ${barChart(schoolsNorm, 'pm-' + (r.id || Math.random().toString(36).slice(2)))}
-        <a href="${toolLinks['personality-match']}" target="_blank" style="${retakeStyle}">Re-take tool &rarr;</a>
-      </div>
-    `
+      <div style="${card}">
+        <div style="${lbl}">Personality Match</div>
+        <div style="${heading}">Your top school matches</div>
+        <div style="${sub}">Saved ${fmtDate(r.updated_at)}</div>
+        <div style="padding-right:8px">${chart}</div>
+        <a href="${toolLinks['personality-match']}" target="_blank" style="${retake}">Re-take assessment \u2192</a>
+      </div>`
   }
 
   function cardFeeCalculator(r) {
     const d = r.result_data || {}
     const annual = d.annualBudget || d.budget || 0
-    const term = d.termBudget || Math.round(annual / 3)
+    const term   = d.termBudget   || Math.round(annual / 3)
     const monthly = d.monthBudget || Math.round(annual / 12)
-    const rate = d.rate ? ' at \u0e3f' + Number(d.rate).toLocaleString() + '/\u00a3' : ''
-    const school = d.selectedSchool ? `<div style="font-size:13px;color:#888;margin-top:8px">${escHtml(d.selectedSchool)}${rate}</div>` : (rate ? `<div style="font-size:13px;color:#888;margin-top:8px">${rate}</div>` : '')
-    return `
-      <div style="${cardStyle}">
-        <div style="${labelStyle}">Fee Calculator</div>
-        <div style="${cardTitle}">Budget breakdown</div>
-        <div style="${dateStyle}">Saved ${fmtDate(r.updated_at)}</div>
-        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px">
-          <div style="flex:1;min-width:120px;background:#111;border:1px solid #2a2a2a;border-radius:6px;padding:16px 20px;text-align:center">
-            <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#555;margin-bottom:6px">Annual</div>
-            <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#B8962E;font-weight:600">${fmtGBP(annual)}</div>
-          </div>
-          <div style="flex:1;min-width:120px;background:#111;border:1px solid #2a2a2a;border-radius:6px;padding:16px 20px;text-align:center">
-            <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#555;margin-bottom:6px">Per Term</div>
-            <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#eee;font-weight:600">${fmtGBP(term)}</div>
-          </div>
-          <div style="flex:1;min-width:120px;background:#111;border:1px solid #2a2a2a;border-radius:6px;padding:16px 20px;text-align:center">
-            <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#555;margin-bottom:6px">Per Month</div>
-            <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#eee;font-weight:600">${fmtGBP(monthly)}</div>
-          </div>
+    const rate   = d.rate ? ' \u00b7 \u0e3f' + Number(d.rate).toLocaleString() + '/\u00a3' : ''
+    const schoolLine = d.selectedSchool ? `<div style="font-size:13px;color:var(--muted);margin-top:10px">${escHtml(d.selectedSchool)}${rate}</div>` : (rate ? `<div style="font-size:13px;color:var(--muted);margin-top:10px">${rate}</div>` : '')
+    const budgetBoxes = annual ? `
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:4px">
+        <div style="flex:1;min-width:130px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:18px 20px;text-align:center">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted2);margin-bottom:6px">Annual</div>
+          <div style="font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--gold);font-weight:600">${fmtGBP(annual)}</div>
         </div>
-        ${school}
-        <a href="${toolLinks['fee-calculator']}" target="_blank" style="${retakeStyle}">Re-take tool &rarr;</a>
+        <div style="flex:1;min-width:130px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:18px 20px;text-align:center">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted2);margin-bottom:6px">Per Term</div>
+          <div style="font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--text);font-weight:600">${fmtGBP(term)}</div>
+        </div>
+        <div style="flex:1;min-width:130px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:18px 20px;text-align:center">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted2);margin-bottom:6px">Per Month</div>
+          <div style="font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--text);font-weight:600">${fmtGBP(monthly)}</div>
+        </div>
       </div>
-    `
+      ${schoolLine}` : noData
+    return `
+      <div style="${card}">
+        <div style="${lbl}">Fee Calculator</div>
+        <div style="${heading}">Budget breakdown</div>
+        <div style="${sub}">Saved ${fmtDate(r.updated_at)}</div>
+        ${budgetBoxes}
+        <a href="${toolLinks['fee-calculator']}" target="_blank" style="${retake}">Re-take assessment \u2192</a>
+      </div>`
   }
 
   function cardSportsPathway(r) {
@@ -7414,85 +7376,90 @@ function renderToolsTab(results) {
     const schools = d.topSchools || []
     const hasScores = schools.length > 0 && typeof schools[0] === 'object' && schools[0].score > 0
     const schoolsNorm = hasScores ? schools : schools.map((s, i) => ({ name: typeof s === 'string' ? s : s.name, score: Math.max(100 - i * 15, 25) }))
+    const chart = schoolsNorm.length > 0 ? barChart(schoolsNorm, 'sp-' + (r.id || Math.random().toString(36).slice(2))) : noData
     return `
-      <div style="${cardStyle}">
-        <div style="${labelStyle}">Sports Pathway</div>
-        ${sport ? `<div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#eee;margin-bottom:4px;font-weight:600">${escHtml(sport)}</div>` : `<div style="${cardTitle}">Top schools for your sport</div>`}
-        <div style="${dateStyle}">Saved ${fmtDate(r.updated_at)}</div>
-        ${barChart(schoolsNorm, 'sp-' + (r.id || Math.random().toString(36).slice(2)))}
-        <a href="${toolLinks['sports-pathway']}" target="_blank" style="${retakeStyle}">Re-take tool &rarr;</a>
-      </div>
-    `
+      <div style="${card}">
+        <div style="${lbl}">Sports Pathway</div>
+        <div style="${heading}">${sport ? escHtml(sport) + ' — top UK boarding schools' : 'Top schools for your sport'}</div>
+        <div style="${sub}">Saved ${fmtDate(r.updated_at)}</div>
+        <div style="padding-right:8px">${chart}</div>
+        <a href="${toolLinks['sports-pathway']}" target="_blank" style="${retake}">Re-take assessment \u2192</a>
+      </div>`
   }
 
   function cardCultureFit(r) {
     const d = r.result_data || {}
     const scoreVal = typeof d.score === 'number' ? d.score : parseInt((d.score || '').replace('%', '')) || 0
     const dims = d.dimensions || null
+    const hasData = scoreVal > 0 || dims
     return `
-      <div style="${cardStyle}">
-        <div style="${labelStyle}">Culture Fit Assessor</div>
-        <div style="${cardTitle}">How well your child fits UK boarding school</div>
-        <div style="${dateStyle}">Saved ${fmtDate(r.updated_at)}</div>
-        <div style="display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap">
-          <div style="flex-shrink:0;text-align:center">
-            ${scoreCircle(scoreVal)}
-            <div style="font-size:11px;color:#555;margin-top:4px">Overall Fit</div>
-          </div>
-          <div style="flex:1;min-width:240px">
-            ${dims ? spiderChart(dims) : '<div style="color:#555;font-size:13px;padding-top:20px">Re-take the tool to see your dimension breakdown.</div>'}
-          </div>
-        </div>
-        <a href="${toolLinks['culture-fit']}" target="_blank" style="${retakeStyle}">Re-take tool &rarr;</a>
-      </div>
-    `
+      <div style="${card}">
+        <div style="${lbl}">Culture Fit Assessor</div>
+        <div style="${heading}">UK boarding school readiness</div>
+        <div style="${sub}">Saved ${fmtDate(r.updated_at)}</div>
+        ${hasData ? `
+          <div style="display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap">
+            <div style="flex-shrink:0;text-align:center">
+              ${scoreCircle(scoreVal)}
+              <div style="font-size:11px;color:var(--muted2);margin-top:6px;text-transform:uppercase;letter-spacing:0.08em">Overall Fit</div>
+            </div>
+            <div style="flex:1;min-width:220px">
+              ${dims ? spiderChart(dims) : `<div style="padding-top:16px;color:var(--muted);font-size:13px">Re-take to see your dimension breakdown.</div>`}
+            </div>
+          </div>` : noData}
+        <a href="${toolLinks['culture-fit']}" target="_blank" style="${retake}">Re-take assessment \u2192</a>
+      </div>`
   }
 
   function cardSchoolComparison(r) {
     const d = r.result_data || {}
     const schools = (d.schools || []).map(s => typeof s === 'object' ? s : { name: s })
-    if (schools.length === 0) return cardGeneric(r)
+    if (schools.length === 0) return `
+      <div style="${card}">
+        <div style="${lbl}">School Comparison</div>
+        <div style="${heading}">Schools you compared</div>
+        <div style="${sub}">Saved ${fmtDate(r.updated_at)}</div>
+        ${noData}
+        <a href="${toolLinks['school-comparison']}" target="_blank" style="${retake}">Re-take assessment \u2192</a>
+      </div>`
     const rows = schools.map(s => `
-      <tr style="border-bottom:1px solid #1a1a1a">
-        <td style="padding:10px 12px;font-size:13px;color:#eee;font-weight:500">${escHtml(s.name || '')}</td>
-        <td style="padding:10px 12px;font-size:13px;color:#B8962E;text-align:right">${s.fee ? fmtGBP(s.fee) : '—'}</td>
-        <td style="padding:10px 12px;font-size:12px;color:#888;text-align:right">${s.academicLevel ? s.academicLevel + '% A-Level' : '—'}</td>
-        <td style="padding:10px 12px;font-size:12px;color:#666;text-align:right">${s.location ? escHtml(s.location) : ''}</td>
-      </tr>
-    `).join('')
+      <tr>
+        <td style="padding:12px 14px;font-size:14px;color:var(--text);font-weight:500;border-bottom:1px solid var(--border)">${escHtml(s.name || '')}</td>
+        <td style="padding:12px 14px;font-size:14px;color:var(--gold);font-weight:600;text-align:right;border-bottom:1px solid var(--border)">${s.fee ? fmtGBP(s.fee) : '\u2014'}</td>
+        <td style="padding:12px 14px;font-size:13px;color:var(--muted);text-align:right;border-bottom:1px solid var(--border)">${s.academicLevel ? s.academicLevel + '% A-Level' : '\u2014'}</td>
+        <td style="padding:12px 14px;font-size:13px;color:var(--muted2);text-align:right;border-bottom:1px solid var(--border)">${s.location ? escHtml(s.location) : ''}</td>
+      </tr>`).join('')
     return `
-      <div style="${cardStyle}">
-        <div style="${labelStyle}">School Comparison</div>
-        <div style="${cardTitle}">Schools you compared</div>
-        <div style="${dateStyle}">Saved ${fmtDate(r.updated_at)}</div>
-        <div style="overflow-x:auto;margin-top:8px">
+      <div style="${card}">
+        <div style="${lbl}">School Comparison</div>
+        <div style="${heading}">Schools you compared</div>
+        <div style="${sub}">Saved ${fmtDate(r.updated_at)}</div>
+        <div style="overflow-x:auto">
           <table style="width:100%;border-collapse:collapse;min-width:400px">
             <thead>
-              <tr style="border-bottom:1px solid #2a2a2a">
-                <th style="padding:8px 12px;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#555;text-align:left;font-weight:500">School</th>
-                <th style="padding:8px 12px;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#555;text-align:right;font-weight:500">Fees</th>
-                <th style="padding:8px 12px;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#555;text-align:right;font-weight:500">A-Level</th>
-                <th style="padding:8px 12px;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#555;text-align:right;font-weight:500">Location</th>
+              <tr style="border-bottom:2px solid var(--border)">
+                <th style="padding:10px 14px;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted2);text-align:left;font-weight:600">School</th>
+                <th style="padding:10px 14px;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted2);text-align:right;font-weight:600">Annual Fees</th>
+                <th style="padding:10px 14px;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted2);text-align:right;font-weight:600">Academic</th>
+                <th style="padding:10px 14px;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted2);text-align:right;font-weight:600">Location</th>
               </tr>
             </thead>
             <tbody>${rows}</tbody>
           </table>
         </div>
-        <a href="${toolLinks['school-comparison']}" target="_blank" style="${retakeStyle}">Re-take tool &rarr;</a>
-      </div>
-    `
+        <a href="${toolLinks['school-comparison']}" target="_blank" style="${retake}">Re-take assessment \u2192</a>
+      </div>`
   }
 
   function cardGeneric(r) {
     return `
-      <div style="${cardStyle}">
-        <div style="${labelStyle}">${toolLabels[r.tool_name] || r.tool_name}</div>
-        <div style="${cardTitle}">Saved result</div>
-        <div style="${dateStyle}">Saved ${fmtDate(r.updated_at)}</div>
-        <div style="font-size:13px;color:#aaa;line-height:1.6">${escHtml(r.result_summary || '\u2014')}</div>
-        <a href="${toolLinks[r.tool_name] || '#'}" target="_blank" style="${retakeStyle}">Re-take tool &rarr;</a>
-      </div>
-    `
+      <div style="${card}">
+        <div style="${lbl}">${escHtml(r.tool_label || r.tool_name)}</div>
+        <div style="${heading}">Saved result</div>
+        <div style="${sub}">Saved ${fmtDate(r.updated_at)}</div>
+        <div style="font-size:14px;color:var(--muted);line-height:1.7">${escHtml(r.result_summary || '\u2014')}</div>
+        <a href="${toolLinks[r.tool_name] || '#'}" target="_blank" style="${retake}">Re-take assessment \u2192</a>
+      </div>`
   }
 
   function renderCard(r) {
@@ -7506,78 +7473,75 @@ function renderToolsTab(results) {
     }
   }
 
-  // ── Browse & Explore tools (shown in empty state only) ───────────────────────
-  const browseTools = [
-    { label: 'Culture Shock Readiness Quiz', link: 'https://linkeduth.netlify.app/tools/culture-shock-readiness-quiz.html' },
-    { label: 'Post-Study Visa Pathway', link: 'https://linkeduth.netlify.app/tools/post-study-visa-pathway.html' },
-    { label: 'Private vs State Boarding', link: 'https://linkeduth.netlify.app/tools/private-vs-state-boarding.html' },
-    { label: 'UK vs Thailand', link: 'https://linkeduth.netlify.app/tools/uk-vs-thailand.html' },
-    { label: 'Thai Student Packing Guide', link: 'https://linkeduth.netlify.app/tools/packing-guide.html' },
-    { label: 'Harrow vs Eton', link: 'https://linkeduth.netlify.app/tools/harrow-vs-eton.html' },
-    { label: 'Bromsgrove vs Rossall', link: 'https://linkeduth.netlify.app/tools/bromsgrove-vs-rossall.html' },
-    { label: 'Concord vs Cardiff', link: 'https://linkeduth.netlify.app/tools/concord-vs-cardiff.html' },
-    { label: 'Millfield vs Rossall Sports', link: 'https://linkeduth.netlify.app/tools/millfield-vs-rossall-sports.html' },
-    { label: 'OIC vs Cardiff vs Concord', link: 'https://linkeduth.netlify.app/tools/oic-vs-cardiff-vs-concord.html' },
+  // ── Five confirmed tools (empty state grid) ───────────────────────────────────
+  const fiveTools = [
+    { key: 'personality-match', label: 'School Personality Match',    desc: 'Find which UK boarding schools match your child\'s personality and learning style.' },
+    { key: 'fee-calculator',    label: 'UK Fees Calculator',          desc: 'Calculate your annual, term and monthly budget for any UK boarding school.' },
+    { key: 'culture-fit',       label: 'Culture Fit Assessor',        desc: 'Discover how well your child is suited to UK boarding school life before you apply.' },
+    { key: 'sports-pathway',    label: 'Sports Pathway Finder',       desc: 'Find UK boarding schools with the best facilities for your child\'s sport.' },
+    { key: 'school-comparison', label: 'School Comparison Tool',      desc: 'Compare two or more UK boarding schools side by side on fees, academics and sport.' },
   ]
+
+  // ── Consultation CTA box ──────────────────────────────────────────────────────
+  const consultaCTA = `
+    <div style="max-width:760px;margin-top:12px;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:4px;padding:24px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
+      <div>
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--gold);font-weight:700;margin-bottom:6px">Ready for a full consultation?</div>
+        <p style="font-size:14px;color:var(--text);margin-bottom:0;max-width:480px">Get a personalised school report and expert guidance from a LINKEDU consultant.</p>
+      </div>
+      <a href="https://linkeduth.netlify.app/contact.html" target="_blank" style="flex-shrink:0;padding:11px 28px;background:var(--gold);color:#111;border-radius:4px;font-size:13px;font-weight:700;text-decoration:none;letter-spacing:0.03em">Book a Free Consultation \u2192</a>
+    </div>`
 
   // ── Empty state ──────────────────────────────────────────────────────────────
   if (!results || results.length === 0) {
     el.innerHTML = `
-      <div style="padding:40px 32px">
-        <p class="sec-label">My Saved Tools</p>
-        <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;margin-bottom:8px;color:var(--text)">No saved results yet</h2>
-        <p style="color:var(--muted);font-size:14px;margin-bottom:32px">Use the free tools on the LinkedU website and save your results to see them here.</p>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px">
-          ${Object.entries(toolLabels).map(([key, label]) => `
-            <a href="${toolLinks[key]}" target="_blank" style="display:block;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:8px;text-decoration:none;transition:border-color 0.2s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border)'">
-              <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--gold);margin-bottom:6px">Tool</div>
-              <div style="font-family:'Playfair Display',serif;font-size:15px;color:var(--text);margin-bottom:8px">${label}</div>
-              <div style="font-size:12px;color:var(--gold)">Try now \u2192</div>
+      <div style="padding:40px 32px 48px">
+        <div class="section-title">My Assessment Tools</div>
+        <h2 style="font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--text);margin-bottom:8px">No saved results yet</h2>
+        <p style="font-size:14px;color:var(--muted);margin-bottom:32px;max-width:520px">Complete any of the five assessments below to get personalised results. Your results will appear here automatically when you save them.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;max-width:900px;margin-bottom:40px">
+          ${fiveTools.map(t => `
+            <a href="${toolLinks[t.key]}" target="_blank" style="display:flex;flex-direction:column;padding:24px 26px;background:var(--surface);border:1px solid var(--border);border-radius:6px;text-decoration:none;transition:border-color 0.2s;cursor:pointer" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border)'">
+              <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--gold);font-weight:700;margin-bottom:10px">Free Assessment</div>
+              <div style="font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--text);font-weight:600;margin-bottom:10px;line-height:1.4">${t.label}</div>
+              <div style="font-size:13px;color:var(--muted);line-height:1.6;flex:1;margin-bottom:18px">${t.desc}</div>
+              <div style="font-size:13px;font-weight:700;color:var(--gold)">Start Assessment \u2192</div>
             </a>
           `).join('')}
         </div>
-        <div style="margin-top:40px;margin-bottom:8px">
-          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.15em;color:#B8962E;margin-bottom:16px">Browse &amp; Explore</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
-            ${browseTools.map(t => `
-              <a href="${t.link}" target="_blank" style="display:block;padding:16px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;text-decoration:none;transition:border-color 0.2s" onmouseover="this.style.borderColor='#B8962E'" onmouseout="this.style.borderColor='#2a2a2a'">
-                <div style="font-size:13px;color:#eee;margin-bottom:8px;line-height:1.4">${t.label}</div>
-                <div style="font-size:12px;color:#B8962E">Explore \u2192</div>
-              </a>
-            `).join('')}
-          </div>
-        </div>
-        <div style="margin-top:40px;padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-width:480px">
-          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--gold);margin-bottom:8px">Ready for a full consultation?</div>
-          <p style="font-size:14px;color:var(--text);margin-bottom:16px">Get a personalised school report and expert guidance from a LINKEDU consultant.</p>
-          <a href="https://linkeduth.netlify.app/contact.html" target="_blank" style="display:inline-block;padding:10px 24px;background:var(--gold);color:#111;border-radius:4px;font-size:13px;font-weight:600;text-decoration:none">Book a Free Consultation \u2192</a>
-        </div>
-      </div>
-    `
+        ${consultaCTA}
+      </div>`
     return
   }
 
   // ── Results state ─────────────────────────────────────────────────────────────
+  // Determine which of the 5 tools have NOT been saved yet
+  const savedKeys = new Set(results.map(r => r.tool_name))
+  const remaining = fiveTools.filter(t => !savedKeys.has(t.key))
+
   el.innerHTML = `
-    <div style="padding:40px 32px">
-      <p class="sec-label">My Saved Tools</p>
-      <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;margin-bottom:28px;color:var(--text)">Your Results</h2>
-      <div style="max-width:720px">
+    <div style="padding:40px 32px 48px">
+      <div class="section-title">My Assessment Tools</div>
+      <h2 style="font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--text);margin-bottom:28px">Your Saved Results</h2>
+      <div style="max-width:760px">
         ${results.map(r => renderCard(r)).join('')}
       </div>
-      <div style="max-width:720px;margin-bottom:28px;padding:16px 20px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px">
-        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:#555;margin-bottom:10px">More tools to explore</div>
-        <div style="font-size:13px;color:#888;line-height:1.8">
-          ${browseTools.map(t => `<a href="${t.link}" target="_blank" style="color:#B8962E;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${t.label}</a>`).join(' &middot; ')}
-        </div>
-      </div>
-      <div style="padding:24px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;max-width:480px;margin-top:8px">
-        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:#B8962E;margin-bottom:8px">Ready for a full consultation?</div>
-        <p style="font-size:14px;color:#eee;margin-bottom:16px">Get a personalised school report and expert guidance from a LINKEDU consultant.</p>
-        <a href="https://linkeduth.netlify.app/contact.html" target="_blank" style="display:inline-block;padding:10px 24px;background:#B8962E;color:#111;border-radius:4px;font-size:13px;font-weight:600;text-decoration:none">Book a Free Consultation &rarr;</a>
-      </div>
-    </div>
-  `
+      ${remaining.length > 0 ? `
+        <div style="max-width:760px;margin-top:8px;margin-bottom:20px">
+          <div class="section-title" style="margin-top:32px">Complete Your Assessment</div>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:20px">You have ${remaining.length} assessment${remaining.length > 1 ? 's' : ''} remaining. Complete ${remaining.length > 1 ? 'them' : 'it'} for a full picture.</p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px">
+            ${remaining.map(t => `
+              <a href="${toolLinks[t.key]}" target="_blank" style="display:flex;flex-direction:column;padding:20px 22px;background:var(--surface);border:1px solid var(--border);border-radius:6px;text-decoration:none;transition:border-color 0.2s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border)'">
+                <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--gold);font-weight:700;margin-bottom:8px">Not yet done</div>
+                <div style="font-family:'Playfair Display',serif;font-size:1rem;color:var(--text);font-weight:600;margin-bottom:8px">${t.label}</div>
+                <div style="font-size:12px;color:var(--muted);line-height:1.5;flex:1;margin-bottom:14px">${t.desc}</div>
+                <div style="font-size:13px;font-weight:700;color:var(--gold)">Start now \u2192</div>
+              </a>`).join('')}
+          </div>
+        </div>` : ''}
+      ${consultaCTA}
+    </div>`
 }
 
 function renderFreePreviewTabs_DELETED() { return // removed — free users see full portal via renderAll()
