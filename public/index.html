@@ -1704,17 +1704,8 @@ async function createFreeAccount() {
 
 async function signOut() {
   await sb.auth.signOut()
-  D = null
-  golfRounds = []
-  isAnalystView = false
-  window._token = null
-  $id('app').classList.remove('visible')
-  $id('app').style.display = 'none'
-  const slScreen = $id('students-list-screen')
-  if (slScreen) slScreen.style.display = 'none'
-  resetAuthForm()
-  $id('auth-email').value = ''
-  $id('auth-screen').style.display = 'flex'
+  // Reload without URL params — token in URL bypasses auth screen, preventing re-login
+  window.location.href = window.location.pathname
 }
 
 // ── Enter key on email field ──────────────────────────────────────────────────
