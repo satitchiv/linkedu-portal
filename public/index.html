@@ -2355,6 +2355,14 @@ function renderJourney() {
     }
   }
 
+  if (!activeSchools.length && !campAppsAll.length) {
+    html = `<div style="text-align:center;padding:60px 20px">
+      <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px">No journey items yet</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Your consultant will add schools and milestones once your application begins.</div>
+      <button data-topic="Journey &amp; Applications" onclick="contactConsultant(this,'jny-empty')" style="padding:10px 24px;background:var(--gold);color:#111;border:none;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer">Contact Consultant</button>
+      <div id="contact-wrap-jny-empty"></div>
+    </div>`
+  }
   $id('journey-content').innerHTML = html
 }
 
@@ -6429,18 +6437,19 @@ function contactConsultant(btn, triggerId) {
   }
 
   wrap.innerHTML = `
-    <div style="background:#161616;border:1px solid #2a2a2a;border-radius:6px;padding:12px 14px;margin-top:8px">
-      <div style="font-size:12px;color:#eee;margin-bottom:4px">Notify your consultant about <strong style="color:#B8962E">${escHtml(topic)}</strong>?</div>
-      <div style="font-size:11px;color:#555;margin-bottom:10px">They will contact you at ${escHtml(D.student.parentPhone)}</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:4px;padding:16px 18px;margin-top:10px">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);margin-bottom:6px">Confirm contact request</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:4px">Notify your consultant about <strong style="color:var(--text)">${escHtml(topic)}</strong>.</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px">They will contact you at <strong style="color:var(--text)">${escHtml(D.student.parentPhone)}</strong>.</p>
       <div style="display:flex;gap:8px">
         <button id="contact-send-${triggerId}"
           data-topic="${escHtml(topic)}" data-triggerid="${escHtml(triggerId)}"
-          style="background:#B8962E;color:#111;border:none;border-radius:4px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer"
+          style="padding:9px 18px;background:var(--gold);color:#111;border:none;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer"
           onclick="_sendContactNotification(this)">Send</button>
-        <button style="background:none;border:1px solid #333;border-radius:4px;padding:5px 12px;font-size:11px;color:#666;cursor:pointer"
+        <button style="background:none;border:1px solid var(--border);border-radius:4px;padding:9px 16px;font-size:13px;color:var(--muted);cursor:pointer"
           onclick="document.getElementById('contact-wrap-${triggerId}').innerHTML=''">Cancel</button>
       </div>
-      <div id="contact-status-${triggerId}" style="font-size:11px;margin-top:6px"></div>
+      <div id="contact-status-${triggerId}" style="font-size:12px;margin-top:8px"></div>
     </div>`
 }
 
@@ -6719,8 +6728,16 @@ function _renderCommsList() {
   }
 
   if (_commsData.length === 0) {
-    const emptyMsg = isAnalystView ? 'No emails logged yet.' : 'No communications to display.'
-    html += `<div style="color:var(--muted2);font-size:13px;padding:16px 0">${emptyMsg}</div>`
+    if (isAnalystView) {
+      html += `<div style="color:var(--muted2);font-size:13px;padding:16px 0">No emails logged yet.</div>`
+    } else {
+      html += `<div style="text-align:center;padding:60px 20px">
+        <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px">No communications yet</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Your consultant will log email correspondence here once your application is active.</div>
+        <button data-topic="Communications &amp; Emails" onclick="contactConsultant(this,'comm-empty')" style="padding:10px 24px;background:var(--gold);color:#111;border:none;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer">Contact Consultant</button>
+        <div id="contact-wrap-comm-empty"></div>
+      </div>`
+    }
   } else {
     _commsData.forEach(c => { html += buildCommCard(c) })
   }
@@ -7975,7 +7992,7 @@ async function loadFreeUsers() {
     }
     const rows = users.map(u => `
       <tr style="border-bottom:1px solid #1a1a1a" onmouseover="this.style.background='#161616'" onmouseout="this.style.background=''">
-        <td style="padding:12px 0;font-size:13px;color:#eee">${u.email || '—'}</td>
+        <td style="padding:12px 0;font-size:13px;color:#1a1a1a">${u.email || '—'}</td>
         <td style="padding:12px 16px;font-size:13px;color:#aaa">${u.parent_name || '—'}</td>
         <td style="padding:12px 16px;font-size:13px;font-weight:600;color:${statusColor(u.status)}">${u.status}</td>
         <td style="padding:12px 16px;font-size:13px">
@@ -7985,8 +8002,13 @@ async function loadFreeUsers() {
         <td style="padding:12px 16px;font-size:12px;color:#555">${fmtDate(u.last_active)}</td>
         <td style="padding:12px 16px;font-size:12px;color:#555">${fmtDate(u.created_at)}</td>
         <td style="padding:12px 0 12px 16px;text-align:right">
-          <button id="notify-btn-${u.id}" onclick="notifyFreeUser('${u.email}','${u.status}',${u.tools_used},'${u.id}')"
-            style="background:none;border:1px solid #B8962E;color:#B8962E;padding:5px 12px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600;letter-spacing:0.04em">Notify</button>
+          <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
+            <button id="notify-btn-${u.id}" onclick="notifyFreeUser('${u.email}','${u.status}',${u.tools_used},'${u.id}')"
+              style="background:none;border:1px solid #B8962E;color:#B8962E;padding:5px 12px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600;letter-spacing:0.04em">Notify</button>
+            <button id="promote-btn-${u.id}" onclick="showPromoteForm('${u.id}','${u.email.replace(/'/g,"\\'").replace(/"/g,'&quot;')}','${(u.parent_name||'').replace(/'/g,"\\'").replace(/"/g,'&quot;')}')"
+              style="background:none;border:1px solid #555;color:#aaa;padding:5px 12px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600;letter-spacing:0.04em">Move to Student</button>
+          </div>
+          <div id="promote-form-${u.id}" style="display:none;margin-top:8px;text-align:left;min-width:260px"></div>
         </td>
       </tr>
     `).join('')
@@ -8042,6 +8064,69 @@ async function notifyFreeUser(email, status, toolCount, userId) {
     }
   } catch (err) {
     if (btn) { btn.textContent = 'Error'; btn.disabled = false }
+  }
+}
+
+function showPromoteForm(userId, email, parentName) {
+  const wrap = $id('promote-form-' + userId)
+  if (!wrap) return
+  if (wrap.style.display !== 'none') { wrap.style.display = 'none'; wrap.innerHTML = ''; return }
+  wrap.style.display = 'block'
+  wrap.innerHTML = `
+    <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;padding:12px 14px">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#B8962E;margin-bottom:10px">Create Student Record</div>
+      <div style="margin-bottom:8px">
+        <div style="font-size:10px;color:#555;margin-bottom:4px">Student Name</div>
+        <input id="promote-name-${userId}" type="text" placeholder="e.g. Somchai K." value=""
+          style="width:100%;padding:7px 10px;background:#111;border:1px solid #333;border-radius:4px;color:#eee;font-size:12px;outline:none;box-sizing:border-box" />
+      </div>
+      <div style="margin-bottom:10px">
+        <div style="font-size:10px;color:#555;margin-bottom:4px">Parent Name</div>
+        <input id="promote-parent-${userId}" type="text" placeholder="Parent name" value="${escHtml(parentName)}"
+          style="width:100%;padding:7px 10px;background:#111;border:1px solid #333;border-radius:4px;color:#eee;font-size:12px;outline:none;box-sizing:border-box" />
+      </div>
+      <div style="font-size:11px;color:#555;margin-bottom:10px">Email: ${escHtml(email)}</div>
+      <div style="display:flex;gap:6px">
+        <button id="promote-confirm-${userId}" onclick="promoteToStudent('${userId}','${email.replace(/'/g,"\\'")}')"
+          style="background:#B8962E;color:#111;border:none;border-radius:4px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer">Create Student</button>
+        <button onclick="document.getElementById('promote-form-${userId}').style.display='none'"
+          style="background:none;border:1px solid #333;border-radius:4px;padding:6px 12px;font-size:11px;color:#666;cursor:pointer">Cancel</button>
+      </div>
+      <div id="promote-status-${userId}" style="font-size:11px;margin-top:8px;color:#555"></div>
+    </div>`
+}
+
+async function promoteToStudent(userId, email) {
+  const nameInput   = $id('promote-name-' + userId)
+  const parentInput = $id('promote-parent-' + userId)
+  const statusEl    = $id('promote-status-' + userId)
+  const btn         = $id('promote-confirm-' + userId)
+  const studentName = (nameInput?.value || '').trim()
+  const parentName  = (parentInput?.value || '').trim()
+  if (!studentName) { if (statusEl) statusEl.textContent = 'Please enter the student name.'; return }
+  if (btn) { btn.textContent = 'Creating...'; btn.disabled = true }
+  try {
+    const res = await fetch('/api/promote-free-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
+      body: JSON.stringify({ user_id: userId, email, student_name: studentName, parent_name: parentName }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'Failed')
+    const portalLink = window.location.origin + '/?token=' + data.access_token
+    const wrap = $id('promote-form-' + userId)
+    if (wrap) wrap.innerHTML = `
+      <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;padding:12px 14px">
+        <div style="font-size:11px;color:#4CAF50;margin-bottom:8px">Student created</div>
+        <div style="font-size:10px;color:#555;margin-bottom:4px">Portal link (copy and share):</div>
+        <input type="text" value="${portalLink}" readonly onclick="this.select()"
+          style="width:100%;padding:6px 8px;background:#111;border:1px solid #333;border-radius:4px;color:#B8962E;font-size:10px;outline:none;box-sizing:border-box;cursor:text" />
+      </div>`
+    const promoteBtn = $id('promote-btn-' + userId)
+    if (promoteBtn) { promoteBtn.textContent = 'In Students'; promoteBtn.style.color = '#4CAF50'; promoteBtn.style.borderColor = '#4CAF50'; promoteBtn.disabled = true }
+  } catch (err) {
+    if (btn) { btn.textContent = 'Create Student'; btn.disabled = false }
+    if (statusEl) statusEl.textContent = err.message || 'Something went wrong.'
   }
 }
 
