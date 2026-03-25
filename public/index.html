@@ -1237,7 +1237,7 @@
     <div class="auth-logo">LINKEDU</div>
     <div class="auth-subtitle">Parent Portal</div>
     <div id="auth-form-wrap">
-      <h2>Sign in to your portal</h2>
+      <h2 id="auth-form-title">Sign in to your portal</h2>
       <!-- Dev login (localhost only — hidden on production) -->
       <div id="dev-login-wrap" style="display:none">
         <div style="font-size:11px;color:#B8962E;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px">Local Dev</div>
@@ -1251,6 +1251,7 @@
         </div>
         <button class="btn-primary" id="dev-btn" onclick="signInWithPassword()" style="margin-top:12px">Sign In</button>
         <div class="auth-error" id="dev-error"></div>
+        <div style="margin-top:14px;text-align:center;font-size:12px;color:var(--muted)">New here? <span onclick="showCreateAccount()" style="color:var(--gold);cursor:pointer;text-decoration:underline">Create a free account</span></div>
       </div>
       <!-- Magic link (production) -->
       <div id="magic-link-wrap">
@@ -1260,6 +1261,21 @@
         </div>
         <button class="btn-primary" id="auth-btn" onclick="signIn()">Send me a login link</button>
         <div class="auth-error" id="auth-error"></div>
+        <div style="margin-top:14px;text-align:center;font-size:12px;color:var(--muted)">New here? <span onclick="showCreateAccount()" style="color:var(--gold);cursor:pointer;text-decoration:underline">Create a free account</span></div>
+      </div>
+      <!-- Create free account -->
+      <div id="create-account-wrap" style="display:none">
+        <div class="field-group">
+          <label>Email</label>
+          <input type="email" id="ca-email" placeholder="your@email.com" autocomplete="email" />
+        </div>
+        <div class="field-group" style="margin-top:10px">
+          <label>Password</label>
+          <input type="password" id="ca-password" placeholder="min 8 characters" onkeydown="if(event.key==='Enter')createFreeAccount()" />
+        </div>
+        <button class="btn-primary" id="ca-btn" onclick="createFreeAccount()" style="margin-top:12px">Create Account</button>
+        <div class="auth-error" id="ca-error"></div>
+        <div style="margin-top:14px;text-align:center;font-size:12px;color:var(--muted)">Already have an account? <span onclick="showSignIn()" style="color:var(--gold);cursor:pointer;text-decoration:underline">Sign in</span></div>
       </div>
     </div>
     <div id="auth-sent-wrap" style="display:none; text-align:center; padding: 12px 0;">
@@ -1616,6 +1632,71 @@ async function signInWithPassword() {
   // onAuthStateChange handles the rest
 }
 
+function showCreateAccount() {
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname.startsWith('100.100.')
+  $id('dev-login-wrap').style.display = 'none'
+  $id('magic-link-wrap').style.display = 'none'
+  $id('create-account-wrap').style.display = 'block'
+  $id('auth-form-title').textContent = 'Create a free account'
+  $id('ca-error').style.display = 'none'
+}
+
+function showSignIn() {
+  $id('create-account-wrap').style.display = 'none'
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname.startsWith('100.100.')
+  if (isLocal) {
+    $id('dev-login-wrap').style.display = 'block'
+    $id('magic-link-wrap').style.display = 'none'
+  } else {
+    $id('magic-link-wrap').style.display = 'block'
+    $id('dev-login-wrap').style.display = 'none'
+  }
+  $id('auth-form-title').textContent = 'Sign in to your portal'
+}
+
+async function createFreeAccount() {
+  const email    = ($id('ca-email').value || '').trim()
+  const password = ($id('ca-password').value || '')
+  const errEl    = $id('ca-error')
+  const btn      = $id('ca-btn')
+  errEl.style.display = 'none'
+  if (!email || password.length < 8) {
+    errEl.textContent = 'Valid email and password (min 8 chars) required.'
+    errEl.style.display = 'block'
+    return
+  }
+  btn.disabled = true
+  btn.textContent = 'Creating account...'
+  try {
+    const res = await fetch('/api/free-signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    })
+    const data = await res.json()
+    if (!res.ok && data.error && data.error !== 'already_exists') {
+      errEl.textContent = data.error || 'Could not create account.'
+      errEl.style.display = 'block'
+      btn.disabled = false
+      btn.textContent = 'Create Account'
+      return
+    }
+    // Sign in with password — onAuthStateChange handles the rest
+    const { error: signInErr } = await sb.auth.signInWithPassword({ email, password })
+    btn.disabled = false
+    btn.textContent = 'Create Account'
+    if (signInErr) {
+      errEl.textContent = signInErr.message
+      errEl.style.display = 'block'
+    }
+  } catch (e) {
+    btn.disabled = false
+    btn.textContent = 'Create Account'
+    errEl.textContent = 'Something went wrong. Please try again.'
+    errEl.style.display = 'block'
+  }
+}
+
 async function signOut() {
   await sb.auth.signOut()
   D = null
@@ -1943,7 +2024,9 @@ function renderOverview() {
       'school-comparison': 'School Comparison',
       'personality-match': 'Personality Match',
       'culture-fit': 'Culture Fit Assessor',
-      'sports-pathway': 'Sports Pathway'
+      'sports-pathway': 'Sports Pathway',
+      'camp-shortlist': 'Summer Camp Shortlist',
+      'school-shortlist': 'School Shortlist'
     }
     toolResultsHtml = `
       <div style="margin-top:24px">
@@ -2906,7 +2989,7 @@ function renderSchools() {
     <div class="section-title" id="schools-tracker-section">Application Tracker</div>
     ${schoolNav}
     ${abandonedToggle}
-    ${activeCards || '<div class="empty">No schools on shortlist yet. Your consultant will add them here.</div>'}
+    ${activeCards || '<div class="empty">No schools on shortlist yet. Your consultant will add them here.<br><button data-topic="School Shortlist" onclick="contactConsultant(this,\'schools-empty\')" style="margin-top:12px;padding:9px 20px;background:var(--gold);color:#111;border:none;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer">Contact Consultant</button><div id="contact-wrap-schools-empty"></div></div>'}
     ${campAppsHtml}`
 
   $id('schools-content').innerHTML = html
@@ -3840,7 +3923,7 @@ function renderRecommendations() {
     </div>` : ''
 
   if (!recs.length && !isAgent) {
-    el.innerHTML = `<div class="rec-section">${parentHeader}<div style="text-align:center;padding:60px 20px"><div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px">No recommendations yet</div><div style="font-size:13px;color:var(--muted)">Your consultant will send personalised recommendations shortly.</div></div></div>`
+    el.innerHTML = `<div class="rec-section">${parentHeader}<div style="text-align:center;padding:60px 20px"><div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px">No recommendations yet</div><div style="font-size:13px;color:var(--muted);margin-bottom:20px">Your consultant will send personalised recommendations shortly.</div><button data-topic="School Recommendations" onclick="contactConsultant(this,'rec-empty')" style="padding:10px 24px;background:var(--gold);color:#111;border:none;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer">Contact Consultant</button><div id="contact-wrap-rec-empty"></div></div></div>`
     return
   }
 
@@ -4394,7 +4477,7 @@ function renderCampRecommendations() {
     </div>`
 
   if (!approved.length) {
-    el.innerHTML = `<div class="rec-section">${parentHeader}<div style="text-align:center;padding:60px 20px"><div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px">No summer recommendations yet</div><div style="font-size:13px;color:var(--muted)">Your consultant will send personalised summer programme recommendations shortly.</div></div></div>`
+    el.innerHTML = `<div class="rec-section">${parentHeader}<div style="text-align:center;padding:60px 20px"><div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px">No summer recommendations yet</div><div style="font-size:13px;color:var(--muted);margin-bottom:20px">Your consultant will send personalised summer programme recommendations shortly.</div><button data-topic="Summer Programme Recommendations" onclick="contactConsultant(this,'sumrec-empty')" style="padding:10px 24px;background:var(--gold);color:#111;border:none;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer">Contact Consultant</button><div id="contact-wrap-sumrec-empty"></div></div></div>`
     return
   }
 
@@ -6328,12 +6411,20 @@ function contactConsultant(btn, triggerId) {
   // Toggle off if already open
   if (wrap.innerHTML.trim()) { wrap.innerHTML = ''; return }
 
-  // No phone on file — nudge to Profile tab
+  // No phone on file — show inline input to add it right here
   if (!D || !D.student || !D.student.parentPhone) {
-    wrap.innerHTML = `<div style="font-size:11px;color:#B8962E;margin-top:8px;padding:2px 0">
-      Please add your phone number in the
-      <a href="#" onclick="showTab('profile');return false;" style="color:#B8962E;text-decoration:underline">Profile tab</a>
-      first.</div>`
+    wrap.innerHTML = `
+      <div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:4px;padding:16px 18px;margin-top:10px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);margin-bottom:6px">Phone number required</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Your phone number is missing from your profile. Add it below and your consultant will be notified.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input type="tel" id="contact-phone-${triggerId}" placeholder="+66 80 000 0000"
+            style="flex:1;min-width:160px;padding:9px 12px;border:1px solid var(--border);border-radius:4px;font-size:13px;color:var(--text);background:var(--surface2);outline:none" />
+          <button onclick="savePhoneAndContact('${escHtml(triggerId)}','${escHtml(topic)}')"
+            style="padding:9px 18px;background:var(--gold);color:#111;border:none;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">Save &amp; Contact</button>
+        </div>
+        <div id="contact-status-${triggerId}" style="font-size:12px;margin-top:8px;color:var(--muted)"></div>
+      </div>`
     return
   }
 
@@ -6382,6 +6473,40 @@ async function _sendContactNotification(btn) {
   } catch (err) {
     if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Send' }
     if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = 'Could not send. Please try again.' }
+  }
+}
+
+async function savePhoneAndContact(triggerId, topic) {
+  const phoneInput = document.getElementById('contact-phone-' + triggerId)
+  const statusEl   = document.getElementById('contact-status-' + triggerId)
+  const phone = (phoneInput?.value || '').trim()
+  if (!phone) { if (statusEl) statusEl.textContent = 'Please enter a phone number.'; return }
+  if (statusEl) statusEl.textContent = 'Saving...'
+  try {
+    // Save phone to student profile
+    const hdrs = { 'Content-Type': 'application/json' }
+    if (_portalToken) hdrs['X-Access-Token'] = _portalToken
+    else hdrs['Authorization'] = 'Bearer ' + (window._token || '')
+    await fetch('/api/update-student', {
+      method: 'PATCH',
+      headers: hdrs,
+      body: JSON.stringify({ student_id: D?.student?.id, parent_phone: phone })
+    })
+    // Update local state
+    if (D?.student) D.student.parentPhone = phone
+    // Send notification
+    const res = await fetch('/api/notify-consultant', {
+      method: 'POST',
+      headers: hdrs,
+      body: JSON.stringify({
+        direct_message: `Parent contact request — ${topic}\nStudent: ${D?.student?.studentName || 'Unknown'}\nPhone: ${phone}\nEmail: ${D?.student?.parentEmail || ''}`
+      })
+    })
+    if (!res.ok) throw new Error('Send failed')
+    const wrap = document.getElementById('contact-wrap-' + triggerId)
+    if (wrap) wrap.innerHTML = `<div style="font-size:12px;color:#27ae60;margin-top:8px;padding:4px 0">Sent — your consultant will contact you at ${escHtml(phone)} shortly.</div>`
+  } catch(e) {
+    if (statusEl) { statusEl.style.color = 'var(--red,#e74c3c)'; statusEl.textContent = 'Could not save. Please add your phone in the Profile tab.' }
   }
 }
 
@@ -7230,7 +7355,9 @@ function renderToolsTab(results) {
     'school-comparison': 'https://linkeduth.netlify.app/tools/school-comparison.html',
     'personality-match': 'https://linkeduth.netlify.app/tools/personality-match.html',
     'culture-fit':       'https://linkeduth.netlify.app/tools/boarding-school-culture-fit-assessor.html',
-    'sports-pathway':    'https://linkeduth.netlify.app/tools/sports-pathway.html'
+    'sports-pathway':    'https://linkeduth.netlify.app/tools/sports-pathway.html',
+    'camp-shortlist':    'https://linkeduth.netlify.app/summer-camps.html',
+    'school-shortlist':  'https://linkeduth.netlify.app/schools.html'
   }
 
   // ── Portal design tokens (matches the rest of the portal) ───────────────────
@@ -7462,6 +7589,44 @@ function renderToolsTab(results) {
       </div>`
   }
 
+  function cardSchoolShortlist(r) {
+    const d = r.result_data || {}
+    const items = d.items || []
+    const listHTML = items.length > 0
+      ? items.map(c => `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+          <div style="flex:1;font-size:14px;color:var(--text)">${escHtml(c.name || c.slug || '')}</div>
+          <a href="https://linkeduth.netlify.app/schools/${escHtml(c.slug || '')}.html" target="_blank" style="flex-shrink:0;font-size:12px;color:var(--gold);font-weight:600;text-decoration:none">View \u2192</a>
+        </div>`).join('')
+      : `<div style="font-size:13px;color:var(--muted);padding:10px 0">No schools in shortlist.</div>`
+    return `
+      <div style="${card}">
+        <div style="${lbl}">School Shortlist</div>
+        <div style="${heading}">${items.length} school${items.length !== 1 ? 's' : ''} shortlisted</div>
+        <div style="${sub}">Saved ${fmtDate(r.updated_at)}</div>
+        <div style="margin-bottom:16px">${listHTML}</div>
+        <a href="https://linkeduth.netlify.app/schools.html" target="_blank" style="${retake}">Browse All Schools \u2192</a>
+      </div>`
+  }
+
+  function cardCampShortlist(r) {
+    const d = r.result_data || {}
+    const items = d.items || []
+    const listHTML = items.length > 0
+      ? items.map(c => `<div style="display:flex;align-items:baseline;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+          <div style="flex:1;font-size:14px;color:var(--text);line-height:1.4">${escHtml(c.title || c.name || '')}</div>
+          ${c.fee ? `<div style="flex-shrink:0;font-size:13px;color:var(--gold);font-weight:600">${escHtml(c.fee)}</div>` : ''}
+        </div>`).join('')
+      : `<div style="font-size:13px;color:var(--muted);padding:10px 0">No camps in shortlist.</div>`
+    return `
+      <div style="${card}">
+        <div style="${lbl}">Summer Camp Shortlist</div>
+        <div style="${heading}">${items.length} programme${items.length !== 1 ? 's' : ''} shortlisted</div>
+        <div style="${sub}">Saved ${fmtDate(r.updated_at)}</div>
+        <div style="margin-bottom:16px">${listHTML}</div>
+        <a href="${toolLinks['camp-shortlist']}" target="_blank" style="${retake}">View Summer Camps \u2192</a>
+      </div>`
+  }
+
   function renderCard(r) {
     switch (r.tool_name) {
       case 'personality-match': return cardPersonalityMatch(r)
@@ -7469,6 +7634,8 @@ function renderToolsTab(results) {
       case 'sports-pathway':    return cardSportsPathway(r)
       case 'culture-fit':       return cardCultureFit(r)
       case 'school-comparison': return cardSchoolComparison(r)
+      case 'camp-shortlist':    return cardCampShortlist(r)
+      case 'school-shortlist':  return cardSchoolShortlist(r)
       default:                  return cardGeneric(r)
     }
   }
