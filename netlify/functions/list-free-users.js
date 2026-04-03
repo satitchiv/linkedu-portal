@@ -46,7 +46,7 @@ exports.handler = async (event) => {
     // ── Fetch all free users ──────────────────────────────────────────────────
     const { data: users, error: usersErr } = await supabase
       .from('user_profiles')
-      .select('id, email, parent_name, created_at, account_type')
+      .select('id, email, parent_name, created_at, account_type, contact_requested, contacted, free_notes')
       .eq('account_type', 'free')
       .order('created_at', { ascending: false })
 
@@ -87,6 +87,9 @@ exports.handler = async (event) => {
         parent_name: u.parent_name,
         created_at: u.created_at,
         account_type: u.account_type,
+        contact_requested: u.contact_requested || false,
+        contacted: u.contacted || false,
+        free_notes: u.free_notes || '',
         tools_used: toolCount,
         tool_names: toolNames,
         last_active: lastActive,

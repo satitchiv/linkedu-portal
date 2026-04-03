@@ -1515,6 +1515,22 @@ const isParentView  = window.location.search.includes('view=parent')
 // isAnalystView is confirmed only after JWT login — never assumed from URL alone
 let isAnalystView = false
 
+// Auto sign-in from tool save — ?at=ACCESS_TOKEN&rt=REFRESH_TOKEN
+;(async () => {
+  const _at = _urlParams.get('at')
+  const _rt = _urlParams.get('rt')
+  if (_at && _rt && !isTokenView) {
+    try {
+      await sb.auth.setSession({ access_token: decodeURIComponent(_at), refresh_token: decodeURIComponent(_rt) })
+    } catch(e) { /* fall through to normal auth screen */ }
+    // Remove tokens from URL without page reload
+    const cleanSearch = window.location.search
+      .replace(/[?&]at=[^&]*/g, '').replace(/[?&]rt=[^&]*/g, '')
+      .replace(/^&/, '?').replace(/^\?$/, '') || ''
+    window.history.replaceState({}, '', window.location.pathname + cleanSearch)
+  }
+})()
+
 // ── Utilities ───────────────────────────────────────────────────────────────
 function $id(id) { return document.getElementById(id) }
 
@@ -7386,9 +7402,17 @@ async function importSelectedEmails() {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+function fitLabel(score) {
+  if (score >= 80) return 'Strong Fit'
+  if (score >= 60) return 'Good Fit'
+  if (score >= 40) return 'Developing'
+  return 'Early Stage'
+}
+
 function renderToolsTab(results) {
   const el = $id('tools-content')
   if (!el) return
+  window._toolResults = results
 
   const toolLinks = {
     'fee-calculator':    'https://linkeduth.netlify.app/tools/fees-calculator-v2c.html',
@@ -7400,39 +7424,44 @@ function renderToolsTab(results) {
     'school-shortlist':  'https://linkeduth.netlify.app/schools.html'
   }
 
-  // ── Portal design tokens (matches the rest of the portal) ───────────────────
-  const card    = `background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:28px 32px;margin-bottom:20px;max-width:760px`
+  const card    = `background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:24px 28px`
   const lbl     = `font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--gold);font-weight:700;margin-bottom:6px`
-  const heading = `font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--text);font-weight:600;margin-bottom:4px`
-  const sub     = `font-size:12px;color:var(--muted2);margin-bottom:20px`
-  const retake  = `display:inline-block;margin-top:20px;padding:9px 20px;background:var(--gold);color:#111;border-radius:4px;font-size:13px;font-weight:600;text-decoration:none`
+  const heading = `font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--text);font-weight:600;margin-bottom:4px`
   const noData  = `<div style="padding:20px 24px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;border-left:3px solid var(--gold)">
       <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold);margin-bottom:6px">No data saved for this section</div>
       <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Re-take the assessment to generate your results, or speak with a consultant for a personalised report.</p>
       <a href="https://linkeduth.netlify.app/contact.html" target="_blank" style="font-size:13px;font-weight:600;color:var(--gold);text-decoration:none">Book a free consultation \u2192</a>
     </div>`
 
-  // ── Format currency ──────────────────────────────────────────────────────────
   function fmtGBP(n) {
     if (!n) return '\u2014'
     return '\u00a3' + Number(n).toLocaleString('en-GB')
   }
 
-  // ── Bar chart — light background, gold bars ─────────────────────────────────
+  function detailBtn(toolName) {
+    return `<button onclick="showToolDetail('${toolName}')" style="display:inline-block;padding:8px 18px;background:transparent;border:1px solid var(--gold);color:var(--gold);border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:0.03em">View Details \u2192</button>`
+  }
+
+  const retakeStyle = `display:inline-block;padding:9px 20px;background:var(--gold);color:#111;border-radius:4px;font-size:12px;font-weight:600;text-decoration:none;letter-spacing:0.03em`
+
+  function cardFooter(toolName, retakeUrl) {
+    return `<div style="display:flex;align-items:center;gap:12px;margin-top:20px;flex-wrap:wrap">${detailBtn(toolName)}<a href="${retakeUrl}" target="_blank" style="${retakeStyle}">Re-take \u2192</a></div>`
+  }
+
   function barChart(schools, uid) {
     if (!schools || schools.length === 0) return noData
     const maxScore = Math.max(...schools.map(s => s.score || 0), 1)
-    const ROW_H = 40, LABEL_W = 180, BAR_W = 240
+    const ROW_H = 40, LABEL_W = 175, BAR_W = 220
     const rows = schools.map((s, i) => {
       const pct = Math.round((s.score / maxScore) * 100)
       const barPx = Math.round(pct * BAR_W / 100)
       const bid = `bc-${uid}-${i}`
       return `
         <g transform="translate(0,${i * ROW_H})">
-          <text x="${LABEL_W - 8}" y="${ROW_H / 2}" font-family="Inter,sans-serif" font-size="13" fill="#1a1a1a" text-anchor="end" dominant-baseline="middle">${escHtml((s.name || '').substring(0, 28))}</text>
-          <rect x="${LABEL_W}" y="${ROW_H/2 - 9}" width="${BAR_W}" height="18" rx="3" fill="rgba(0,0,0,0.06)"/>
-          <rect x="${LABEL_W}" y="${ROW_H/2 - 9}" width="${barPx}" height="18" rx="3" fill="var(--gold)" id="${bid}"/>
-          <text x="${LABEL_W + barPx + 6}" y="${ROW_H/2}" font-family="Inter,sans-serif" font-size="12" fill="var(--gold)" dominant-baseline="middle" font-weight="600">${pct}%</text>
+          <text x="${LABEL_W - 8}" y="${ROW_H / 2}" font-family="Inter,sans-serif" font-size="12" fill="#1a1a1a" text-anchor="end" dominant-baseline="middle">${escHtml((s.name || '').substring(0, 24))}</text>
+          <rect x="${LABEL_W}" y="${ROW_H/2 - 8}" width="${BAR_W}" height="16" rx="3" fill="rgba(0,0,0,0.06)"/>
+          <rect x="${LABEL_W}" y="${ROW_H/2 - 8}" width="${barPx}" height="16" rx="3" fill="var(--gold)" id="${bid}"/>
+          <text x="${LABEL_W + barPx + 6}" y="${ROW_H/2}" font-family="Inter,sans-serif" font-size="11" fill="var(--gold)" dominant-baseline="middle" font-weight="600">${pct}%</text>
         </g>`
     }).join('')
     const svgH = schools.length * ROW_H + 4
@@ -7443,7 +7472,6 @@ function renderToolsTab(results) {
     return `<svg width="100%" viewBox="0 0 ${LABEL_W + BAR_W + 60} ${svgH}" style="display:block;overflow:visible">${rows}</svg>`
   }
 
-  // ── Spider chart — light background ─────────────────────────────────────────
   function spiderChart(dimensions) {
     if (!dimensions) return noData
     const dims = [
@@ -7470,7 +7498,6 @@ function renderToolsTab(results) {
     return `<svg width="280" height="250" viewBox="0 0 280 250" style="display:block;margin:0 auto">${rings}${axes}${polygon}${dots}${labels}</svg>`
   }
 
-  // ── Score circle — light background ─────────────────────────────────────────
   function scoreCircle(score) {
     const s = Math.min(100, Math.max(0, score || 0))
     const r = 46, cx = 58, cy = 58
@@ -7487,53 +7514,81 @@ function renderToolsTab(results) {
       </svg>`
   }
 
-  // ── Per-tool result card renderers ───────────────────────────────────────────
+  function miniDimBars(dims) {
+    if (!dims) return ''
+    const dimLabels = { structure:'Structure', independence:'Independence', social:'Social', academics:'Academics', co_curricular:'Co-curricular', support:'Support', community:'Community', discipline:'Discipline' }
+    const sorted = Object.entries(dims).map(([k,v]) => ({ label: dimLabels[k] || k, val: Number(v) || 0 })).sort((a,b) => b.val - a.val).slice(0, 4)
+    return sorted.map(d => `
+      <div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px">
+          <span style="color:var(--muted)">${d.label}</span><span style="color:var(--gold);font-weight:600">${d.val}%</span>
+        </div>
+        <div style="height:5px;background:rgba(0,0,0,0.06);border-radius:3px;overflow:hidden">
+          <div style="height:100%;width:${d.val}%;background:var(--gold);border-radius:3px"></div>
+        </div>
+      </div>`).join('')
+  }
+
   function cardPersonalityMatch(r) {
     const d = r.result_data || {}
     const schools = d.topSchools || []
     const hasScores = schools.length > 0 && typeof schools[0] === 'object' && schools[0].score > 0
     const schoolsNorm = hasScores ? schools : schools.map((s, i) => ({ name: typeof s === 'string' ? s : s.name, score: Math.max(100 - i * 15, 25) }))
-    const chart = schoolsNorm.length > 0 ? barChart(schoolsNorm, 'pm-' + (r.id || Math.random().toString(36).slice(2))) : noData
+    const top3 = schoolsNorm.slice(0, 3)
+    const chart = top3.length > 0 ? barChart(top3, 'pm-' + (r.id || Math.random().toString(36).slice(2))) : noData
+    const topName = schoolsNorm[0] ? escHtml((schoolsNorm[0].name || '').slice(0, 28)) : ''
+    const headingText = topName ? `Top match: ${topName}` : 'Your top school matches'
     return `
       <div style="${card}">
-        <div style="${lbl}">Personality Match</div>
-        <div style="${heading}">Your top school matches</div>
-        <div style="${sub}">Saved ${fmtDate(r.updated_at)}</div>
-        <div style="padding-right:8px">${chart}</div>
-        <a href="${toolLinks['personality-match']}" target="_blank" style="${retake}">Re-take assessment \u2192</a>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+          <div style="${lbl}">Personality Match</div>
+          <div style="font-size:11px;color:var(--muted2)">${fmtDate(r.updated_at)}</div>
+        </div>
+        <div style="${heading}">${headingText}</div>
+        <div style="height:1px;background:var(--border);margin:14px 0"></div>
+        <div style="padding-right:4px">${chart}</div>
+        ${cardFooter('personality-match', toolLinks['personality-match'])}
       </div>`
   }
 
   function cardFeeCalculator(r) {
     const d = r.result_data || {}
-    const annual = d.annualBudget || d.budget || 0
-    const term   = d.termBudget   || Math.round(annual / 3)
-    const monthly = d.monthBudget || Math.round(annual / 12)
-    const rate   = d.rate ? ' \u00b7 \u0e3f' + Number(d.rate).toLocaleString() + '/\u00a3' : ''
-    const schoolLine = d.selectedSchool ? `<div style="font-size:13px;color:var(--muted);margin-top:10px">${escHtml(d.selectedSchool)}${rate}</div>` : (rate ? `<div style="font-size:13px;color:var(--muted);margin-top:10px">${rate}</div>` : '')
+    const annual  = d.annualBudget || d.budget || 0
+    const term    = d.termBudget   || Math.round(annual / 3)
+    const monthly = d.monthBudget  || Math.round(annual / 12)
+    const rate    = Number(d.rate) || 0
+    const thb     = rate > 0 ? Math.round(annual * rate) : 0
+    const schoolLine = d.selectedSchool ? `<div style="font-size:12px;color:var(--muted);margin-top:8px">${escHtml(d.selectedSchool)}${rate ? ' \u00b7 \u0e3f' + rate.toLocaleString() + '/\u00a3' : ''}</div>` : ''
     const budgetBoxes = annual ? `
-      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:4px">
-        <div style="flex:1;min-width:130px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:18px 20px;text-align:center">
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted2);margin-bottom:6px">Annual</div>
-          <div style="font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--gold);font-weight:600">${fmtGBP(annual)}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;margin-bottom:4px">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:14px 12px;text-align:center">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted2);margin-bottom:5px">Annual</div>
+          <div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--gold);font-weight:600">${fmtGBP(annual)}</div>
         </div>
-        <div style="flex:1;min-width:130px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:18px 20px;text-align:center">
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted2);margin-bottom:6px">Per Term</div>
-          <div style="font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--text);font-weight:600">${fmtGBP(term)}</div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:14px 12px;text-align:center">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted2);margin-bottom:5px">Per Term</div>
+          <div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--text);font-weight:600">${fmtGBP(term)}</div>
         </div>
-        <div style="flex:1;min-width:130px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:18px 20px;text-align:center">
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted2);margin-bottom:6px">Per Month</div>
-          <div style="font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--text);font-weight:600">${fmtGBP(monthly)}</div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:14px 12px;text-align:center">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted2);margin-bottom:5px">Per Month</div>
+          <div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--text);font-weight:600">${fmtGBP(monthly)}</div>
         </div>
+        ${thb > 0 ? `<div style="background:rgba(184,150,46,0.08);border:1px solid rgba(184,150,46,0.25);border-radius:4px;padding:14px 12px;text-align:center">
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold);margin-bottom:5px">In THB</div>
+          <div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--gold);font-weight:600">\u0e3f${thb.toLocaleString()}</div>
+        </div>` : ''}
       </div>
       ${schoolLine}` : noData
     return `
       <div style="${card}">
-        <div style="${lbl}">Fee Calculator</div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+          <div style="${lbl}">Fee Calculator</div>
+          <div style="font-size:11px;color:var(--muted2)">${fmtDate(r.updated_at)}</div>
+        </div>
         <div style="${heading}">Budget breakdown</div>
-        <div style="${sub}">Saved ${fmtDate(r.updated_at)}</div>
+        <div style="height:1px;background:var(--border);margin:14px 0"></div>
         ${budgetBoxes}
-        <a href="${toolLinks['fee-calculator']}" target="_blank" style="${retake}">Re-take assessment \u2192</a>
+        ${cardFooter('fee-calculator', toolLinks['fee-calculator'])}
       </div>`
   }
 
@@ -7543,14 +7598,20 @@ function renderToolsTab(results) {
     const schools = d.topSchools || []
     const hasScores = schools.length > 0 && typeof schools[0] === 'object' && schools[0].score > 0
     const schoolsNorm = hasScores ? schools : schools.map((s, i) => ({ name: typeof s === 'string' ? s : s.name, score: Math.max(100 - i * 15, 25) }))
-    const chart = schoolsNorm.length > 0 ? barChart(schoolsNorm, 'sp-' + (r.id || Math.random().toString(36).slice(2))) : noData
+    const top3 = schoolsNorm.slice(0, 3)
+    const chart = top3.length > 0 ? barChart(top3, 'sp-' + (r.id || Math.random().toString(36).slice(2))) : noData
+    const sportBadge = sport ? `<div style="display:inline-block;padding:3px 10px;background:rgba(184,150,46,0.1);border:1px solid rgba(184,150,46,0.25);border-radius:12px;font-size:11px;font-weight:600;color:var(--gold);margin-bottom:12px">${escHtml(sport)}</div>` : ''
     return `
       <div style="${card}">
-        <div style="${lbl}">Sports Pathway</div>
-        <div style="${heading}">${sport ? escHtml(sport) + ' — top UK boarding schools' : 'Top schools for your sport'}</div>
-        <div style="${sub}">Saved ${fmtDate(r.updated_at)}</div>
-        <div style="padding-right:8px">${chart}</div>
-        <a href="${toolLinks['sports-pathway']}" target="_blank" style="${retake}">Re-take assessment \u2192</a>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+          <div style="${lbl}">Sports Pathway</div>
+          <div style="font-size:11px;color:var(--muted2)">${fmtDate(r.updated_at)}</div>
+        </div>
+        <div style="${heading}">Top UK boarding schools</div>
+        <div style="height:1px;background:var(--border);margin:14px 0"></div>
+        ${sportBadge}
+        <div style="padding-right:4px">${chart}</div>
+        ${cardFooter('sports-pathway', toolLinks['sports-pathway'])}
       </div>`
   }
 
@@ -7561,20 +7622,24 @@ function renderToolsTab(results) {
     const hasData = scoreVal > 0 || dims
     return `
       <div style="${card}">
-        <div style="${lbl}">Culture Fit Assessor</div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+          <div style="${lbl}">Culture Fit</div>
+          <div style="font-size:11px;color:var(--muted2)">${fmtDate(r.updated_at)}</div>
+        </div>
         <div style="${heading}">UK boarding school readiness</div>
-        <div style="${sub}">Saved ${fmtDate(r.updated_at)}</div>
+        <div style="height:1px;background:var(--border);margin:14px 0"></div>
         ${hasData ? `
-          <div style="display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap">
+          <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
             <div style="flex-shrink:0;text-align:center">
               ${scoreCircle(scoreVal)}
-              <div style="font-size:11px;color:var(--muted2);margin-top:6px;text-transform:uppercase;letter-spacing:0.08em">Overall Fit</div>
+              <div style="font-size:10px;color:var(--muted2);margin-top:4px;text-transform:uppercase;letter-spacing:0.08em">Overall Fit</div>
+              ${scoreVal > 0 ? `<div style="font-size:11px;color:var(--gold);font-weight:600;margin-top:3px">${fitLabel(scoreVal)}</div>` : ''}
             </div>
-            <div style="flex:1;min-width:220px">
-              ${dims ? spiderChart(dims) : `<div style="padding-top:16px;color:var(--muted);font-size:13px">Re-take to see your dimension breakdown.</div>`}
+            <div style="flex:1;min-width:160px;padding-top:8px">
+              ${dims ? miniDimBars(dims) : `<div style="color:var(--muted);font-size:13px">Re-take to see dimension breakdown.</div>`}
             </div>
           </div>` : noData}
-        <a href="${toolLinks['culture-fit']}" target="_blank" style="${retake}">Re-take assessment \u2192</a>
+        ${cardFooter('culture-fit', toolLinks['culture-fit'])}
       </div>`
   }
 
@@ -7582,88 +7647,119 @@ function renderToolsTab(results) {
     const d = r.result_data || {}
     const schools = (d.schools || []).map(s => typeof s === 'object' ? s : { name: s })
     if (schools.length === 0) return `
-      <div style="${card}">
-        <div style="${lbl}">School Comparison</div>
-        <div style="${heading}">Schools you compared</div>
-        <div style="${sub}">Saved ${fmtDate(r.updated_at)}</div>
-        ${noData}
-        <a href="${toolLinks['school-comparison']}" target="_blank" style="${retake}">Re-take assessment \u2192</a>
-      </div>`
-    const rows = schools.map(s => `
-      <tr>
-        <td style="padding:12px 14px;font-size:14px;color:var(--text);font-weight:500;border-bottom:1px solid var(--border)">${escHtml(s.name || '')}</td>
-        <td style="padding:12px 14px;font-size:14px;color:var(--gold);font-weight:600;text-align:right;border-bottom:1px solid var(--border)">${s.fee ? fmtGBP(s.fee) : '\u2014'}</td>
-        <td style="padding:12px 14px;font-size:13px;color:var(--muted);text-align:right;border-bottom:1px solid var(--border)">${s.academicLevel ? s.academicLevel + '% A-Level' : '\u2014'}</td>
-        <td style="padding:12px 14px;font-size:13px;color:var(--muted2);text-align:right;border-bottom:1px solid var(--border)">${s.location ? escHtml(s.location) : ''}</td>
-      </tr>`).join('')
-    return `
-      <div style="${card}">
-        <div style="${lbl}">School Comparison</div>
-        <div style="${heading}">Schools you compared</div>
-        <div style="${sub}">Saved ${fmtDate(r.updated_at)}</div>
-        <div style="overflow-x:auto">
-          <table style="width:100%;border-collapse:collapse;min-width:400px">
-            <thead>
-              <tr style="border-bottom:2px solid var(--border)">
-                <th style="padding:10px 14px;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted2);text-align:left;font-weight:600">School</th>
-                <th style="padding:10px 14px;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted2);text-align:right;font-weight:600">Annual Fees</th>
-                <th style="padding:10px 14px;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted2);text-align:right;font-weight:600">Academic</th>
-                <th style="padding:10px 14px;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted2);text-align:right;font-weight:600">Location</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
+      <div style="${card};grid-column:1/-1">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+          <div style="${lbl}">School Comparison</div>
+          <div style="font-size:11px;color:var(--muted2)">${fmtDate(r.updated_at)}</div>
         </div>
-        <a href="${toolLinks['school-comparison']}" target="_blank" style="${retake}">Re-take assessment \u2192</a>
+        <div style="${heading}">Schools you compared</div>
+        <div style="height:1px;background:var(--border);margin:14px 0"></div>
+        ${noData}
+        ${cardFooter('school-comparison', toolLinks['school-comparison'])}
+      </div>`
+    // Highlight helpers
+    const minFee = Math.min(...schools.map(s => s.fee || Infinity))
+    const maxAcad = Math.max(...schools.map(s => s.academicLevel || 0))
+    const isiRank = { Outstanding: 3, Excellent: 2, Good: 1 }
+    const maxIsi = Math.max(...schools.map(s => isiRank[s.isiRating] || 0))
+    const cardRows = [
+      { label: 'Annual Fee',    vals: schools.map(s => ({ v: s.fee ? fmtGBP(s.fee) : '\u2014', best: s.fee === minFee })) },
+      { label: 'Type',          vals: schools.map(s => ({ v: escHtml(s.type || '\u2014'), best: false })) },
+      { label: 'A-Level A*-B',  vals: schools.map(s => ({ v: s.academicLevel ? s.academicLevel + '%' : '\u2014', best: s.academicLevel === maxAcad })) },
+      { label: 'Scholarship',   vals: schools.map(s => ({ v: escHtml(s.scholarshipStatus || '\u2014'), best: s.scholarshipStatus === 'Yes' })) },
+      { label: 'ISI Rating',    vals: schools.map(s => ({ v: escHtml(s.isiRating || '\u2014'), best: (isiRank[s.isiRating] || 0) === maxIsi })) },
+    ]
+    const colW = Math.floor(100 / (schools.length + 1))
+    const thStyle = `padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted2);font-weight:600;text-align:center;border-bottom:1px solid var(--border)`
+    const tdLabel = `padding:8px 10px;font-size:11px;color:var(--muted);vertical-align:middle;border-bottom:1px solid var(--border);white-space:nowrap`
+    const tdVal = `padding:8px 10px;font-size:12px;text-align:center;vertical-align:middle;border-bottom:1px solid var(--border)`
+    const tableHTML = `
+      <div style="overflow-x:auto;margin:0 -4px">
+        <table style="width:100%;border-collapse:collapse;min-width:320px">
+          <thead><tr>
+            <th style="${thStyle};text-align:left;width:${colW}%"></th>
+            ${schools.map(s => `<th style="${thStyle};width:${colW}%">${escHtml((s.name || '').split(' ')[0])}</th>`).join('')}
+          </tr></thead>
+          <tbody>
+            ${cardRows.map(row => `<tr>
+              <td style="${tdLabel}">${row.label}</td>
+              ${row.vals.map(cell => `<td style="${tdVal};${cell.best ? 'color:var(--gold);font-weight:700' : 'color:var(--text)'}">${cell.v}</td>`).join('')}
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`
+    return `
+      <div style="${card};grid-column:1/-1">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+          <div style="${lbl}">School Comparison</div>
+          <div style="font-size:11px;color:var(--muted2)">${fmtDate(r.updated_at)}</div>
+        </div>
+        <div style="${heading}">${schools.length} school${schools.length !== 1 ? 's' : ''} compared — gold = best in category</div>
+        <div style="height:1px;background:var(--border);margin:14px 0"></div>
+        ${tableHTML}
+        ${cardFooter('school-comparison', toolLinks['school-comparison'])}
       </div>`
   }
 
   function cardGeneric(r) {
     return `
       <div style="${card}">
-        <div style="${lbl}">${escHtml(r.tool_label || r.tool_name)}</div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+          <div style="${lbl}">${escHtml(r.tool_label || r.tool_name)}</div>
+          <div style="font-size:11px;color:var(--muted2)">${fmtDate(r.updated_at)}</div>
+        </div>
         <div style="${heading}">Saved result</div>
-        <div style="${sub}">Saved ${fmtDate(r.updated_at)}</div>
+        <div style="height:1px;background:var(--border);margin:14px 0"></div>
         <div style="font-size:14px;color:var(--muted);line-height:1.7">${escHtml(r.result_summary || '\u2014')}</div>
-        <a href="${toolLinks[r.tool_name] || '#'}" target="_blank" style="${retake}">Re-take assessment \u2192</a>
+        ${cardFooter(r.tool_name, toolLinks[r.tool_name] || '#')}
       </div>`
   }
 
   function cardSchoolShortlist(r) {
     const d = r.result_data || {}
     const items = d.items || []
-    const listHTML = items.length > 0
-      ? items.map(c => `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
-          <div style="flex:1;font-size:14px;color:var(--text)">${escHtml(c.name || c.slug || '')}</div>
-          <a href="https://linkeduth.netlify.app/schools/${escHtml(c.slug || '')}.html" target="_blank" style="flex-shrink:0;font-size:12px;color:var(--gold);font-weight:600;text-decoration:none">View \u2192</a>
-        </div>`).join('')
+    const preview = items.slice(0, 3)
+    const extra = items.length > 3 ? items.length - 3 : 0
+    const listHTML = preview.length > 0
+      ? preview.map(c => `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
+          <div style="flex:1;font-size:13px;color:var(--text)">${escHtml(c.name || c.slug || '')}</div>
+          <a href="https://linkeduth.netlify.app/schools/${escHtml(c.slug || '')}.html" target="_blank" style="flex-shrink:0;font-size:11px;color:var(--gold);font-weight:600;text-decoration:none">View \u2192</a>
+        </div>`).join('') + (extra > 0 ? `<div style="font-size:12px;color:var(--muted);padding:8px 0">+${extra} more \u00b7 click View Details to see all</div>` : '')
       : `<div style="font-size:13px;color:var(--muted);padding:10px 0">No schools in shortlist.</div>`
     return `
-      <div style="${card}">
-        <div style="${lbl}">School Shortlist</div>
+      <div style="${card};grid-column:1/-1">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+          <div style="${lbl}">School Shortlist</div>
+          <div style="font-size:11px;color:var(--muted2)">${fmtDate(r.updated_at)}</div>
+        </div>
         <div style="${heading}">${items.length} school${items.length !== 1 ? 's' : ''} shortlisted</div>
-        <div style="${sub}">Saved ${fmtDate(r.updated_at)}</div>
-        <div style="margin-bottom:16px">${listHTML}</div>
-        <a href="https://linkeduth.netlify.app/schools.html" target="_blank" style="${retake}">Browse All Schools \u2192</a>
+        <div style="height:1px;background:var(--border);margin:14px 0"></div>
+        <div style="margin-bottom:4px">${listHTML}</div>
+        ${cardFooter('school-shortlist', 'https://linkeduth.netlify.app/schools.html')}
       </div>`
   }
 
   function cardCampShortlist(r) {
     const d = r.result_data || {}
     const items = d.items || []
-    const listHTML = items.length > 0
-      ? items.map(c => `<div style="display:flex;align-items:baseline;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
-          <div style="flex:1;font-size:14px;color:var(--text);line-height:1.4">${escHtml(c.title || c.name || '')}</div>
-          ${c.fee ? `<div style="flex-shrink:0;font-size:13px;color:var(--gold);font-weight:600">${escHtml(c.fee)}</div>` : ''}
-        </div>`).join('')
+    const preview = items.slice(0, 3)
+    const extra = items.length > 3 ? items.length - 3 : 0
+    const listHTML = preview.length > 0
+      ? preview.map(c => `<div style="display:flex;align-items:baseline;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
+          <div style="flex:1;font-size:13px;color:var(--text);line-height:1.4">${escHtml(c.title || c.name || '')}</div>
+          ${c.fee ? `<div style="flex-shrink:0;font-size:12px;color:var(--gold);font-weight:600">${escHtml(c.fee)}</div>` : ''}
+        </div>`).join('') + (extra > 0 ? `<div style="font-size:12px;color:var(--muted);padding:8px 0">+${extra} more \u00b7 click View Details to see all</div>` : '')
       : `<div style="font-size:13px;color:var(--muted);padding:10px 0">No camps in shortlist.</div>`
     return `
-      <div style="${card}">
-        <div style="${lbl}">Summer Camp Shortlist</div>
+      <div style="${card};grid-column:1/-1">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+          <div style="${lbl}">Summer Camp Shortlist</div>
+          <div style="font-size:11px;color:var(--muted2)">${fmtDate(r.updated_at)}</div>
+        </div>
         <div style="${heading}">${items.length} programme${items.length !== 1 ? 's' : ''} shortlisted</div>
-        <div style="${sub}">Saved ${fmtDate(r.updated_at)}</div>
-        <div style="margin-bottom:16px">${listHTML}</div>
-        <a href="${toolLinks['camp-shortlist']}" target="_blank" style="${retake}">View Summer Camps \u2192</a>
+        <div style="height:1px;background:var(--border);margin:14px 0"></div>
+        <div style="margin-bottom:4px">${listHTML}</div>
+        ${cardFooter('camp-shortlist', toolLinks['camp-shortlist'])}
       </div>`
   }
 
@@ -7680,7 +7776,6 @@ function renderToolsTab(results) {
     }
   }
 
-  // ── Five confirmed tools (empty state grid) ───────────────────────────────────
   const fiveTools = [
     { key: 'personality-match', label: 'School Personality Match',    desc: 'Find which UK boarding schools match your child\'s personality and learning style.' },
     { key: 'fee-calculator',    label: 'UK Fees Calculator',          desc: 'Calculate your annual, term and monthly budget for any UK boarding school.' },
@@ -7689,17 +7784,16 @@ function renderToolsTab(results) {
     { key: 'school-comparison', label: 'School Comparison Tool',      desc: 'Compare two or more UK boarding schools side by side on fees, academics and sport.' },
   ]
 
-  // ── Consultation CTA box ──────────────────────────────────────────────────────
   const consultaCTA = `
-    <div style="max-width:760px;margin-top:12px;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:4px;padding:24px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
+    <div style="max-width:860px;margin-top:12px;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:4px;padding:24px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
       <div>
         <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--gold);font-weight:700;margin-bottom:6px">Ready for a full consultation?</div>
         <p style="font-size:14px;color:var(--text);margin-bottom:0;max-width:480px">Get a personalised school report and expert guidance from a LINKEDU consultant.</p>
       </div>
-      <a href="https://linkeduth.netlify.app/contact.html" target="_blank" style="flex-shrink:0;padding:11px 28px;background:var(--gold);color:#111;border-radius:4px;font-size:13px;font-weight:700;text-decoration:none;letter-spacing:0.03em">Book a Free Consultation \u2192</a>
-    </div>`
+      <button id="free-contact-btn" onclick="freeUserContact()" style="flex-shrink:0;padding:11px 28px;background:var(--gold);color:#111;border-radius:4px;font-size:13px;font-weight:700;border:none;cursor:pointer;letter-spacing:0.03em">Book a Free Consultation &#8594;</button>
+    </div>
+    <div id="free-contact-status" style="margin-top:10px;font-size:12px;color:var(--muted);display:none"></div>`
 
-  // ── Empty state ──────────────────────────────────────────────────────────────
   if (!results || results.length === 0) {
     el.innerHTML = `
       <div style="padding:40px 32px 48px">
@@ -7721,20 +7815,35 @@ function renderToolsTab(results) {
     return
   }
 
-  // ── Results state ─────────────────────────────────────────────────────────────
-  // Determine which of the 5 tools have NOT been saved yet
   const savedKeys = new Set(results.map(r => r.tool_name))
   const remaining = fiveTools.filter(t => !savedKeys.has(t.key))
+
+  const assessmentKeys = ['personality-match', 'fee-calculator', 'culture-fit', 'sports-pathway', 'school-comparison']
+  const doneCount = assessmentKeys.filter(k => savedKeys.has(k)).length
+  const progressDots = assessmentKeys.map(k =>
+    savedKeys.has(k)
+      ? `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--gold)"></span>`
+      : `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;border:2px solid rgba(0,0,0,0.15)"></span>`
+  ).join('')
 
   el.innerHTML = `
     <div style="padding:40px 32px 48px">
       <div class="section-title">My Assessment Tools</div>
-      <h2 style="font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--text);margin-bottom:28px">Your Saved Results</h2>
-      <div style="max-width:760px">
+      <h2 style="font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--text);margin-bottom:16px">Your Saved Results</h2>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <div style="display:flex;gap:6px;align-items:center">${progressDots}</div>
+        <span style="font-size:12px;color:var(--muted)">${doneCount} of 5 assessments completed</span>
+      </div>
+      <div style="margin-bottom:24px;font-size:13px;color:var(--muted)">
+        ${doneCount === 5
+          ? `Your profile is complete — <a href="https://linkeduth.netlify.app/contact.html" target="_blank" style="color:var(--gold);text-decoration:none;font-weight:500">book a free consultation to review your results \u2192</a>`
+          : `Complete all 5 assessments for a full profile review — <a href="https://linkeduth.netlify.app/tools.html" target="_blank" style="color:var(--gold);text-decoration:none;font-weight:500">continue \u2192</a>`}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;max-width:860px">
         ${results.map(r => renderCard(r)).join('')}
       </div>
       ${remaining.length > 0 ? `
-        <div style="max-width:760px;margin-top:8px;margin-bottom:20px">
+        <div style="max-width:860px;margin-top:8px;margin-bottom:20px">
           <div class="section-title" style="margin-top:32px">Complete Your Assessment</div>
           <p style="font-size:13px;color:var(--muted);margin-bottom:20px">You have ${remaining.length} assessment${remaining.length > 1 ? 's' : ''} remaining. Complete ${remaining.length > 1 ? 'them' : 'it'} for a full picture.</p>
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px">
@@ -7751,6 +7860,269 @@ function renderToolsTab(results) {
     </div>`
 }
 
+function showToolDetail(toolName) {
+  const results = window._toolResults || []
+  const r = results.find(x => x.tool_name === toolName)
+  if (!r) return
+  const contentEl = document.getElementById('tool-detail-content')
+  if (!contentEl) return
+  if (window._detailChart) { window._detailChart.destroy(); window._detailChart = null }
+  const fmt = n => n ? '\u00a3' + Number(n).toLocaleString('en-GB') : '\u2014'
+  const dimLabels = { structure:'Structure', independence:'Independence', social:'Social', academics:'Academics', co_curricular:'Co-curricular', support:'Support', community:'Community', discipline:'Discipline' }
+  let html = ''
+  const d = r.result_data || {}
+  function qaSection(answers) {
+    if (!answers || !answers.length) return ''
+    const rows = answers.map(a => `<div style="padding:10px 0;border-bottom:1px solid rgba(0,0,0,0.06)"><div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:#999;margin-bottom:3px">${escHtml(a.q)}</div><div style="font-size:13px;color:#1a1a1a;font-weight:500">${escHtml(a.a)}</div></div>`).join('')
+    return `<div style="margin-top:24px"><div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:#999;font-weight:600;margin-bottom:12px">Your Answers</div>${rows}</div>`
+  }
+  const dlbl = `font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:#B8962E;font-weight:700;margin-bottom:8px`
+  const dhead = `font-family:'Playfair Display',serif;font-size:1.4rem;color:#1a1a1a;font-weight:600;margin-bottom:20px`
+  const divider = `<div style="height:1px;background:rgba(0,0,0,0.08);margin:20px 0"></div>`
+  if (toolName === 'personality-match') {
+    const schools = d.topSchools || []
+    const hasScores = schools.length > 0 && typeof schools[0] === 'object' && schools[0].score > 0
+    const schoolsNorm = hasScores ? schools : schools.map((s, i) => ({ name: typeof s === 'string' ? s : s.name, score: Math.max(100 - i * 15, 25) }))
+    const maxS = Math.max(...schoolsNorm.map(s => s.score || 0), 1)
+    const bars = schoolsNorm.map(s => {
+      const pct = Math.round((s.score / maxS) * 100)
+      return `<div style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+          <span style="color:#1a1a1a;font-weight:500">${escHtml(s.name || '')}</span><span style="color:#B8962E;font-weight:700">${pct}%</span>
+        </div>
+        <div style="height:8px;background:rgba(0,0,0,0.06);border-radius:4px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:#B8962E;border-radius:4px"></div>
+        </div>
+      </div>`
+    }).join('')
+    html = `<div style="${dlbl}">Personality Match</div><div style="${dhead}">Your Top School Matches</div>${bars}<p style="font-size:13px;color:#666;margin-top:20px;line-height:1.7">These schools were matched based on your child's personality, learning style, and school preferences. Scores show compatibility as a percentage.</p>${qaSection(d.answers)}`
+  } else if (toolName === 'fee-calculator') {
+    const annual = d.annualBudget || d.budget || 0
+    const term = d.termBudget || Math.round(annual / 3)
+    const monthly = d.monthBudget || Math.round(annual / 12)
+    const rate = Number(d.rate) || 0
+    const thb = rate > 0 ? Math.round(annual * rate) : 0
+    html = `<div style="${dlbl}">Fee Calculator</div><div style="${dhead}">Budget Summary</div>
+      ${d.selectedSchool ? `<div style="font-size:14px;color:#1a1a1a;font-weight:600;margin-bottom:4px">${escHtml(d.selectedSchool)}</div>` : ''}
+      ${d.vatOn ? `<div style="font-size:12px;color:#999;margin-bottom:16px">VAT included in calculation</div>` : ''}
+      ${divider}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+        <div style="background:#f5f0e8;border-radius:6px;padding:20px;text-align:center">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#999;margin-bottom:8px">Annual Budget</div>
+          <div style="font-family:'Playfair Display',serif;font-size:1.8rem;color:#B8962E;font-weight:600">${fmt(annual)}</div>
+        </div>
+        <div style="background:#f5f0e8;border-radius:6px;padding:20px;text-align:center">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#999;margin-bottom:8px">Per Term</div>
+          <div style="font-family:'Playfair Display',serif;font-size:1.8rem;color:#1a1a1a;font-weight:600">${fmt(term)}</div>
+        </div>
+        <div style="background:#f5f0e8;border-radius:6px;padding:20px;text-align:center">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#999;margin-bottom:8px">Per Month</div>
+          <div style="font-family:'Playfair Display',serif;font-size:1.8rem;color:#1a1a1a;font-weight:600">${fmt(monthly)}</div>
+        </div>
+        ${thb > 0 ? `<div style="background:rgba(184,150,46,0.1);border:1px solid rgba(184,150,46,0.3);border-radius:6px;padding:20px;text-align:center">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#B8962E;margin-bottom:8px">Annual in THB</div>
+          <div style="font-family:'Playfair Display',serif;font-size:1.8rem;color:#B8962E;font-weight:600">\u0e3f${thb.toLocaleString()}</div>
+        </div>` : ''}
+      </div>
+      ${rate > 0 ? `<div style="font-size:13px;color:#666">Exchange rate used: \u0e3f${rate.toLocaleString()} per \u00a3</div>` : ''}
+      ${d.livingCosts && Object.keys(d.livingCosts).length > 0 ? (() => {
+        const lcLabels = { flights: 'Flights (return)', uniform: 'Uniform & Kit', personal: 'Personal Allowance', accommodation: 'Holiday Accommodation', phone: 'Phone / SIM', contingency: 'Contingency' }
+        const lcTotal = Object.values(d.livingCosts).reduce((s, v) => s + (Number(v) || 0), 0)
+        const lcRows = Object.entries(d.livingCosts).map(([k, v]) => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(0,0,0,0.06);font-size:13px"><span style="color:#666">${lcLabels[k] || k}</span><span style="color:#1a1a1a;font-weight:500">${fmt(v)}</span></div>`).join('')
+        return `<div style="margin-top:24px"><div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:#999;font-weight:600;margin-bottom:12px">Living Costs Breakdown</div>${lcRows}<div style="display:flex;justify-content:space-between;padding:10px 0;font-size:13px;font-weight:700"><span style="color:#1a1a1a">Total Living Costs</span><span style="color:#B8962E">${fmt(lcTotal)}</span></div></div>`
+      })() : ''}`
+  } else if (toolName === 'culture-fit') {
+    const scoreVal = typeof d.score === 'number' ? d.score : parseInt((d.score || '').replace('%', '')) || 0
+    const dims = d.dimensions || {}
+    const dimEntries = Object.entries(dims).map(([k, v]) => ({ key: k, label: dimLabels[k] || k, val: Number(v) || 0 })).sort((a, b) => b.val - a.val)
+    const dimHintMap = {
+      structure:     { high: 'suits structured, traditional schools',      low: 'may thrive in flexible, progressive schools' },
+      independence:  { high: 'well-suited to independent learning',        low: 'benefits from close pastoral support' },
+      social:        { high: 'thrives in community-focused environments',  low: 'suits smaller, quieter school communities' },
+      academics:     { high: 'ready for rigorous academic programmes',     low: 'benefits from strong co-curricular breadth' },
+      co_curricular: { high: 'suits activity-rich, vibrant environments',  low: 'prefers academically focused environments' },
+      support:       { high: 'benefits from strong pastoral guidance',     low: 'comfortable with greater independence' },
+      community:     { high: 'suits schools with a strong house system',   low: 'prefers a more independent school experience' },
+      discipline:    { high: 'comfortable with clear rules and structure', low: 'suits schools with a more flexible approach' }
+    }
+    const dimBars = dimEntries.map((dim, idx) => {
+      const isTop = idx === 0
+      const isBottom = idx === dimEntries.length - 1 && dimEntries.length > 1
+      const hints = dimHintMap[dim.key]
+      const hint = (isTop && hints) ? hints.high : (isBottom && hints) ? hints.low : ''
+      return `
+      <div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px">
+          <span style="color:#1a1a1a">${dim.label}</span><span style="color:#B8962E;font-weight:600">${dim.val}%</span>
+        </div>
+        <div style="height:7px;background:rgba(0,0,0,0.06);border-radius:4px;overflow:hidden">
+          <div style="height:100%;width:${dim.val}%;background:#B8962E;border-radius:4px"></div>
+        </div>
+        ${hint ? `<div style="font-size:11px;color:#999;margin-top:4px;font-style:italic">${isTop ? 'Strength:' : 'Note:'} ${hint}</div>` : ''}
+      </div>`
+    }).join('')
+    html = `<div style="${dlbl}">Culture Fit Assessor</div><div style="${dhead}">Your Dimension Profile</div>
+      <div style="display:flex;align-items:center;gap:20px;margin-bottom:28px;flex-wrap:wrap">
+        <div style="text-align:center">
+          <div style="font-family:'Playfair Display',serif;font-size:3rem;color:#B8962E;font-weight:600;line-height:1">${scoreVal}%</div>
+          <div style="font-size:11px;color:#999;text-transform:uppercase;letter-spacing:0.1em;margin-top:4px">Overall Fit Score</div>
+          <div style="font-size:12px;color:#B8962E;font-weight:600;margin-top:4px">${fitLabel(scoreVal)}</div>
+        </div>
+        <p style="flex:1;min-width:200px;font-size:13px;color:#666;line-height:1.7;margin:0">This score reflects how well your child's personality and preferences align with the culture of UK boarding school life.</p>
+      </div>
+      ${divider}
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:#999;font-weight:600;margin-bottom:16px">Dimension Breakdown</div>
+      <div id="detail-radar-wrap" style="margin-bottom:24px">
+        <canvas id="detail-radar-chart" width="400" height="280" style="max-width:100%"></canvas>
+      </div>
+      ${divider}
+      ${dimBars}${qaSection(d.answers)}`
+  } else if (toolName === 'sports-pathway') {
+    const sport = d.sport || ''
+    const schools = d.topSchools || []
+    const hasScores = schools.length > 0 && typeof schools[0] === 'object' && schools[0].score > 0
+    const schoolsNorm = hasScores ? schools : schools.map((s, i) => ({ name: typeof s === 'string' ? s : s.name, score: Math.max(100 - i * 15, 25) }))
+    const maxS = Math.max(...schoolsNorm.map(s => s.score || 0), 1)
+    const bars = schoolsNorm.map(s => {
+      const pct = Math.round((s.score / maxS) * 100)
+      return `<div style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+          <span style="color:#1a1a1a;font-weight:500">${escHtml(s.name || '')}</span><span style="color:#B8962E;font-weight:700">${pct}%</span>
+        </div>
+        <div style="height:8px;background:rgba(0,0,0,0.06);border-radius:4px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:#B8962E;border-radius:4px"></div>
+        </div>
+      </div>`
+    }).join('')
+    const levelLabel = d.level ? `<span style="margin-left:8px;display:inline-block;padding:4px 10px;background:rgba(0,0,0,0.05);border-radius:12px;font-size:11px;color:#666;font-weight:500">${escHtml(d.level)}</span>` : ''
+    const ageLabel = d.age ? `<span style="margin-left:8px;display:inline-block;padding:4px 10px;background:rgba(0,0,0,0.05);border-radius:12px;font-size:11px;color:#666;font-weight:500">Age ${escHtml(String(d.age))}</span>` : ''
+    html = `<div style="${dlbl}">Sports Pathway</div><div style="${dhead}">Top Schools for ${escHtml(sport) || 'Your Sport'}</div>
+      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:20px">
+        ${sport ? `<div style="display:inline-block;padding:4px 12px;background:rgba(184,150,46,0.1);border:1px solid rgba(184,150,46,0.25);border-radius:12px;font-size:12px;font-weight:600;color:#B8962E">${escHtml(sport)}</div>` : ''}
+        ${levelLabel}${ageLabel}
+      </div>
+      ${divider}${bars}
+      <p style="font-size:13px;color:#666;margin-top:16px;line-height:1.7">Schools are ranked by facilities, scholarships, coaching quality and competitive results for ${escHtml(sport) || 'this sport'}.</p>`
+  } else if (toolName === 'school-comparison') {
+    const schools = (d.schools || []).map(s => typeof s === 'object' ? s : { name: s })
+    const isiRankD = { Outstanding: 3, Excellent: 2, Good: 1 }
+    const minFeeD = Math.min(...schools.map(s => s.fee || Infinity))
+    const maxAcadD = Math.max(...schools.map(s => s.academicLevel || 0))
+    const maxSportsD = Math.max(...schools.map(s => (s.sports || []).length))
+    const maxIsiD = Math.max(...schools.map(s => isiRankD[s.isiRating] || 0))
+    const isBest = (val, best) => val === best
+    const dRows = [
+      { label: 'Annual Fee (Boarding)',  vals: schools.map(s => ({ v: s.fee ? fmt(s.fee) : '\u2014', best: s.fee === minFeeD && s.fee !== undefined })) },
+      { label: 'Type',                   vals: schools.map(s => ({ v: escHtml(s.type || '\u2014'), best: false })) },
+      { label: 'Region',                 vals: schools.map(s => ({ v: escHtml(s.location || '\u2014'), best: false })) },
+      { label: 'A-Level A*-B',           vals: schools.map(s => ({ v: s.academicLevel != null ? s.academicLevel + '%' : '\u2014', best: s.academicLevel === maxAcadD && maxAcadD > 0 })) },
+      { label: 'Sports Offered',         vals: schools.map(s => ({ v: (s.sports || []).length > 0 ? escHtml((s.sports).join(', ')) : '\u2014', best: (s.sports || []).length === maxSportsD && maxSportsD > 0 })) },
+      { label: 'Scholarship',            vals: schools.map(s => ({ v: escHtml(s.scholarshipStatus || '\u2014'), best: s.scholarshipStatus === 'Yes' })) },
+      { label: 'Max Scholarship',        vals: schools.map(s => ({ v: s.scholarshipMaxPercent ? s.scholarshipMaxPercent + '%' : '\u2014', best: s.scholarshipMaxPercent === Math.max(...schools.map(x => x.scholarshipMaxPercent || 0)) && s.scholarshipMaxPercent > 0 })) },
+      { label: 'Scholarship Types',      vals: schools.map(s => ({ v: escHtml(s.scholarshipNote || '\u2014'), best: false })) },
+      { label: 'Entry Ages',             vals: schools.map(s => ({ v: escHtml(s.entryAge || '\u2014'), best: false })) },
+      { label: 'Total Students',         vals: schools.map(s => ({ v: s.totalStudents ? s.totalStudents.toLocaleString() : '\u2014', best: false })) },
+      { label: 'Boarding Type',          vals: schools.map(s => ({ v: escHtml(s.boardingType || '\u2014'), best: false })) },
+      { label: 'ISI Rating',             vals: schools.map(s => ({ v: escHtml(s.isiRating || '\u2014'), best: (isiRankD[s.isiRating] || 0) === maxIsiD && maxIsiD > 0 })) },
+    ]
+    const dTh = `padding:10px 14px;font-size:11px;font-weight:600;color:#1a1a1a;text-align:center;border-bottom:2px solid rgba(0,0,0,0.1);background:#f9f7f2`
+    const dTdL = `padding:11px 14px;font-size:12px;color:#999;text-transform:uppercase;letter-spacing:0.07em;border-bottom:1px solid rgba(0,0,0,0.06);white-space:nowrap;background:#fafafa;font-weight:600`
+    const dTdV = `padding:11px 14px;font-size:13px;text-align:center;border-bottom:1px solid rgba(0,0,0,0.06);vertical-align:top;line-height:1.5`
+    const analysis = d.analysis || null
+    const dimWinnersHTML = analysis && analysis.dimWinners ? `
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:#999;font-weight:600;margin:28px 0 16px">Which School Wins Each Category</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:28px">
+        ${analysis.dimWinners.map(dw => `
+          <div style="background:#f9f7f2;border-radius:6px;padding:14px 16px">
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.12em;color:#B8962E;font-weight:700;margin-bottom:6px">Winner</div>
+            <div style="font-size:12px;color:#666;margin-bottom:4px">${escHtml(dw.category)}</div>
+            <div style="font-size:14px;color:#1a1a1a;font-weight:600">${escHtml(dw.tie ? dw.tieNames.join(' & ') : (dw.winner || '\u2014'))}</div>
+            <div style="font-size:11px;color:#B8962E;margin-top:4px">${dw.tie ? 'Tied' : (dw.score + ' / 100')}</div>
+          </div>`).join('')}
+      </div>` : ''
+    const recsHTML = analysis && analysis.recommendations && analysis.recommendations.length > 0 ? `
+      <div style="height:1px;background:rgba(0,0,0,0.07);margin:4px 0 24px"></div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:#999;font-weight:600;margin-bottom:16px">LINKEDU Recommendation</div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px">
+        ${analysis.recommendations.map(rec => `
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <span style="flex-shrink:0;background:#B8962E;color:#111;font-size:9px;font-weight:700;letter-spacing:0.08em;padding:3px 8px;border-radius:3px;margin-top:2px">${escHtml(rec.badge)}</span>
+            <span style="font-size:13px;color:#333;line-height:1.6">${escHtml(rec.text)}</span>
+          </div>`).join('')}
+      </div>` : ''
+    html = `<div style="${dlbl}">School Comparison</div><div style="${dhead}">${schools.length} School${schools.length !== 1 ? 's' : ''} Compared</div>
+      ${dimWinnersHTML}
+      ${recsHTML}
+      <div style="height:1px;background:rgba(0,0,0,0.07);margin:4px 0 24px"></div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:#999;font-weight:600;margin-bottom:16px">Full Comparison</div>
+      <p style="font-size:12px;color:#aaa;margin-bottom:16px">Gold = best in category. Scroll right if needed.</p>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;min-width:${280 + schools.length * 160}px">
+          <thead><tr>
+            <th style="${dTh};text-align:left;width:160px">Feature</th>
+            ${schools.map(s => `<th style="${dTh}">${escHtml(s.name || '')}</th>`).join('')}
+          </tr></thead>
+          <tbody>
+            ${dRows.map(row => `<tr>
+              <td style="${dTdL}">${row.label}</td>
+              ${row.vals.map(cell => `<td style="${dTdV};${cell.best ? 'color:#B8962E;font-weight:700' : 'color:#1a1a1a'}">${cell.v}</td>`).join('')}
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`
+  } else if (toolName === 'school-shortlist') {
+    const items = d.items || []
+    const rows = items.map(c => `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(0,0,0,0.07)">
+      <div style="flex:1;font-size:14px;color:#1a1a1a">${escHtml(c.name || c.slug || '')}</div>
+      <a href="https://linkeduth.netlify.app/schools/${escHtml(c.slug || '')}.html" target="_blank" style="font-size:12px;color:#B8962E;font-weight:600;text-decoration:none;flex-shrink:0">View \u2192</a>
+    </div>`).join('')
+    html = `<div style="${dlbl}">School Shortlist</div><div style="${dhead}">${items.length} School${items.length !== 1 ? 's' : ''} Shortlisted</div>
+      ${items.length > 0 ? rows : '<p style="color:#999;font-size:14px">No schools in shortlist.</p>'}`
+  } else if (toolName === 'camp-shortlist') {
+    const items = d.items || []
+    const rows = items.map(c => `<div style="display:flex;align-items:baseline;gap:12px;padding:10px 0;border-bottom:1px solid rgba(0,0,0,0.07)">
+      <div style="flex:1;font-size:14px;color:#1a1a1a;line-height:1.4">${escHtml(c.title || c.name || '')}</div>
+      ${c.fee ? `<div style="flex-shrink:0;font-size:13px;color:#B8962E;font-weight:600">${escHtml(c.fee)}</div>` : ''}
+    </div>`).join('')
+    html = `<div style="${dlbl}">Summer Camp Shortlist</div><div style="${dhead}">${items.length} Programme${items.length !== 1 ? 's' : ''} Shortlisted</div>
+      ${items.length > 0 ? rows : '<p style="color:#999;font-size:14px">No camps in shortlist.</p>'}`
+  } else {
+    html = `<div style="${dlbl}">${escHtml(r.tool_label || r.tool_name)}</div><div style="${dhead}">Saved Result</div><p style="font-size:14px;color:#666">${escHtml(r.result_summary || '')}</p>`
+  }
+  contentEl.innerHTML = html
+  document.getElementById('tool-detail-modal').style.display = 'block'
+  document.body.style.overflow = 'hidden'
+  if (toolName === 'culture-fit' && d.dimensions && typeof Chart !== 'undefined') {
+    setTimeout(() => {
+      const canvas = document.getElementById('detail-radar-chart')
+      if (!canvas) return
+      const dims = d.dimensions
+      const dimLabels2 = { structure:'Structure', independence:'Independence', social:'Social', academics:'Academics', co_curricular:'Co-curricular', support:'Support', community:'Community', discipline:'Discipline' }
+      const keys = Object.keys(dims)
+      const labels = keys.map(k => dimLabels2[k] || k)
+      const values = keys.map(k => Number(dims[k]) || 0)
+      window._detailChart = new Chart(canvas.getContext('2d'), {
+        type: 'radar',
+        data: {
+          labels,
+          datasets: [{ data: values, backgroundColor: 'rgba(184,150,46,0.15)', borderColor: '#B8962E', borderWidth: 2, pointBackgroundColor: '#B8962E', pointRadius: 4 }]
+        },
+        options: {
+          responsive: true,
+          scales: { r: { min: 0, max: 100, ticks: { stepSize: 25, font: { size: 10 }, color: '#999' }, grid: { color: 'rgba(0,0,0,0.07)' }, angleLines: { color: 'rgba(0,0,0,0.07)' }, pointLabels: { font: { size: 12, family: 'Inter, sans-serif' }, color: '#666' } } },
+          plugins: { legend: { display: false } }
+        }
+      })
+    }, 50)
+  }
+}
+
+function closeToolDetail() {
+  const modal = document.getElementById('tool-detail-modal')
+  if (modal) modal.style.display = 'none'
+  document.body.style.overflow = ''
+  if (window._detailChart) { window._detailChart.destroy(); window._detailChart = null }
+}
 function renderFreePreviewTabs_DELETED() { return // removed — free users see full portal via renderAll()
   const consultUrl = 'https://linkeduth.netlify.app/contact.html'
   const previewStyle = `
@@ -7986,6 +8358,164 @@ function slSwitchTab(tab) {
 }
 
 // ── Free users list ───────────────────────────────────────────────────────────
+let _freeUsersData = []
+let _freeStatusFilter = 'All'
+let _freeToolSort = 'desc'
+
+function fmtFreeDate(d) {
+  if (!d) return '—'
+  return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+function freeStatusColor(s) {
+  if (s === 'Engaged')   return '#4CAF50'
+  if (s === 'Exploring') return '#B8962E'
+  return '#555'
+}
+function freeChipHtml(names) {
+  if (!names || !names.length) return '<span style="color:#555;font-size:12px">—</span>'
+  return names.map(n => `<span style="display:inline-block;background:#2a2a2a;color:#aaa;font-size:10px;border-radius:4px;padding:2px 6px;margin:2px 2px 2px 0">${n}</span>`).join('')
+}
+function freeFiltBtn(label, active) {
+  const base = 'padding:4px 12px;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:0.04em;border:1px solid'
+  return active
+    ? `<button onclick="setFreeFilter('status','${label}')" style="${base} #B8962E;background:rgba(184,150,46,0.15);color:#B8962E">${label}</button>`
+    : `<button onclick="setFreeFilter('status','${label}')" style="${base} #333;background:none;color:#666">${label}</button>`
+}
+function freeSortBtn(label, val, active) {
+  const base = 'padding:4px 12px;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:0.04em;border:1px solid'
+  return active
+    ? `<button onclick="setFreeFilter('sort','${val}')" style="${base} #B8962E;background:rgba(184,150,46,0.15);color:#B8962E">${label}</button>`
+    : `<button onclick="setFreeFilter('sort','${val}')" style="${base} #333;background:none;color:#666">${label}</button>`
+}
+
+function setFreeFilter(type, val) {
+  if (type === 'status') _freeStatusFilter = val
+  if (type === 'sort')   _freeToolSort = val
+  renderFreeUsers()
+}
+
+function renderFreeUsers() {
+  const panel = $id('free-accounts-panel')
+  let users = [..._freeUsersData]
+
+  // Filter by status
+  if (_freeStatusFilter !== 'All') users = users.filter(u => u.status === _freeStatusFilter)
+
+  // Sort by tools used
+  users.sort((a, b) => _freeToolSort === 'desc' ? b.tools_used - a.tools_used : a.tools_used - b.tools_used)
+
+  const filterBar = `
+    <div style="display:flex;align-items:center;gap:20px;margin-bottom:20px;flex-wrap:wrap">
+      <div style="display:flex;gap:6px;align-items:center">
+        <span style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#555;margin-right:4px">Status</span>
+        ${['All','New','Exploring','Engaged'].map(s => freeFiltBtn(s, _freeStatusFilter === s)).join('')}
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#555;margin-right:4px">Tools</span>
+        ${freeSortBtn('Most first','desc',_freeToolSort==='desc')}
+        ${freeSortBtn('Fewest first','asc',_freeToolSort==='asc')}
+      </div>
+      <span style="font-size:11px;color:#555;margin-left:auto">${users.length} of ${_freeUsersData.length} account${_freeUsersData.length !== 1 ? 's' : ''}</span>
+    </div>`
+
+  if (!users.length) {
+    panel.innerHTML = filterBar + '<div style="color:#555;font-size:13px;padding:16px 0">No accounts match this filter.</div>'
+    return
+  }
+
+  const btnStyle = 'padding:4px 10px;background:none;border:1px solid rgba(255,255,255,0.1);border-radius:4px;font-size:11px;color:var(--muted);cursor:pointer'
+
+  const rows = users.map(u => {
+    const esc = s => (s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;')
+    const portalUrl = u.portal_token ? `${window.location.origin}/?token=${u.portal_token}` : ''
+
+    // Contact column
+    let contactCell = '—'
+    if (u.contacted) {
+      contactCell = `<span style="font-size:11px;font-weight:600;color:#4CAF50">Contacted</span>`
+    } else if (u.contact_requested) {
+      contactCell = `<button onclick="fuMarkContacted('${u.id}')" style="padding:4px 12px;background:rgba(232,66,110,0.15);border:1px solid #e8426e;border-radius:4px;font-size:11px;font-weight:600;color:#e8426e;cursor:pointer">Please Contact</button>`
+    }
+
+    // Notes
+    const safeNotes = (u.free_notes||'').replace(/`/g,"'").replace(/\\/g,'\\\\')
+
+    return `
+    <tr id="fu-row-${u.id}" style="cursor:default;border-bottom:1px solid #1a1a1a" onmouseover="this.style.background='rgba(184,150,46,0.04)'" onmouseout="this.style.background=''">
+      <td style="padding:12px 0;font-size:13px;color:#111;font-weight:500">${u.email || '—'}</td>
+      <td style="padding:12px 16px;font-size:13px;color:#aaa">${u.parent_name || '—'}</td>
+      <td style="padding:12px 16px;font-size:13px;font-weight:600;color:${freeStatusColor(u.status)}">${u.status}</td>
+      <td style="padding:12px 16px;font-size:13px">
+        <span style="color:#eee;margin-right:6px">${u.tools_used}</span>
+        <div style="margin-top:4px">${freeChipHtml(u.tool_names)}</div>
+      </td>
+      <td style="padding:12px 16px;font-size:12px;color:#555">${contactCell}</td>
+      <td style="padding:12px 16px;min-width:180px">
+        <div style="display:flex;gap:6px;align-items:flex-start">
+          <textarea id="fu-notes-${u.id}" rows="2" placeholder="Add note…" style="flex:1;padding:6px 8px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;color:#aaa;font-size:11px;resize:vertical;font-family:inherit;outline:none;min-width:120px">${(u.free_notes||'').replace(/</g,'&lt;')}</textarea>
+          <button id="fu-notes-btn-${u.id}" onclick="fuSaveNotes('${u.id}')" style="padding:4px 8px;background:none;border:1px solid #333;border-radius:4px;font-size:10px;color:#666;cursor:pointer;white-space:nowrap;margin-top:1px">Save</button>
+        </div>
+      </td>
+      <td style="padding:12px 0 12px 16px;text-align:right">
+        <div style="display:flex;gap:6px;justify-content:flex-end;align-items:center;flex-wrap:wrap">
+          ${portalUrl ? `<button onclick="window.open('${portalUrl}','_blank')" style="padding:4px 10px;background:var(--gold);color:#111;border:none;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer">Open</button>` : ''}
+          ${portalUrl ? `<button id="fu-copy-${u.id}" onclick="fuCopyLink('${portalUrl}','${u.id}')" style="${btnStyle}">Copy Link</button>` : ''}
+          <button id="notify-btn-${u.id}" onclick="notifyFreeUser('${esc(u.email)}','${u.status}',${u.tools_used},'${u.id}')" style="${btnStyle}">Notify</button>
+          <button id="promote-btn-${u.id}" onclick="showPromoteForm('${u.id}','${esc(u.email)}','${esc(u.parent_name||'')}')" style="${btnStyle}">Move to Student</button>
+          <button onclick="fuShowDelete('${u.id}','${esc(u.email)}')" style="padding:4px 10px;background:none;border:none;font-size:11px;color:#444;cursor:pointer">Delete</button>
+        </div>
+        <div id="promote-form-${u.id}" style="display:none;margin-top:8px;text-align:left;min-width:260px"></div>
+        <div id="fu-del-${u.id}" style="display:none;background:rgba(192,57,43,0.06);border:1px solid rgba(192,57,43,0.2);border-radius:6px;padding:10px 14px;margin-top:8px;font-size:12px;color:#c0392b;text-align:left">
+          Delete <strong>${(u.email||'').replace(/</g,'&lt;')}</strong>? This removes their account and all saved results.
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button onclick="deleteFreeUser('${u.id}')" style="padding:5px 14px;background:#c0392b;color:#fff;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600">Yes, delete</button>
+            <button onclick="$id('fu-del-${u.id}').style.display='none'" style="padding:5px 14px;background:none;border:1px solid #333;border-radius:4px;font-size:12px;cursor:pointer;color:#666">Cancel</button>
+          </div>
+        </div>
+      </td>
+    </tr>`
+  }).join('')
+
+  panel.innerHTML = filterBar + `
+    <div style="overflow-x:auto">
+      <table id="fu-table" style="width:100%;border-collapse:collapse;min-width:900px;table-layout:fixed">
+        <thead>
+          <tr style="font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#555;border-bottom:1px solid #222">
+            <th style="text-align:left;padding:0 0 10px 0;font-weight:400;position:relative;width:200px">Email</th>
+            <th style="text-align:left;padding:0 0 10px 16px;font-weight:400;position:relative;width:130px">Name</th>
+            <th style="text-align:left;padding:0 0 10px 16px;font-weight:400;position:relative;width:90px">Status</th>
+            <th style="text-align:left;padding:0 0 10px 16px;font-weight:400;position:relative;width:160px">Tools Used</th>
+            <th style="text-align:left;padding:0 0 10px 16px;font-weight:400;position:relative;width:120px">Contact</th>
+            <th style="text-align:left;padding:0 0 10px 16px;font-weight:400;position:relative;width:200px">Notes</th>
+            <th style="text-align:right;padding:0 0 10px 16px;font-weight:400;position:relative;width:260px">Actions</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`
+  _initFuTableResize()
+}
+
+function _initFuTableResize() {
+  const table = document.getElementById('fu-table')
+  if (!table) return
+  const cols = table.querySelectorAll('th')
+  cols.forEach(th => {
+    const handle = document.createElement('div')
+    handle.style.cssText = 'position:absolute;right:0;top:0;bottom:0;width:6px;cursor:col-resize;z-index:1;user-select:none'
+    handle.addEventListener('mousedown', e => {
+      e.preventDefault()
+      const startX = e.pageX
+      const startW = th.offsetWidth
+      function onMove(e) { th.style.width = Math.max(60, startW + e.pageX - startX) + 'px' }
+      function onUp() { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp) }
+      document.addEventListener('mousemove', onMove)
+      document.addEventListener('mouseup', onUp)
+    })
+    th.appendChild(handle)
+  })
+}
+
 async function loadFreeUsers() {
   _freeUsersLoaded = true
   const panel = $id('free-accounts-panel')
@@ -7995,68 +8525,101 @@ async function loadFreeUsers() {
       headers: { 'Authorization': 'Bearer ' + (window._token || '') }
     })
     const json = await res.json()
-    const users = json.users || []
-    if (!users.length) {
+    _freeUsersData = json.users || []
+    if (!_freeUsersData.length) {
       panel.innerHTML = '<div style="color:#555;font-size:13px;padding:32px 0">No free accounts yet.</div>'
       return
     }
-    function fmtDate(d) {
-      if (!d) return '—'
-      return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-    }
-    function statusColor(s) {
-      if (s === 'Engaged')   return '#4CAF50'
-      if (s === 'Exploring') return '#B8962E'
-      return '#555'
-    }
-    function chipHtml(names) {
-      if (!names || !names.length) return '<span style="color:#555;font-size:12px">—</span>'
-      return names.map(n => `<span style="display:inline-block;background:#2a2a2a;color:#aaa;font-size:10px;border-radius:4px;padding:2px 6px;margin:2px 2px 2px 0">${n}</span>`).join('')
-    }
-    const rows = users.map(u => `
-      <tr style="border-bottom:1px solid #1a1a1a" onmouseover="this.style.background='#161616'" onmouseout="this.style.background=''">
-        <td style="padding:12px 0;font-size:13px;color:#1a1a1a">${u.email || '—'}</td>
-        <td style="padding:12px 16px;font-size:13px;color:#aaa">${u.parent_name || '—'}</td>
-        <td style="padding:12px 16px;font-size:13px;font-weight:600;color:${statusColor(u.status)}">${u.status}</td>
-        <td style="padding:12px 16px;font-size:13px">
-          <span style="color:#eee;margin-right:6px">${u.tools_used}</span>
-          <div style="margin-top:4px">${chipHtml(u.tool_names)}</div>
-        </td>
-        <td style="padding:12px 16px;font-size:12px;color:#555">${fmtDate(u.last_active)}</td>
-        <td style="padding:12px 16px;font-size:12px;color:#555">${fmtDate(u.created_at)}</td>
-        <td style="padding:12px 0 12px 16px;text-align:right">
-          <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
-            ${u.portal_token ? `<button onclick="window.open(window.location.origin+'/?token=${u.portal_token}','_blank')" style="background:var(--gold);color:#111;border:none;padding:5px 12px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600;letter-spacing:0.04em">Open Portal</button>` : ''}
-            <button id="notify-btn-${u.id}" onclick="notifyFreeUser('${u.email}','${u.status}',${u.tools_used},'${u.id}')"
-              style="background:none;border:1px solid #B8962E;color:#B8962E;padding:5px 12px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600;letter-spacing:0.04em">Notify</button>
-            <button id="promote-btn-${u.id}" onclick="showPromoteForm('${u.id}','${u.email.replace(/'/g,"\\'").replace(/"/g,'&quot;')}','${(u.parent_name||'').replace(/'/g,"\\'").replace(/"/g,'&quot;')}')"
-              style="background:none;border:1px solid #555;color:#aaa;padding:5px 12px;border-radius:4px;font-size:11px;cursor:pointer;font-weight:600;letter-spacing:0.04em">Move to Student</button>
-          </div>
-          <div id="promote-form-${u.id}" style="display:none;margin-top:8px;text-align:left;min-width:260px"></div>
-        </td>
-      </tr>
-    `).join('')
-    panel.innerHTML = `
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:#555;margin-bottom:16px">${users.length} free account${users.length !== 1 ? 's' : ''}</div>
-      <div style="overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse;min-width:700px">
-          <thead>
-            <tr style="font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#555;border-bottom:1px solid #222">
-              <th style="text-align:left;padding:0 0 10px 0;font-weight:400">Email</th>
-              <th style="text-align:left;padding:0 0 10px 16px;font-weight:400">Name</th>
-              <th style="text-align:left;padding:0 0 10px 16px;font-weight:400">Status</th>
-              <th style="text-align:left;padding:0 0 10px 16px;font-weight:400">Tools Used</th>
-              <th style="text-align:left;padding:0 0 10px 16px;font-weight:400">Last Active</th>
-              <th style="text-align:left;padding:0 0 10px 16px;font-weight:400">Signed Up</th>
-              <th style="text-align:right;padding:0 0 10px 16px;font-weight:400">Action</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
-    `
+    renderFreeUsers()
   } catch (err) {
     panel.innerHTML = '<div style="color:#555;font-size:13px;padding:32px 0">Failed to load free accounts.</div>'
+  }
+}
+
+function fuCopyLink(url, userId) {
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = $id('fu-copy-' + userId)
+    if (btn) { btn.textContent = 'Copied'; btn.style.color = '#4CAF50'; btn.style.borderColor = '#4CAF50' }
+  })
+}
+
+function fuShowDelete(userId, email) {
+  const el = $id('fu-del-' + userId)
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none'
+}
+
+async function freeUserContact() {
+  const btn = $id('free-contact-btn')
+  const status = $id('free-contact-status')
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…' }
+  if (status) status.style.display = 'none'
+  try {
+    const res = await fetch('/api/notify-consultant', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + (window._freeUserToken || ''), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ free_contact: true, topic: 'Free consultation request from portal' })
+    })
+    if (!res.ok) throw new Error()
+    if (btn) { btn.textContent = 'Request Sent'; btn.style.background = '#2a2a2a'; btn.style.color = '#4CAF50' }
+    if (status) { status.textContent = 'Your consultant will be in touch soon.'; status.style.display = 'block'; status.style.color = '#4CAF50' }
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Book a Free Consultation →' }
+    if (status) { status.textContent = 'Could not send. Please try again.'; status.style.display = 'block'; status.style.color = 'var(--red)' }
+  }
+}
+
+async function fuMarkContacted(userId) {
+  const u = _freeUsersData.find(x => x.id === userId)
+  if (!u) return
+  try {
+    const res = await fetch('/api/update-free-user', {
+      method: 'PATCH',
+      headers: { 'Authorization': 'Bearer ' + (window._token || ''), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId, contacted: true })
+    })
+    if (!res.ok) throw new Error()
+    u.contacted = true
+    renderFreeUsers()
+  } catch(e) { /* silent */ }
+}
+
+async function fuSaveNotes(userId) {
+  const ta = $id('fu-notes-' + userId)
+  const btn = $id('fu-notes-btn-' + userId)
+  if (!ta) return
+  const notes = ta.value
+  if (btn) { btn.textContent = 'Saving…'; btn.disabled = true }
+  try {
+    const res = await fetch('/api/update-free-user', {
+      method: 'PATCH',
+      headers: { 'Authorization': 'Bearer ' + (window._token || ''), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId, free_notes: notes })
+    })
+    if (!res.ok) throw new Error()
+    const u = _freeUsersData.find(x => x.id === userId)
+    if (u) u.free_notes = notes
+    if (btn) { btn.textContent = 'Saved'; btn.style.color = '#4CAF50'; btn.style.borderColor = '#4CAF50' }
+    setTimeout(() => { if (btn) { btn.textContent = 'Save'; btn.style.color = ''; btn.style.borderColor = ''; btn.disabled = false } }, 2000)
+  } catch(e) {
+    if (btn) { btn.textContent = 'Error'; btn.style.color = '#e55'; btn.disabled = false }
+  }
+}
+
+async function deleteFreeUser(userId) {
+  const el = $id('fu-del-' + userId)
+  const row = $id('fu-row-' + userId)
+  if (el) el.innerHTML = '<span style="color:#555;font-size:12px">Deleting...</span>'
+  try {
+    const res = await fetch('/api/delete-free-user', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + (window._token || ''), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId })
+    })
+    if (!res.ok) throw new Error('Failed')
+    _freeUsersData = _freeUsersData.filter(u => u.id !== userId)
+    renderFreeUsers()
+  } catch(err) {
+    if (el) el.innerHTML = '<span style="color:#c0392b;font-size:12px">Delete failed. Try again.</span>'
   }
 }
 
@@ -8553,7 +9116,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
         D.schools = D.schools || []
         D.documents = D.documents || []
         try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {}
-        $id('header-name').textContent = 'My Portal'
+        $id('header-name').textContent = session.user.email || 'My Portal'
         renderAll()
         renderToolsTab(D.toolResults || [])
         $id('loading').style.display = 'none'
@@ -8721,6 +9284,14 @@ sb.auth.onAuthStateChange(async (event, session) => {
       <button onclick="closeCommModal()" style="background:none;border:1px solid #2a2a2a;border-radius:6px;padding:10px 16px;font-size:13px;cursor:pointer;color:#555">Cancel</button>
       <span id="comm-modal-msg" style="font-size:12px;color:#555;align-self:center"></span>
     </div>
+  </div>
+</div>
+
+<!-- ── Tool Detail Modal ──────────────────────────────────────── -->
+<div id="tool-detail-modal" onclick="if(event.target===this)closeToolDetail()" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.6);overflow-y:auto;padding:60px 20px 40px">
+  <div style="background:#fff;border-radius:10px;max-width:720px;margin:0 auto;position:relative;padding:36px 40px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <button onclick="closeToolDetail()" style="position:absolute;top:16px;right:20px;background:none;border:none;font-size:22px;cursor:pointer;color:rgba(26,26,26,0.3);line-height:1;padding:4px 8px">&#215;</button>
+    <div id="tool-detail-content"></div>
   </div>
 </div>
 </body>

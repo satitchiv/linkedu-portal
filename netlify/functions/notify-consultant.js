@@ -45,7 +45,26 @@ exports.handler = async (event) => {
     return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) }
 
   try {
-    const { topic, student_id, direct_message } = JSON.parse(event.body || '{}')
+    const { topic, student_id, direct_message, free_contact } = JSON.parse(event.body || '{}')
+
+    // ── Free user contact request path ────────────────────────────────────────
+    if (free_contact) {
+      const token = (event.headers.authorization || '').replace('Bearer ', '')
+      if (!token) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) }
+      const { data: { user }, error: authErr } = await supabase.auth.getUser(token)
+      if (authErr || !user) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Invalid token' }) }
+      const { data: profile } = await supabase
+        .from('user_profiles').select('role, email, parent_name, account_type').eq('id', user.id).single()
+      if (!profile || profile.account_type !== 'free') {
+        return { statusCode: 403, headers, body: JSON.stringify({ error: 'Free accounts only' }) }
+      }
+      // Flag contact requested
+      await supabase.from('user_profiles').update({ contact_requested: true }).eq('id', user.id)
+      // Notify via Telegram
+      const msg = `<b>LINKEDU — Free User Contact Request</b>\n\n<b>Email:</b> ${profile.email}\n<b>Name:</b> ${profile.parent_name || '—'}\n<b>Re:</b> ${topic || 'General enquiry'}`
+      await sendTelegram(msg)
+      return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) }
+    }
 
     // ── Direct message path (for free users, admin secret OR analyst JWT) ────
     if (direct_message) {
