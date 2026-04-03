@@ -4,6 +4,7 @@
 
 const { createClient } = require('@supabase/supabase-js')
 const https = require('https')
+const { trackEvent } = require('./utils/track-event')
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -63,6 +64,15 @@ exports.handler = async (event) => {
       // Notify via Telegram
       const msg = `<b>LINKEDU — Free User Contact Request</b>\n\n<b>Email:</b> ${profile.email}\n<b>Name:</b> ${profile.parent_name || '—'}\n<b>Re:</b> ${topic || 'General enquiry'}`
       await sendTelegram(msg)
+      // Track funnel event
+      const { count: toolCount } = await supabase
+        .from('saved_tool_results')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+      await trackEvent(user.id, 'consultation_requested', {
+        email: profile.email,
+        tool_count: toolCount || 0,
+      })
       return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) }
     }
 

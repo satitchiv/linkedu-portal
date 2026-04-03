@@ -8521,19 +8521,70 @@ async function loadFreeUsers() {
   const panel = $id('free-accounts-panel')
   panel.innerHTML = '<div style="color:#555;font-size:13px;padding:32px 0">Loading...</div>'
   try {
-    const res = await fetch('/api/list-free-users', {
-      headers: { 'Authorization': 'Bearer ' + (window._token || '') }
-    })
-    const json = await res.json()
+    const [usersRes, statsRes] = await Promise.all([
+      fetch('/api/list-free-users', { headers: { 'Authorization': 'Bearer ' + (window._token || '') } }),
+      fetch('/api/funnel-stats', { headers: { 'Authorization': 'Bearer ' + (window._token || '') } }),
+    ])
+    const json = await usersRes.json()
+    const stats = statsRes.ok ? await statsRes.json() : null
     _freeUsersData = json.users || []
+    panel.innerHTML = ''
+    if (stats) panel.innerHTML = renderFunnelStats(stats)
     if (!_freeUsersData.length) {
-      panel.innerHTML = '<div style="color:#555;font-size:13px;padding:32px 0">No free accounts yet.</div>'
+      panel.innerHTML += '<div style="color:#555;font-size:13px;padding:32px 0">No free accounts yet.</div>'
       return
     }
     renderFreeUsers()
   } catch (err) {
     panel.innerHTML = '<div style="color:#555;font-size:13px;padding:32px 0">Failed to load free accounts.</div>'
   }
+}
+
+function renderFunnelStats(s) {
+  function pct(num, denom) {
+    if (!denom) return ''
+    return ' <span style="color:#555;font-size:11px">(' + Math.round(num / denom * 100) + '%)</span>'
+  }
+  function statRow(label, value, pctHtml) {
+    return `<div style="display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-bottom:1px solid #1a1a1a">
+      <span style="color:#888;font-size:12px">${label}</span>
+      <span style="color:#eee;font-size:13px;font-weight:600">${value}${pctHtml || ''}</span>
+    </div>`
+  }
+  function topList(items, keyProp, valProp) {
+    if (!items || !items.length) return '<span style="color:#555;font-size:12px">No data yet</span>'
+    return items.map(i =>
+      `<div style="display:flex;justify-content:space-between;padding:3px 0">
+        <span style="color:#aaa;font-size:12px">${i[keyProp]}</span>
+        <span style="color:#eee;font-size:12px;font-weight:600">${i[valProp]}</span>
+      </div>`
+    ).join('')
+  }
+  return `
+    <div style="background:#161616;border:1px solid #222;border-radius:8px;padding:20px 24px;margin-bottom:28px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <span style="color:#B8962E;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase">Funnel — Last ${s.days} days</span>
+        <button onclick="loadFreeUsers()" style="background:none;border:none;color:#555;font-size:11px;cursor:pointer;padding:0">Refresh</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 32px">
+        <div>
+          ${statRow('Signups completed', s.signups)}
+          ${statRow('Tool saves (website)', s.tool_saves, pct(s.tool_saves, s.signups))}
+          ${statRow('Portal visits', s.portal_visits, pct(s.portal_visits, s.tool_saves))}
+          ${statRow('Consultations requested', s.consultations, pct(s.consultations, s.portal_visits))}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 20px">
+          <div>
+            <div style="color:#555;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px">Top Sources</div>
+            ${topList(s.top_sources, 'source', 'count')}
+          </div>
+          <div>
+            <div style="color:#555;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px">Top Referrers</div>
+            ${topList(s.top_referrers, 'referrer', 'count')}
+          </div>
+        </div>
+      </div>
+    </div>`
 }
 
 function fuCopyLink(url, userId) {
@@ -9123,6 +9174,12 @@ sb.auth.onAuthStateChange(async (event, session) => {
         $id('app').style.display = 'flex'
         $id('app').classList.add('visible')
         showTab('tools')
+        // Track portal_visited — fire-and-forget
+        fetch('/api/track-event', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+          body: JSON.stringify({ event_name: 'portal_visited', properties: { tool_count: (D.toolResults || []).length } })
+        }).catch(() => {})
         return
       }
 

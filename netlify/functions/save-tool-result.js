@@ -4,6 +4,7 @@
 // Body: { tool_name, tool_label, result_summary, result_data }
 
 const { createClient } = require('@supabase/supabase-js')
+const { trackEvent } = require('./utils/track-event')
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -32,7 +33,7 @@ exports.handler = async (event) => {
 
     if (!tool_name) return { statusCode: 400, headers, body: JSON.stringify({ error: 'tool_name required' }) }
 
-    const { error: upsertErr } = await supabase
+    const { data: upsertData, error: upsertErr } = await supabase
       .from('saved_tool_results')
       .upsert(
         {
@@ -45,11 +46,20 @@ exports.handler = async (event) => {
         },
         { onConflict: 'user_id,tool_name' }
       )
+      .select('created_at, updated_at')
 
     if (upsertErr) {
       console.error('save-tool-result upsert error:', upsertErr)
       return { statusCode: 500, headers, body: JSON.stringify({ error: upsertErr.message }) }
     }
+
+    const row = upsertData && upsertData[0]
+    const isFirstSave = row ? row.created_at === row.updated_at : false
+    await trackEvent(user.id, 'tool_saved', {
+      tool_name,
+      tool_label: tool_label || null,
+      is_first_save: isFirstSave,
+    })
 
     return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) }
 

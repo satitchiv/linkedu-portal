@@ -1,9 +1,10 @@
 // POST /api/free-signup
 // Creates a free-tier Supabase user account.
-// Body: { email, password, name? }
+// Body: { email, password, name?, source?, referrer?, utm_source?, utm_campaign? }
 // Returns: { ok: true } on success, { error: 'already_exists' } if duplicate.
 
 const { createClient } = require('@supabase/supabase-js')
+const { trackEvent } = require('./utils/track-event')
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -22,7 +23,7 @@ exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) }
 
   try {
-    const { email, password, name } = JSON.parse(event.body || '{}')
+    const { email, password, name, source, referrer, utm_source, utm_campaign } = JSON.parse(event.body || '{}')
 
     if (!email || !password) {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Email and password required' }) }
@@ -64,6 +65,15 @@ exports.handler = async (event) => {
       // Profile insert failed — not fatal, user was created
       console.error('Profile insert error:', profileErr.message)
     }
+
+    await trackEvent(user.id, 'signup_completed', {
+      email: user.email,
+      source: source || null,
+      parent_name: name || null,
+      referrer: referrer || null,
+      utm_source: utm_source || null,
+      utm_campaign: utm_campaign || null,
+    })
 
     return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) }
 
