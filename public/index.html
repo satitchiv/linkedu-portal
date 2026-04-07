@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
@@ -1224,6 +1225,58 @@
     .sa-timeline-always details summary { user-select: none; }
     .sa-timeline-always details[open] summary span { display: inline-block; transform: rotate(90deg); }
 
+    /* ── School Reports Tab — screen-optimised, PDF aesthetic ──────────────── */
+    #tab-reports { background: #e8e4dc; }
+    .rpt-outer { max-width: 960px; margin: 0 auto; padding: 28px 20px; }
+    .rpt-card { background: #fff; border: 1px solid #e0d9cc; margin-bottom: 18px; font-family: 'EB Garamond', Georgia, serif; }
+    .rpt-card-head { display: flex; align-items: flex-start; justify-content: space-between; padding: 22px 28px 18px; cursor: pointer; user-select: none; border-bottom: 1px solid #eee8de; }
+    .rpt-card-head:hover { background: #faf8f4; }
+    .rpt-rank-badge { font-family: 'Prompt', sans-serif; font-size: 11px; font-weight: 500; letter-spacing: 0.12em; color: #fff; background: #8B7F5A; padding: 4px 10px; margin-right: 12px; flex-shrink: 0; margin-top: 5px; }
+    .rpt-school-name { font-family: 'EB Garamond', Georgia, serif; font-size: 26px; font-weight: 400; color: #0a0a0a; line-height: 1.15; }
+    .rpt-school-loc { font-family: 'Prompt', sans-serif; font-size: 12px; font-weight: 300; color: #999; letter-spacing: 0.08em; margin-top: 4px; }
+    .rpt-arrow { font-size: 16px; color: #bbb; user-select: none; padding-top: 6px; flex-shrink: 0; }
+    .rpt-card-body { padding: 4px 28px 28px; }
+    /* Section header — PDF .sh style, screen-sized */
+    .rpt-sh { font-family: 'Prompt', sans-serif; font-weight: 600; font-size: 10px; letter-spacing: 0.28em; text-transform: uppercase; color: #8B7F5A; margin: 22px 0 12px; display: flex; align-items: center; gap: 10px; }
+    .rpt-sh::after { content: ''; flex: 1; height: 1px; background: #8B7F5A; opacity: 0.3; }
+    /* Data rows */
+    .rpt-dr { display: flex; justify-content: space-between; align-items: baseline; padding: 7px 0; border-bottom: 1px solid #f5f1ea; gap: 16px; }
+    .rpt-dr:last-child { border-bottom: none; }
+    .rpt-lbl { font-family: 'Prompt', sans-serif; font-size: 11px; font-weight: 300; color: #999; letter-spacing: 0.03em; flex-shrink: 0; }
+    .rpt-val { font-family: 'Prompt', sans-serif; font-size: 13px; font-weight: 500; color: #0a0a0a; text-align: right; }
+    .rpt-val.gold { color: #8B7F5A; font-weight: 600; }
+    /* Body text (overview, notes) */
+    .rpt-body-text { font-family: 'EB Garamond', Georgia, serif; font-size: 16px; color: #444; line-height: 1.7; margin-bottom: 10px; }
+    /* Two-column data grid */
+    .rpt-data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 4px; }
+    .rpt-data-block { border: 1px solid #ede8de; padding: 14px 16px; }
+    .rpt-db-title { font-family: 'Prompt', sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: #8B7F5A; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #ede8de; }
+    /* LTA / info panel */
+    .rpt-lta-panel { background: #f5f1e8; border-left: 3px solid #8B7F5A; padding: 14px 18px; margin-top: 10px; }
+    .rpt-lta-lbl { font-family: 'Prompt', sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: #8B7F5A; margin-bottom: 5px; }
+    .rpt-lta-text { font-family: 'EB Garamond', Georgia, serif; font-size: 15px; color: #555; line-height: 1.6; }
+    /* Map */
+    .rpt-map { width: 100%; height: 220px; border: none; display: block; }
+    .rpt-map-wrap { border: 1px solid #ede8de; overflow: hidden; margin-bottom: 6px; margin-top: 18px; }
+    .rpt-map-caption { font-family: 'Prompt', sans-serif; font-size: 10px; color: #bbb; letter-spacing: 0.05em; font-style: italic; margin-bottom: 4px; }
+    /* Analyst notes editor */
+    .rpt-notes-editor { min-height: 56px; padding: 12px 14px; background: #faf8f4; border: 1px solid #ede8de; font-family: 'EB Garamond', Georgia, serif; font-size: 16px; color: #333; line-height: 1.65; outline: none; cursor: text; width: 100%; box-sizing: border-box; }
+    .rpt-notes-editor:focus { border-color: #8B7F5A; background: #fff; }
+    @media (max-width: 680px) {
+      .rpt-data-grid { grid-template-columns: 1fr; }
+      .rpt-school-name { font-size: 22px; }
+      .rpt-card-head { padding: 18px 20px 14px; }
+      .rpt-card-body { padding: 4px 20px 20px; }
+    }
+    @media print {
+      #tabnav, #reports-analyst-bar, .rpt-arrow { display: none !important; }
+      .rpt-card-body { display: block !important; }
+      .rpt-card { break-inside: avoid; page-break-inside: avoid; margin-bottom: 16px; }
+      .rpt-card-head { cursor: default; }
+      .rpt-data-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; }
+      #tab-reports { background: white !important; }
+    }
+
   </style>
 </head>
 <body>
@@ -1352,6 +1405,7 @@
     <button class="tab-btn" onclick="showTab('journey')">Journey</button>
     <button class="tab-btn" onclick="showTab('applying')">Applying</button>
     <button class="tab-btn" onclick="showTab('recommendations')">Recommendations</button>
+    <button class="tab-btn" id="tab-btn-reports" onclick="showTab('reports')">School Reports</button>
     <button class="tab-btn" id="tab-btn-golf" onclick="showTab('golf')">Golf</button>
     <button class="tab-btn" id="tab-btn-services" onclick="showTab('services')">Services</button>
     <button class="tab-btn" id="tab-btn-communications" onclick="showTab('communications')">Communications</button>
@@ -1422,6 +1476,7 @@
       </div>
     </div>
     <div class="tab-panel" id="tab-tools"><div id="tools-content"></div></div>
+    <div class="tab-panel" id="tab-reports"><div id="reports-container" style="padding:4px 0"><p style="font-size:13px;color:var(--muted);padding:20px 0">Loading school reports...</p></div></div>
   </div>
 </div>
 
@@ -1501,6 +1556,7 @@ let currentTab = 'overview'
 let userRole = 'parent'
 let _commsData = []
 let _commsLoaded = false
+let _reportsLoaded = false
 let _gmailEmails = []
 
 function escHtml(s) {
@@ -1889,13 +1945,14 @@ const SHORTLISTED_SCHOOLS = [
 // ── Tab switching ─────────────────────────────────────────────────────────────
 function showTab(name) {
   currentTab = name
-  const tabs = ['overview','journey','applying','recommendations','golf','services','communications','profile']
+  const tabs = ['overview','journey','applying','recommendations','reports','golf','services','communications','profile']
   document.querySelectorAll('.tab-btn').forEach((b, i) => {
     b.classList.toggle('active', tabs[i] === name)
   })
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'))
   $id(`tab-${name}`).classList.add('active')
   if (name === 'communications' && !_commsLoaded) renderCommunications()
+  if (name === 'reports' && !_reportsLoaded) { _reportsLoaded = true; loadSchoolReports() }
 }
 
 // ── Overview (cockpit) ────────────────────────────────────────────────────────
@@ -3086,11 +3143,11 @@ async function saveSection(id, fields) {
   try {
     const reqHeaders = { 'Content-Type': 'application/json' }
     let payload = fields
-    if (isAnalystView) {
+    if (_portalToken) {
+      reqHeaders['X-Access-Token'] = _portalToken
+    } else if (isAnalystView) {
       reqHeaders['Authorization'] = 'Bearer ' + (window._token || '')
       payload = { ...fields, student_id: D.student.id }
-    } else if (_portalToken) {
-      reqHeaders['X-Access-Token'] = _portalToken
     } else {
       const { data: { session } } = await sb.auth.getSession()
       if (!session) throw new Error('Not logged in')
@@ -3607,6 +3664,28 @@ function renderProfile() {
             <button onclick="copyMagicLink()" style="margin-top:6px;background:none;border:1px solid var(--gold);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;color:var(--gold)">Copy</button>
           </div>
         </div>
+        <div>
+          <div style="font-size:11px;color:#555;margin-bottom:6px">Password login — parent signs in with email &amp; password on any device, any time</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <button onclick="openCreateLoginForm()" style="background:#1a1a1a;color:#ccc;border:1px solid #2a2a2a;border-radius:6px;padding:7px 14px;font-size:12px;cursor:pointer">Create Password Login</button>
+            <span id="prof-login-msg" style="font-size:11px;color:var(--gold)"></span>
+          </div>
+          <div id="prof-login-form-wrap" style="display:none;margin-top:10px">
+            <div style="display:flex;flex-direction:column;gap:8px;max-width:340px">
+              <input type="email" id="prof-login-email" placeholder="Parent email" style="padding:8px 12px;border:1px solid #2a2a2a;border-radius:6px;background:#161616;color:#eee;font-size:12px;outline:none" />
+              <input type="text" id="prof-login-pass" placeholder="Default password (min 8 chars)" style="padding:8px 12px;border:1px solid #2a2a2a;border-radius:6px;background:#161616;color:#eee;font-size:12px;outline:none" />
+              <div style="display:flex;gap:8px;margin-top:2px">
+                <button onclick="createParentLogin()" style="background:#1a1a1a;color:var(--gold);border:1px solid var(--gold);border-radius:6px;padding:7px 16px;font-size:12px;cursor:pointer;font-weight:600">Create Account</button>
+                <button onclick="$id('prof-login-form-wrap').style.display='none'" style="background:none;border:1px solid #2a2a2a;border-radius:6px;padding:7px 14px;font-size:12px;cursor:pointer;color:#555">Cancel</button>
+              </div>
+            </div>
+            <div id="prof-login-result" style="display:none;margin-top:12px;padding:12px 14px;background:#161616;border-radius:6px;border-left:3px solid var(--gold)">
+              <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);margin-bottom:8px">Login created — share with parent</div>
+              <div id="prof-login-result-email" style="font-size:13px;color:#eee;margin-bottom:4px"></div>
+              <div id="prof-login-result-pass" style="font-size:13px;color:#eee;font-family:'Courier New',monospace"></div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>` : ''}
     ${readOnlySec('Consultant Note', s6read)}
@@ -3755,6 +3834,20 @@ function renderProfile() {
       </div>`
     })()}
     </div>
+
+    ${!isAnalystView && !isTokenView && window._token ? `
+    <div style="margin-top:24px;border:1px solid #2a2a2a;border-radius:10px;background:#0f0f0f;padding:18px 20px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin-bottom:14px">Security</div>
+      <div style="font-size:13px;color:#888;margin-bottom:14px">Update your portal password.</div>
+      <div style="display:flex;flex-direction:column;gap:10px;max-width:320px">
+        <input type="password" id="cp-new" placeholder="New password (min 8 chars)" style="padding:9px 12px;border:1px solid #2a2a2a;border-radius:6px;background:#161616;color:#eee;font-size:13px;outline:none" />
+        <input type="password" id="cp-confirm" placeholder="Confirm new password" style="padding:9px 12px;border:1px solid #2a2a2a;border-radius:6px;background:#161616;color:#eee;font-size:13px;outline:none" />
+        <div style="display:flex;gap:10px;align-items:center;margin-top:2px">
+          <button onclick="changePassword()" style="background:#1a1a1a;color:var(--gold);border:1px solid var(--gold);border-radius:6px;padding:8px 18px;font-size:12px;cursor:pointer;font-weight:600">Update Password</button>
+          <span id="cp-msg" style="font-size:12px"></span>
+        </div>
+      </div>
+    </div>` : ''}
 
     ${isAnalystView ? `
     <div style="margin-top:32px;border:1.5px solid #2a2a2a;border-radius:10px;background:#0f0f0f;padding:20px 22px">
@@ -8216,6 +8309,14 @@ function renderAll() {
 }
 
 function applyTabVisibility() {
+  const reportsBtn = document.getElementById('tab-btn-reports')
+  if (reportsBtn) {
+    if (isAnalystView) {
+      reportsBtn.style.display = ''
+    } else {
+      reportsBtn.style.display = D && D.student && D.student.show_reports_to_parent ? '' : 'none'
+    }
+  }
   const golfBtn = document.getElementById('tab-btn-golf')
   if (golfBtn) {
     if (isAnalystView) {
@@ -8268,6 +8369,227 @@ async function toggleGolfVisibility() {
 }
 
 
+// ── School Reports Tab ────────────────────────────────────────────────────────
+function _updateReportsVisBar() {
+  const label = document.getElementById('reports-vis-label')
+  const btn   = document.getElementById('reports-vis-btn')
+  if (!label || !btn) return
+  const visible = D && D.student && D.student.show_reports_to_parent
+  label.textContent   = visible ? 'Visible to parents' : 'Hidden from parents'
+  label.style.color   = visible ? '#B8962E' : '#555'
+  btn.textContent     = visible ? 'Hide' : 'Show'
+  btn.style.color     = visible ? '#888' : '#B8962E'
+  btn.style.borderColor = visible ? '#333' : '#B8962E44'
+}
+
+async function toggleReportsVisibility() {
+  if (!D || !D.student) return
+  const newVal = !D.student.show_reports_to_parent
+  const btn = document.getElementById('reports-vis-btn')
+  if (btn) { btn.disabled = true; btn.textContent = '...' }
+  try {
+    const res = await fetch('/api/update-student', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
+      body: JSON.stringify({ student_id: D.student.id, show_reports_to_parent: newVal }),
+    })
+    if (!res.ok) throw new Error('Save failed')
+    D.student.show_reports_to_parent = newVal
+    _updateReportsVisBar()
+    applyTabVisibility()
+  } catch (e) {
+    alert('Could not update visibility: ' + e.message)
+    if (btn) { btn.disabled = false; _updateReportsVisBar() }
+  }
+}
+
+async function loadSchoolReports() {
+  const container = document.getElementById('reports-container')
+  if (!container) return
+
+  // Analyst: inject visibility toggle bar
+  if (isAnalystView) {
+    const existing = document.getElementById('reports-analyst-bar')
+    if (!existing) {
+      const bar = document.createElement('div')
+      bar.id = 'reports-analyst-bar'
+      bar.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;margin-bottom:16px'
+      bar.innerHTML = '<span style="font-size:11px;color:#555;text-transform:uppercase;letter-spacing:.1em">Parent visibility \u00b7 School Reports</span><div style="display:flex;align-items:center;gap:10px"><span id="reports-vis-label" style="font-size:11px"></span><button onclick="toggleReportsVisibility()" id="reports-vis-btn" style="background:none;border:1px solid #333;border-radius:4px;padding:3px 12px;font-size:11px;cursor:pointer"></button></div>'
+      const tabPanel = document.getElementById('tab-reports')
+      tabPanel.insertBefore(bar, container)
+    }
+    _updateReportsVisBar()
+  }
+
+  try {
+    const headers = {}
+    if (window._portalToken) headers['X-Access-Token'] = window._portalToken
+    else if (window._token) headers['Authorization'] = 'Bearer ' + window._token
+    const qs = (D && D.student && D.student.id && isAnalystView) ? '?student_id=' + D.student.id : ''
+    const res = await fetch('/api/get-school-reports' + qs, { headers })
+    if (!res.ok) throw new Error('HTTP ' + res.status)
+    const schools = await res.json()
+    container.innerHTML = schools.length
+      ? renderReportCards(schools)
+      : '<div class="rpt-outer"><p style="font-family:\'Prompt\',sans-serif;font-size:12px;color:#999;padding:24px 0;text-align:center;letter-spacing:.05em">Your school reports are being prepared. Check back soon.</p></div>'
+    // Wire expand toggles
+    container.querySelectorAll('.rpt-card-head').forEach(h => {
+      h.addEventListener('click', () => {
+        const body = h.nextElementSibling
+        const isOpen = body.style.display !== 'none'
+        body.style.display = isOpen ? 'none' : ''
+        h.querySelector('.rpt-arrow').textContent = isOpen ? '\u25b8' : '\u25be'
+      })
+    })
+    // Wire analyst note editors
+    if (isAnalystView) wireReportNoteEditors()
+  } catch (e) {
+    container.innerHTML = '<p style="font-size:13px;color:var(--muted);padding:20px 0">Could not load school reports. Try again shortly.</p>'
+    console.error('loadSchoolReports error:', e)
+  }
+}
+
+function renderReportCards(schools) {
+  const isMobile = window.innerWidth < 768
+  return `<div class="rpt-outer">${schools.map((s, i) => {
+    const defaultOpen = !isMobile && i < 3
+    const arrowChar   = defaultOpen ? '\u25be' : '\u25b8'
+    const hasTennis   = s.tennis_teams || s.tennis_age_groups
+    const mapQ        = encodeURIComponent((s.school_name || '') + (s.location ? ', ' + s.location : ''))
+
+    // Map embed
+    const mapHtml = `
+      <div class="rpt-map-wrap">
+        <iframe class="rpt-map" src="https://maps.google.com/maps?q=${mapQ}&output=embed&z=12" loading="lazy" allowfullscreen></iframe>
+      </div>
+      <div class="rpt-map-caption">${s.location || s.region || ''}</div>`
+
+    // Overview / Why this school
+    const overviewHtml = (s.thai_angle_en || s.hero_tagline_en || (s.match_reasons && s.match_reasons.length))
+      ? `<div class="rpt-sh">Overview</div>
+        ${s.hero_tagline_en ? `<p class="rpt-body-text" style="font-style:italic;color:#333;font-size:14px;margin-bottom:6px">${s.hero_tagline_en}</p>` : ''}
+        ${s.thai_angle_en   ? `<p class="rpt-body-text">${s.thai_angle_en}</p>` : ''}
+        ${(s.match_reasons && s.match_reasons.length) ? `<ul style="font-family:'EB Garamond',Georgia,serif;font-size:12px;color:#666;line-height:1.7;padding-left:16px;margin:6px 0 0">${s.match_reasons.map(r => `<li>${r}</li>`).join('')}</ul>` : ''}`
+      : ''
+
+    // Academics
+    const acadHtml = (s.gcse_results || s.alevel_results || s.russell_group || s.oxbridge || s.isi_key_strengths)
+      ? `<div class="rpt-sh">Academics</div>
+        ${s.gcse_results    ? `<div class="rpt-dr"><span class="rpt-lbl">GCSE (9-7)</span><span class="rpt-val">${s.gcse_results}</span></div>` : ''}
+        ${s.alevel_results  ? `<div class="rpt-dr"><span class="rpt-lbl">A-Level (A*-A)</span><span class="rpt-val">${s.alevel_results}</span></div>` : ''}
+        ${s.russell_group   ? `<div class="rpt-dr"><span class="rpt-lbl">Russell Group</span><span class="rpt-val">${s.russell_group}</span></div>` : ''}
+        ${s.oxbridge        ? `<div class="rpt-dr"><span class="rpt-lbl">Oxbridge</span><span class="rpt-val">${s.oxbridge}</span></div>` : ''}
+        ${s.a_level_subjects  ? `<div class="rpt-dr"><span class="rpt-lbl">A-Level Subjects</span><span class="rpt-val">${s.a_level_subjects}</span></div>` : ''}
+        ${s.isi_key_strengths ? `<div class="rpt-dr"><span class="rpt-lbl">ISI Strengths</span><span class="rpt-val">${s.isi_key_strengths}</span></div>` : ''}`
+      : ''
+
+    // Sports & Pastoral
+    const sportsHtml = (s.core_sports || s.competition_achievements || s.pastoral_care)
+      ? `<div class="rpt-sh">Sports &amp; Pastoral</div>
+        ${s.core_sports              ? `<div class="rpt-dr"><span class="rpt-lbl">Core Sports</span><span class="rpt-val">${s.core_sports}</span></div>` : ''}
+        ${s.competition_achievements ? `<div class="rpt-dr"><span class="rpt-lbl">Achievements</span><span class="rpt-val">${s.competition_achievements}</span></div>` : ''}
+        ${s.pastoral_care            ? `<div class="rpt-dr"><span class="rpt-lbl">Pastoral</span><span class="rpt-val">${s.pastoral_care}</span></div>` : ''}`
+      : ''
+
+    // Tennis — two-column data-block style matching PDF
+    const tennisHtml = hasTennis
+      ? `<div class="rpt-sh">Tennis Programme \u2014 2024/25 Season</div>
+        <div class="rpt-data-grid">
+          <div class="rpt-data-block">
+            <div class="rpt-db-title">Programme</div>
+            ${s.tennis_teams          ? `<div class="rpt-dr"><span class="rpt-lbl">Teams</span><span class="rpt-val gold">${s.tennis_teams}</span></div>` : ''}
+            ${s.tennis_total_fixtures ? `<div class="rpt-dr"><span class="rpt-lbl">Total Fixtures</span><span class="rpt-val">${s.tennis_total_fixtures}</span></div>` : ''}
+            ${s.tennis_age_groups     ? `<div class="rpt-dr"><span class="rpt-lbl">Age Groups</span><span class="rpt-val">${s.tennis_age_groups}</span></div>` : ''}
+            ${s.tennis_1st_record     ? `<div class="rpt-dr"><span class="rpt-lbl">1st Team Record</span><span class="rpt-val gold">${s.tennis_1st_record}</span></div>` : ''}
+            ${s.tennis_national       ? `<div class="rpt-dr"><span class="rpt-lbl">National Level</span><span class="rpt-val gold">${s.tennis_national}</span></div>` : ''}
+            ${s.tennis_coach          ? `<div class="rpt-dr"><span class="rpt-lbl">Head Coach</span><span class="rpt-val">${s.tennis_coach}</span></div>` : ''}
+          </div>
+          <div class="rpt-data-block">
+            <div class="rpt-db-title">Fixtures by Age Group</div>
+            ${s.tennis_u18_fixtures ? `<div class="rpt-dr"><span class="rpt-lbl">U18</span><span class="rpt-val">${s.tennis_u18_fixtures} fixtures</span></div>` : ''}
+            ${s.tennis_u16_fixtures ? `<div class="rpt-dr"><span class="rpt-lbl">U16</span><span class="rpt-val">${s.tennis_u16_fixtures} fixtures</span></div>` : ''}
+            ${s.tennis_u15_fixtures ? `<div class="rpt-dr"><span class="rpt-lbl">U15</span><span class="rpt-val">${s.tennis_u15_fixtures} fixtures</span></div>` : ''}
+            ${s.tennis_u14_fixtures ? `<div class="rpt-dr"><span class="rpt-lbl">U14</span><span class="rpt-val">${s.tennis_u14_fixtures} fixtures</span></div>` : ''}
+            ${s.tennis_u13_fixtures ? `<div class="rpt-dr"><span class="rpt-lbl">U13</span><span class="rpt-val">${s.tennis_u13_fixtures} fixtures</span></div>` : ''}
+            ${s.tennis_u12_fixtures ? `<div class="rpt-dr"><span class="rpt-lbl">U12</span><span class="rpt-val">${s.tennis_u12_fixtures} fixtures</span></div>` : ''}
+          </div>
+        </div>
+        ${(s.tennis_lta || s.tennis_competitions) ? `
+        <div class="rpt-lta-panel">
+          ${s.tennis_lta          ? `<div class="rpt-lta-lbl">LTA Competition Level</div><p class="rpt-lta-text" style="margin-bottom:${s.tennis_competitions?'8px':'0'}">${s.tennis_lta}</p>` : ''}
+          ${s.tennis_competitions ? `<div class="rpt-lta-lbl">Competitions Entered</div><p class="rpt-lta-text">${s.tennis_competitions}</p>` : ''}
+        </div>` : ''}`
+      : ''
+
+    // Key facts
+    const factsHtml = (s.fees_per_year || s.fees_thb || s.founded_year || s.scholarships)
+      ? `<div class="rpt-sh">Key Facts</div>
+        ${s.fees_per_year  ? `<div class="rpt-dr"><span class="rpt-lbl">Boarding Fee / Year</span><span class="rpt-val">${s.fees_per_year}</span></div>` : ''}
+        ${s.fees_thb       ? `<div class="rpt-dr"><span class="rpt-lbl">Fees in THB</span><span class="rpt-val">${s.fees_thb}</span></div>` : ''}
+        ${s.founded_year   ? `<div class="rpt-dr"><span class="rpt-lbl">Founded</span><span class="rpt-val">${s.founded_year}</span></div>` : ''}
+        ${s.saturday_school ? `<div class="rpt-dr"><span class="rpt-lbl">Saturday School</span><span class="rpt-val">${s.saturday_school}</span></div>` : ''}
+        ${s.scholarships   ? `<div class="rpt-sh">Scholarships</div><div class="rpt-lta-panel"><p class="rpt-lta-text">${s.scholarships}</p></div>` : ''}`
+      : ''
+
+    // Analyst notes
+    const notesHtml = (s.analyst_notes && !isAnalystView)
+      ? `<div class="rpt-sh">Consultant Notes</div>
+        <div class="rpt-lta-panel"><p class="rpt-lta-text" style="font-style:italic">${s.analyst_notes}</p></div>`
+      : isAnalystView
+      ? `<div class="rpt-sh" style="margin-top:16px">Analyst Notes <span id="note-status-${s.rec_id}" style="font-family:'Prompt',sans-serif;font-size:7px;color:#8B7F5A;letter-spacing:.05em;font-weight:400;text-transform:none;opacity:0;transition:opacity 0.4s;margin-left:4px"></span></div>
+        <div contenteditable="true" data-note-rec="${s.rec_id}" class="rpt-notes-editor" spellcheck="false">${s.analyst_notes || ''}</div>`
+      : ''
+
+    return `
+    <div class="rpt-card" id="rpt-card-${s.rec_id}">
+      <div class="rpt-card-head">
+        <div style="display:flex;align-items:flex-start;gap:10px;flex:1;min-width:0">
+          <span class="rpt-rank-badge">${s.rank}</span>
+          <div>
+            <div class="rpt-school-name">${s.school_name}</div>
+            <div class="rpt-school-loc">${[s.location, s.region].filter(Boolean).join(' \u00b7 ')}</div>
+          </div>
+        </div>
+        <span class="rpt-arrow">${arrowChar}</span>
+      </div>
+      <div class="rpt-card-body" style="display:${defaultOpen ? '' : 'none'}">
+        ${mapHtml}
+        ${overviewHtml}
+        ${acadHtml}
+        ${sportsHtml}
+        ${tennisHtml}
+        ${factsHtml}
+        ${notesHtml}
+      </div>
+    </div>`
+  }).join('')}</div>`
+}
+
+function wireReportNoteEditors() {
+  document.querySelectorAll('[data-note-rec]').forEach(el => {
+    el.addEventListener('blur', async function() {
+      const recId    = el.dataset.noteRec
+      const value    = el.innerText.trim()
+      const statusEl = document.getElementById('note-status-' + recId)
+      if (statusEl) { statusEl.style.opacity = '1'; statusEl.textContent = 'Saving...' }
+      try {
+        const res = await fetch('/api/update-recommendation', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
+          body: JSON.stringify({ rec_id: recId, analyst_notes: value }),
+        })
+        if (!res.ok) throw new Error('Save failed')
+        if (statusEl) {
+          statusEl.textContent = 'Saved'
+          setTimeout(() => { statusEl.style.opacity = '0' }, 2000)
+        }
+      } catch(e) {
+        if (statusEl) { statusEl.textContent = 'Error saving'; statusEl.style.color = '#c00' }
+      }
+    })
+  })
+}
+
 // ── Token view startup (bypasses Supabase auth entirely) ──────────────────────
 if (isTokenView) {
   ;(async () => {
@@ -8278,6 +8600,7 @@ if (isTokenView) {
       userRole = 'parent'
       $id('header-name').textContent = (D.student?.preferredName || D.student?.studentName) || 'Portal'
       renderAll()
+      renderToolsTab(D.toolResults || [])
       $id('loading').classList.remove('show')
       $id('loading').style.display = 'none'
       $id('auth-screen').style.display = 'none'
@@ -9133,6 +9456,58 @@ function copyMagicLink() {
     msg.textContent = '✓ Magic link copied'
     setTimeout(() => { msg.textContent = '' }, 2500)
   })
+}
+
+function openCreateLoginForm() {
+  const wrap = $id('prof-login-form-wrap')
+  if (!wrap) return
+  const emailInput = $id('prof-login-email')
+  if (emailInput && D.student && D.student.parentEmail) emailInput.value = D.student.parentEmail
+  $id('prof-login-result').style.display = 'none'
+  $id('prof-login-msg').textContent = ''
+  wrap.style.display = 'block'
+}
+
+async function createParentLogin() {
+  const email = ($id('prof-login-email').value || '').trim()
+  const pass  = ($id('prof-login-pass').value || '').trim()
+  const msg   = $id('prof-login-msg')
+  if (!email) { msg.style.color = 'var(--red)'; msg.textContent = 'Email required'; return }
+  if (pass.length < 8) { msg.style.color = 'var(--red)'; msg.textContent = 'Password must be 8+ chars'; return }
+  msg.style.color = 'var(--gold)'; msg.textContent = 'Creating…'
+  try {
+    const res = await fetch('/api/create-parent-account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
+      body: JSON.stringify({ student_id: D.student.id, email, default_password: pass })
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error)
+    msg.textContent = ''
+    $id('prof-login-result-email').textContent = 'Email: ' + json.email
+    $id('prof-login-result-pass').textContent = 'Password: ' + json.default_password
+    $id('prof-login-result').style.display = 'block'
+  } catch (err) {
+    msg.style.color = 'var(--red)'; msg.textContent = err.message
+  }
+}
+
+async function changePassword() {
+  const np  = $id('cp-new').value
+  const cp  = $id('cp-confirm').value
+  const msg = $id('cp-msg')
+  if (!np || np.length < 8) { msg.style.color = 'var(--red)'; msg.textContent = 'Min 8 characters'; return }
+  if (np !== cp) { msg.style.color = 'var(--red)'; msg.textContent = 'Passwords do not match'; return }
+  msg.style.color = 'var(--gold)'; msg.textContent = 'Saving…'
+  try {
+    const { error } = await sb.auth.updateUser({ password: np })
+    if (error) throw error
+    msg.style.color = '#27ae60'; msg.textContent = '✓ Password updated'
+    $id('cp-new').value = ''
+    $id('cp-confirm').value = ''
+  } catch (err) {
+    msg.style.color = 'var(--red)'; msg.textContent = err.message
+  }
 }
 
 sb.auth.onAuthStateChange(async (event, session) => {
