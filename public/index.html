@@ -1277,6 +1277,129 @@
       #tab-reports { background: white !important; }
     }
 
+    /* ── Tennis tab ─────────────────────────────────────────────────────────── */
+    .tennis-card { border: 1px solid #e0dbd2; border-radius: 8px; margin-bottom: 12px; overflow: hidden; }
+    .tennis-card-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; cursor: pointer; background: #f5f0e8; user-select: none; }
+    .tennis-card-header h3 { font-family: 'Prompt', sans-serif; font-size: 10pt; font-weight: 600; color: var(--text); margin: 0; letter-spacing: 0.05em; text-transform: uppercase; }
+    .tennis-card-header-right { display: flex; align-items: center; gap: 10px; }
+    .tennis-card-arrow { font-size: 11px; color: var(--muted2); transition: transform 0.15s; }
+    .tennis-card-body { padding: 16px; background: var(--surface); }
+    .tennis-card-body.collapsed { display: none; }
+
+    .tennis-stats-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+    .tennis-stat { flex: 1; min-width: 60px; text-align: center; padding: 10px 6px; background: #f5f0e8; border-radius: 6px; }
+    .tennis-stat-num { font-family: 'EB Garamond', serif; font-size: 22px; font-weight: 600; color: var(--text); line-height: 1; }
+    .tennis-stat-num.gold { color: var(--gold); }
+    .tennis-stat-lbl { font-family: 'Prompt', sans-serif; font-size: 6.5pt; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted2); margin-top: 3px; }
+
+    .tennis-match { padding: 10px 0; border-bottom: 1px solid #ece7df; }
+    .tennis-match:last-child { border-bottom: none; }
+    .tennis-match-main { display: flex; align-items: center; gap: 8px; cursor: pointer; flex-wrap: wrap; }
+    .tennis-match-date { font-family: 'Prompt', sans-serif; font-size: 8pt; color: var(--muted2); min-width: 80px; flex-shrink: 0; }
+    .tennis-match-info { flex: 1; font-family: 'EB Garamond', serif; font-size: 11pt; color: var(--muted); }
+    .tennis-match-score { font-family: 'EB Garamond', serif; font-size: 11pt; font-weight: 600; color: var(--text); }
+    .tennis-match-detail { padding: 8px 0 4px; font-family: 'EB Garamond', serif; font-size: 10pt; color: var(--muted); line-height: 1.5; display: none; }
+    .tennis-match-actions { display: flex; gap: 12px; margin-top: 4px; }
+    .tennis-match-action-link { font-family: 'Prompt', sans-serif; font-size: 7.5pt; color: var(--muted2); cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0; }
+    .tennis-match-action-link:hover { color: var(--text); }
+
+    .badge-w { background: #e6f4ea; color: #1e7e34; padding: 2px 8px; border-radius: 10px; font-family: 'Prompt', sans-serif; font-size: 9px; font-weight: 600; }
+    .badge-l { background: #fde8e8; color: #c0392b; padding: 2px 8px; border-radius: 10px; font-family: 'Prompt', sans-serif; font-size: 9px; font-weight: 600; }
+
+    .tennis-tournament { border: 1px solid #e0dbd2; border-radius: 6px; padding: 10px 14px; margin-bottom: 8px; cursor: pointer; transition: background 0.1s; }
+    .tennis-tournament:hover { background: #f5f0e8; }
+    .tennis-tournament-detail { display: none; padding-top: 8px; border-top: 1px solid #ece7df; margin-top: 8px; }
+    .tennis-tournament-actions { display: flex; gap: 12px; margin-top: 6px; flex-wrap: wrap; }
+
+    .status-pill { display: inline-block; padding: 2px 10px; border-radius: 10px; font-family: 'Prompt', sans-serif; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .status-planning  { background: #e5e7eb; color: #374151; }
+    .status-entered   { background: #dbeafe; color: #1e40af; }
+    .status-confirmed { background: #d1fae5; color: #065f46; }
+    .status-completed { background: #fdf6e3; color: #8a6e22; }
+    .status-withdrawn { background: #fde8e8; color: #c0392b; }
+
+    .tennis-note { padding: 12px 0; border-bottom: 1px solid #ece7df; }
+    .tennis-note:last-child { border-bottom: none; }
+    .tennis-note-meta { font-family: 'Prompt', sans-serif; font-size: 7.5pt; color: var(--muted2); margin-bottom: 4px; }
+    .tennis-note-author { color: var(--gold); font-weight: 600; }
+    .tennis-note-content { font-family: 'EB Garamond', serif; font-size: 11pt; color: var(--muted); line-height: 1.6; }
+    .tennis-note-delete { font-family: 'Prompt', sans-serif; font-size: 7.5pt; color: var(--muted2); cursor: pointer; background: none; border: none; padding: 0; margin-top: 4px; text-decoration: underline; display: block; }
+    .tennis-note-delete:hover { color: var(--red); }
+
+    .tennis-chart-wrap { width: 100%; overflow: hidden; }
+    .tennis-chart { width: 100%; height: 180px; display: block; }
+    .tennis-chart-tooltip { position: fixed; background: var(--text); color: #fff; font-family: 'Prompt', sans-serif; font-size: 9pt; padding: 4px 10px; border-radius: 4px; pointer-events: none; z-index: 100; display: none; white-space: nowrap; }
+    .tennis-current { font-family: 'EB Garamond', serif; font-size: 18px; color: var(--gold); font-weight: 600; text-align: center; margin-top: 10px; }
+    .tennis-change-up   { color: #1e7e34; font-size: 13px; }
+    .tennis-change-down { color: #c0392b; font-size: 13px; }
+
+    .tennis-ranking-log { margin-top: 12px; }
+    .tennis-ranking-row { display: flex; align-items: baseline; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #ece7df; gap: 8px; }
+    .tennis-ranking-row:last-child { border-bottom: none; }
+    .tennis-ranking-date { font-family: 'Prompt', sans-serif; font-size: 8pt; color: var(--muted2); flex-shrink: 0; }
+    .tennis-ranking-val { font-family: 'EB Garamond', serif; font-size: 11pt; font-weight: 600; color: var(--text); }
+    .tennis-ranking-note { font-family: 'EB Garamond', serif; font-size: 9.5pt; color: var(--muted); flex: 1; text-align: right; }
+    .tennis-ranking-del { font-size: 11px; color: var(--muted2); cursor: pointer; background: none; border: none; padding: 0 0 0 8px; flex-shrink: 0; }
+    .tennis-ranking-del:hover { color: var(--red); }
+
+    .tennis-form { background: #f5f0e8; border-radius: 6px; padding: 14px 16px; margin-bottom: 14px; }
+    .tennis-form label { font-family: 'Prompt', sans-serif; font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted2); display: block; margin-bottom: 3px; margin-top: 12px; }
+    .tennis-form label:first-child { margin-top: 0; }
+    .tennis-form input, .tennis-form textarea, .tennis-form select { width: 100%; padding: 8px 10px; border: 1px solid #e0dbd2; border-radius: 4px; font-family: 'EB Garamond', serif; font-size: 11pt; color: var(--text); background: #fff; box-sizing: border-box; outline: none; }
+    .tennis-form input:focus, .tennis-form textarea:focus, .tennis-form select:focus { border-color: var(--gold); }
+    .tennis-form textarea { resize: vertical; min-height: 52px; }
+    .tennis-form-row { display: flex; gap: 8px; margin-top: 4px; }
+
+    .tennis-result-btns { display: flex; gap: 8px; margin-top: 4px; }
+    .tennis-result-btn { flex: 1; padding: 11px; border: 2px solid #e0dbd2; border-radius: 6px; text-align: center; cursor: pointer; font-family: 'Prompt', sans-serif; font-size: 9pt; font-weight: 600; transition: all 0.15s; background: #fff; user-select: none; }
+    .tennis-result-btn.win.selected  { border-color: #1e7e34; background: #e6f4ea; color: #1e7e34; transform: scale(1.03); box-shadow: 0 2px 6px rgba(30,126,52,0.12); }
+    .tennis-result-btn.loss.selected { border-color: #c0392b; background: #fde8e8; color: #c0392b; transform: scale(1.03); box-shadow: 0 2px 6px rgba(192,57,43,0.12); }
+    .tennis-result-btn:not(.selected) { opacity: 0.45; }
+
+    .tennis-status-btns { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+    .tennis-status-btn { padding: 6px 14px; border: 1.5px solid #e0dbd2; border-radius: 20px; font-family: 'Prompt', sans-serif; font-size: 8pt; cursor: pointer; background: #fff; color: var(--muted); transition: all 0.12s; }
+    .tennis-status-btn.selected { border-color: var(--gold); background: #fdf6e3; color: #8a6e22; font-weight: 600; }
+
+    .tennis-add-btn { display: inline-flex; align-items: center; gap: 4px; padding: 6px 14px; background: var(--text); color: #fff; border: none; border-radius: 4px; cursor: pointer; font-family: 'Prompt', sans-serif; font-size: 8pt; font-weight: 500; letter-spacing: 0.05em; }
+    .tennis-add-btn:hover { opacity: 0.85; }
+    .tennis-save-btn { padding: 8px 18px; background: var(--gold); color: #fff; border: none; border-radius: 4px; font-family: 'Prompt', sans-serif; font-size: 8.5pt; font-weight: 600; cursor: pointer; letter-spacing: 0.03em; }
+    .tennis-save-btn:hover { opacity: 0.9; }
+    .tennis-cancel-btn { padding: 8px 14px; background: none; border: 1px solid #e0dbd2; border-radius: 4px; font-family: 'Prompt', sans-serif; font-size: 8.5pt; color: var(--muted2); cursor: pointer; }
+    .tennis-cancel-btn:hover { border-color: var(--text); color: var(--text); }
+
+    .tennis-profile-display { margin-bottom: 4px; }
+    .tennis-profile-name { font-family: 'EB Garamond', serif; font-size: 14pt; font-weight: 600; color: var(--text); margin-bottom: 10px; }
+
+    .tennis-empty { text-align: center; padding: 28px 20px 20px; color: var(--muted2); font-family: 'EB Garamond', serif; font-size: 11pt; line-height: 1.7; }
+
+    .tennis-show-more { display: block; text-align: center; padding: 10px; font-family: 'Prompt', sans-serif; font-size: 8pt; color: var(--muted2); cursor: pointer; background: none; border: none; width: 100%; text-decoration: underline; }
+    .tennis-show-more:hover { color: var(--text); }
+
+    .tennis-sub-section { margin-top: 16px; }
+    .tennis-sub-section summary { font-family: 'Prompt', sans-serif; font-size: 8.5pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted2); cursor: pointer; padding: 6px 0; list-style: none; display: flex; align-items: center; gap: 6px; border-top: 1px solid #ece7df; padding-top: 10px; user-select: none; }
+    .tennis-sub-section summary::-webkit-details-marker { display: none; }
+    .tennis-sub-section summary .ts-arrow { font-size: 9px; transition: transform 0.15s; }
+    .tennis-sub-section[open] summary .ts-arrow { transform: rotate(90deg); }
+
+    .tennis-year-count { font-family: 'Prompt', sans-serif; font-size: 8pt; color: var(--muted2); margin-bottom: 12px; letter-spacing: 0.04em; }
+
+    .tennis-vis-bar { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 6px; margin-bottom: 16px; }
+
+    @media (max-width: 768px) {
+      .tennis-stats-row { gap: 6px; }
+      .tennis-stat { min-width: 50px; padding: 8px 4px; }
+      .tennis-stat-num { font-size: 18px; }
+      .tennis-match-main { flex-direction: column; align-items: flex-start; gap: 2px; }
+      .tennis-match-date { min-width: auto; }
+      .tennis-form { padding: 12px; }
+      .tennis-card-body { padding: 12px; }
+    }
+    @media print {
+      .tennis-card-body { display: block !important; }
+      .tennis-add-btn, .tennis-save-btn, .tennis-cancel-btn, .tennis-form, .tennis-vis-bar { display: none !important; }
+      .tennis-card { break-inside: avoid; page-break-inside: avoid; }
+    }
+
   </style>
 </head>
 <body>
@@ -1438,6 +1561,7 @@
     <button class="tab-btn" onclick="showTab('recommendations')">Recommendations</button>
     <button class="tab-btn" id="tab-btn-reports" onclick="showTab('reports')">School Reports</button>
     <button class="tab-btn" id="tab-btn-golf" onclick="showTab('golf')">Golf</button>
+    <button class="tab-btn" id="tab-btn-tennis" onclick="showTab('tennis')" style="display:none">Tennis</button>
     <button class="tab-btn" id="tab-btn-services" onclick="showTab('services')">Services</button>
     <button class="tab-btn" id="tab-btn-communications" onclick="showTab('communications')">Communications</button>
     <button class="tab-btn" onclick="showTab('profile')">Profile</button>
@@ -1505,6 +1629,9 @@
           <div id="trackman-root"></div>
         </div>
       </div>
+    </div>
+    <div class="tab-panel" id="tab-tennis">
+      <div id="tennis-container"><p style="font-size:13px;color:var(--muted);padding:20px 0">Loading...</p></div>
     </div>
     <div class="tab-panel" id="tab-tools"><div id="tools-content"></div></div>
     <div class="tab-panel" id="tab-reports"><div id="reports-container" style="padding:4px 0"><p style="font-size:13px;color:var(--muted);padding:20px 0">Loading school reports...</p></div></div>
@@ -1588,6 +1715,7 @@ let userRole = 'parent'
 let _commsData = []
 let _commsLoaded = false
 let _reportsLoaded = false
+let _tennisLoaded = false
 let _gmailEmails = []
 
 function escHtml(s) {
@@ -2054,7 +2182,7 @@ const SHORTLISTED_SCHOOLS = [
 // ── Tab switching ─────────────────────────────────────────────────────────────
 function showTab(name) {
   currentTab = name
-  const tabs = ['overview','journey','applying','recommendations','reports','golf','services','communications','profile']
+  const tabs = ['overview','journey','applying','recommendations','reports','golf','tennis','services','communications','profile']
   document.querySelectorAll('.tab-btn').forEach((b, i) => {
     b.classList.toggle('active', tabs[i] === name)
   })
@@ -2062,6 +2190,7 @@ function showTab(name) {
   $id(`tab-${name}`).classList.add('active')
   if (name === 'communications' && !_commsLoaded) renderCommunications()
   if (name === 'reports' && !_reportsLoaded) { _reportsLoaded = true; loadSchoolReports() }
+  if (name === 'tennis' && !_tennisLoaded) { _tennisLoaded = true; loadTennisTab() }
 }
 
 // ── Overview (cockpit) ────────────────────────────────────────────────────────
@@ -7752,6 +7881,10 @@ function renderToolsTab(results) {
     const chart = top3.length > 0 ? barChart(top3, 'pm-' + (r.id || Math.random().toString(36).slice(2))) : noData
     const topName = schoolsNorm[0] ? escHtml((schoolsNorm[0].name || '').slice(0, 28)) : ''
     const headingText = topName ? `Top match: ${topName}` : 'Your top school matches'
+    const boardingLabels = { full: 'Full boarding', weekly: 'Weekly boarding', flexible: 'Flexible boarding', any: 'Any boarding type' }
+    const boardingBadge = d.boardingType && boardingLabels[d.boardingType]
+      ? `<div style="display:inline-block;padding:2px 9px;background:rgba(184,150,46,0.08);border:1px solid rgba(184,150,46,0.2);border-radius:10px;font-size:10px;color:var(--muted2);margin-bottom:10px">${boardingLabels[d.boardingType]}</div>`
+      : ''
     return `
       <div style="${card}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
@@ -7760,6 +7893,7 @@ function renderToolsTab(results) {
         </div>
         <div style="${heading}">${headingText}</div>
         <div style="height:1px;background:var(--border);margin:14px 0"></div>
+        ${boardingBadge}
         <div style="padding-right:4px">${chart}</div>
         ${cardFooter('personality-match', toolLinks['personality-match'])}
       </div>`
@@ -7772,11 +7906,18 @@ function renderToolsTab(results) {
     const monthly = d.monthBudget  || Math.round(annual / 12)
     const rate    = Number(d.rate) || 0
     const thb     = rate > 0 ? Math.round(annual * rate) : 0
+    const totalAnnual = d.totalAnnualCost || 0
+    const totalThb = rate > 0 && totalAnnual > 0 ? Math.round(totalAnnual * rate) : 0
     const schoolLine = d.selectedSchool ? `<div style="font-size:12px;color:var(--muted);margin-top:8px">${escHtml(d.selectedSchool)}${rate ? ' \u00b7 \u0e3f' + rate.toLocaleString() + '/\u00a3' : ''}</div>` : ''
+    const totalLine = totalAnnual > annual ? `
+      <div style="margin-top:10px;padding:10px 12px;background:rgba(184,150,46,0.06);border:1px solid rgba(184,150,46,0.2);border-radius:4px;display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted2)">Total Annual Cost <span style="color:var(--muted2);font-weight:400">(inc. all extras)</span></div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--gold);font-weight:600">${fmtGBP(totalAnnual)}${totalThb > 0 ? ' <span style="font-size:0.8em;color:var(--muted2)">/ \u0e3f' + totalThb.toLocaleString() + '</span>' : ''}</div>
+      </div>` : ''
     const budgetBoxes = annual ? `
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;margin-bottom:4px">
         <div style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:14px 12px;text-align:center">
-          <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted2);margin-bottom:5px">Annual</div>
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted2);margin-bottom:5px">Tuition</div>
           <div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--gold);font-weight:600">${fmtGBP(annual)}</div>
         </div>
         <div style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:14px 12px;text-align:center">
@@ -7792,6 +7933,7 @@ function renderToolsTab(results) {
           <div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--gold);font-weight:600">\u0e3f${thb.toLocaleString()}</div>
         </div>` : ''}
       </div>
+      ${totalLine}
       ${schoolLine}` : noData
     return `
       <div style="${card}">
@@ -7831,9 +7973,16 @@ function renderToolsTab(results) {
 
   function cardCultureFit(r) {
     const d = r.result_data || {}
+    const profileName = d.profile || ''
     const scoreVal = typeof d.score === 'number' ? d.score : parseInt((d.score || '').replace('%', '')) || 0
     const dims = d.dimensions || null
-    const hasData = scoreVal > 0 || dims
+    const hasData = profileName || scoreVal > 0 || dims
+    const profileBadge = profileName
+      ? `<div style="display:inline-block;padding:5px 14px;background:rgba(184,150,46,0.08);border:1px solid rgba(184,150,46,0.25);border-radius:3px;font-family:'Playfair Display',serif;font-size:0.95rem;color:var(--gold);font-weight:600;margin-bottom:4px">${escHtml(profileName)}</div>
+         <div style="font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Boarding Profile</div>`
+      : scoreVal > 0
+        ? `${scoreCircle(scoreVal)}<div style="font-size:10px;color:var(--muted2);margin-top:4px;text-transform:uppercase;letter-spacing:0.08em">Overall Fit</div><div style="font-size:11px;color:var(--gold);font-weight:600;margin-top:3px">${fitLabel(scoreVal)}</div>`
+        : ''
     return `
       <div style="${card}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
@@ -7845,9 +7994,7 @@ function renderToolsTab(results) {
         ${hasData ? `
           <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
             <div style="flex-shrink:0;text-align:center">
-              ${scoreCircle(scoreVal)}
-              <div style="font-size:10px;color:var(--muted2);margin-top:4px;text-transform:uppercase;letter-spacing:0.08em">Overall Fit</div>
-              ${scoreVal > 0 ? `<div style="font-size:11px;color:var(--gold);font-weight:600;margin-top:3px">${fitLabel(scoreVal)}</div>` : ''}
+              ${profileBadge}
             </div>
             <div style="flex:1;min-width:160px;padding-top:8px">
               ${dims ? miniDimBars(dims) : `<div style="color:var(--muted);font-size:13px">Re-take to see dimension breakdown.</div>`}
@@ -8454,6 +8601,10 @@ function applyTabVisibility() {
       enterRoundBtn.href = '/playgolf?student=' + D.student.id
     }
   }
+  const tennisBtn = document.getElementById('tab-btn-tennis')
+  if (tennisBtn) {
+    tennisBtn.style.display = isAnalystView || (D && D.student && D.student.show_tennis_to_parent) ? '' : 'none'
+  }
 }
 
 function _updateGolfVisBar() {
@@ -8523,6 +8674,891 @@ async function toggleReportsVisibility() {
     if (btn) { btn.disabled = false; _updateReportsVisBar() }
   }
 }
+
+// ── Tennis Tab ─────────────────────────────────────────────────────────────────
+
+function _tGetHeaders() {
+  const h = {}
+  if (window._portalToken) h['X-Access-Token'] = window._portalToken
+  else if (window._token) h['Authorization'] = 'Bearer ' + window._token
+  return h
+}
+
+async function _tPost(action, extra) {
+  const payload = { action, ...extra }
+  if (isAnalystView && D && D.student) payload.target_student_id = D.student.id
+  const headers = { 'Content-Type': 'application/json' }
+  if (window._portalToken) headers['X-Access-Token'] = window._portalToken
+  else if (window._token) headers['Authorization'] = 'Bearer ' + window._token
+  const res = await fetch('/api/save-tennis-data', { method: 'POST', headers, body: JSON.stringify(payload) })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Request failed' }))
+    throw new Error(err.error || 'Request failed')
+  }
+  return res.json()
+}
+
+function _tFmtDate(ds) {
+  if (!ds) return ''
+  const d = new Date(ds + 'T12:00:00')
+  const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  const y = d.getFullYear(), cy = new Date().getFullYear()
+  return y === cy ? `${d.getDate()} ${m[d.getMonth()]}` : `${d.getDate()} ${m[d.getMonth()]} ${y}`
+}
+
+function _tFmtRange(s, e) {
+  if (!s) return ''
+  if (!e) return _tFmtDate(s)
+  const sd = new Date(s + 'T12:00:00'), ed = new Date(e + 'T12:00:00')
+  const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  const yr = sd.getFullYear() === new Date().getFullYear() ? '' : ` ${sd.getFullYear()}`
+  if (sd.getMonth() === ed.getMonth() && sd.getFullYear() === ed.getFullYear()) {
+    return `${sd.getDate()}-${ed.getDate()} ${m[sd.getMonth()]}${yr}`
+  }
+  return `${sd.getDate()} ${m[sd.getMonth()]} - ${ed.getDate()} ${m[ed.getMonth()]}${yr}`
+}
+
+function _tAutoResult(score) {
+  if (!score) return null
+  let w = 0, l = 0
+  score.trim().split(/\s+/).forEach(s => {
+    const p = s.split('-')
+    if (p.length === 2) {
+      const a = parseInt(p[0]), b = parseInt(p[1])
+      if (!isNaN(a) && !isNaN(b)) { if (a > b) w++; else if (b > a) l++ }
+    }
+  })
+  return w > l ? 'win' : l > w ? 'loss' : null
+}
+
+function _tPill(status) {
+  const l = { planning:'Planning', entered:'Entered', confirmed:'Confirmed', completed:'Completed', withdrawn:'Withdrawn' }
+  return `<span class="status-pill status-${status||'planning'}">${l[status]||status||''}</span>`
+}
+
+// ── Tennis visibility toggle ───────────────────────────────────────────────────
+function _updateTennisVisBar() {
+  const lbl = document.getElementById('tennis-vis-label')
+  const btn = document.getElementById('tennis-vis-btn')
+  if (!lbl || !btn) return
+  const v = D && D.student && D.student.show_tennis_to_parent
+  lbl.textContent = v ? 'Visible to parents' : 'Hidden from parents'
+  lbl.style.color = v ? '#B8962E' : '#555'
+  btn.textContent = v ? 'Hide' : 'Show'
+  btn.style.color = v ? '#888' : '#B8962E'
+  btn.style.borderColor = v ? '#333' : '#B8962E44'
+}
+
+async function toggleTennisVisibility() {
+  if (!D || !D.student) return
+  const nv = !D.student.show_tennis_to_parent
+  const btn = document.getElementById('tennis-vis-btn')
+  if (btn) { btn.disabled = true; btn.textContent = '...' }
+  try {
+    const res = await fetch('/api/update-student', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token||'') },
+      body: JSON.stringify({ student_id: D.student.id, show_tennis_to_parent: nv }),
+    })
+    if (!res.ok) throw new Error('Save failed')
+    D.student.show_tennis_to_parent = nv
+    _updateTennisVisBar()
+    applyTabVisibility()
+  } catch (e) {
+    alert('Could not update visibility: ' + e.message)
+    if (btn) { btn.disabled = false; _updateTennisVisBar() }
+  }
+}
+
+// ── Load ──────────────────────────────────────────────────────────────────────
+async function loadTennisTab() {
+  const container = document.getElementById('tennis-container')
+  if (!container) return
+
+  if (isAnalystView && !document.getElementById('tennis-vis-bar')) {
+    const bar = document.createElement('div')
+    bar.id = 'tennis-vis-bar'
+    bar.className = 'tennis-vis-bar'
+    bar.innerHTML = `<span style="font-size:11px;color:#555;text-transform:uppercase;letter-spacing:.1em">Parent visibility · Tennis</span><div style="display:flex;align-items:center;gap:10px"><span id="tennis-vis-label" style="font-size:11px"></span><button onclick="toggleTennisVisibility()" id="tennis-vis-btn" style="background:none;border:1px solid #333;border-radius:4px;padding:3px 12px;font-size:11px;cursor:pointer;color:#B8962E"></button></div>`
+    const panel = document.getElementById('tab-tennis')
+    panel.insertBefore(bar, container)
+    _updateTennisVisBar()
+  }
+
+  container.innerHTML = '<p style="font-size:13px;color:var(--muted);padding:20px 0">Loading...</p>'
+
+  try {
+    const qs = (isAnalystView && D && D.student && D.student.id) ? '?student_id=' + D.student.id : ''
+    const res = await fetch('/api/get-tennis-data' + qs, { headers: _tGetHeaders() })
+    if (!res.ok) throw new Error('HTTP ' + res.status)
+    const data = await res.json()
+    renderTennisTab(data)
+  } catch (e) {
+    container.innerHTML = `<p style="font-size:13px;color:var(--muted);padding:20px 0">Could not load tennis data. Try again shortly.</p>`
+    console.error('loadTennisTab error:', e)
+  }
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────────
+function renderTennisTab(data) {
+  window._tennisData = data
+  window._tennisMatchPage = 1
+  const c = document.getElementById('tennis-container')
+  if (!c) return
+
+  c.innerHTML = [
+    _tCardWrap('My Player',         'profile',     _tCardProfile(data)),
+    _tCardWrap('Match Diary',       'matches',     _tCardMatches(data)),
+    _tCardWrap('Tournaments',       'tournaments', _tCardTournaments(data)),
+    _tCardWrap('Ranking Tracker',   'rankings',    _tCardRankings(data)),
+    _tCardWrap('Development Notes', 'notes',       _tCardNotes(data)),
+  ].join('')
+
+  if (window.innerWidth < 768) {
+    ;['matches','tournaments','rankings','notes'].forEach(id => {
+      const b = document.getElementById('tennis-body-' + id)
+      if (b) b.classList.add('collapsed')
+      const arr = c.querySelector(`[data-body="tennis-body-${id}"] .tennis-card-arrow`)
+      if (arr) arr.textContent = '\u25B6'
+    })
+  }
+
+  c.querySelectorAll('.tennis-card-header').forEach(h => {
+    h.addEventListener('click', e => {
+      if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return
+      const body = document.getElementById(h.dataset.body)
+      if (!body) return
+      body.classList.toggle('collapsed')
+      const arr = h.querySelector('.tennis-card-arrow')
+      if (arr) arr.textContent = body.classList.contains('collapsed') ? '\u25B6' : '\u25BC'
+    })
+  })
+
+  // If no profile yet, open the form immediately
+  if (!data.profile) tToggleProfileEdit(true)
+
+  _wireTennisChart()
+}
+
+function _tCardWrap(title, id, body) {
+  return `<div class="tennis-card">
+    <div class="tennis-card-header" data-body="tennis-body-${id}">
+      <h3>${escHtml(title)}</h3>
+      <span class="tennis-card-arrow">\u25BC</span>
+    </div>
+    <div class="tennis-card-body" id="tennis-body-${id}">${body}</div>
+  </div>`
+}
+
+// ── Card 1: My Player ──────────────────────────────────────────────────────────
+function _tCardProfile(data) {
+  const p = data.profile
+  const s = (D && D.student) || {}
+  return `<div id="tennis-profile-display">${p ? _tProfileDisplay(p, s) : ''}</div>
+    <div id="tennis-profile-form-slot">${!p ? _tProfileForm(null) : ''}</div>`
+}
+
+function _tProfileDisplay(p, s) {
+  const name = s.student_name || s.preferred_name || ''
+  const handMap = { right:'Right', left:'Left', ambidextrous:'Both' }
+  const backMap = { 'one-handed':'One-handed', 'two-handed':'Two-handed' }
+  const rows = [
+    p.dominant_hand            ? `<div class="rpt-dr"><span class="rpt-lbl">Hand</span><span class="rpt-val">${handMap[p.dominant_hand]||p.dominant_hand}</span></div>` : '',
+    p.backhand_style           ? `<div class="rpt-dr"><span class="rpt-lbl">Backhand</span><span class="rpt-val">${backMap[p.backhand_style]||p.backhand_style}</span></div>` : '',
+    p.current_coach            ? `<div class="rpt-dr"><span class="rpt-lbl">Coach</span><span class="rpt-val">${escHtml(p.current_coach)}</span></div>` : '',
+    p.current_academy          ? `<div class="rpt-dr"><span class="rpt-lbl">Academy</span><span class="rpt-val">${escHtml(p.current_academy)}</span></div>` : '',
+    p.training_hours_per_week != null ? `<div class="rpt-dr"><span class="rpt-lbl">Training</span><span class="rpt-val">${p.training_hours_per_week} hrs/week</span></div>` : '',
+    p.years_playing != null    ? `<div class="rpt-dr"><span class="rpt-lbl">Years playing</span><span class="rpt-val">${p.years_playing}</span></div>` : '',
+  ].filter(Boolean).join('')
+  return `<div class="tennis-profile-display">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px">
+      <div class="tennis-profile-name">${escHtml(name)}</div>
+      <button class="tennis-cancel-btn" onclick="tToggleProfileEdit(true)" style="padding:5px 12px;font-size:7.5pt">Edit</button>
+    </div>
+    ${rows || '<p style="font-family:\'EB Garamond\',serif;font-size:11pt;color:var(--muted2)">No details saved yet.</p>'}
+  </div>`
+}
+
+function _tProfileForm(p) {
+  const hand = p && p.dominant_hand, back = p && p.backhand_style
+  return `<div class="tennis-form">
+    <label>Dominant Hand</label>
+    <div style="display:flex;gap:14px;margin-top:4px;flex-wrap:wrap">
+      ${['right','left','ambidextrous'].map(v => `<label style="display:flex;align-items:center;gap:5px;font-family:'Prompt',sans-serif;font-size:9.5pt;text-transform:none;letter-spacing:0;color:var(--text);margin-top:0;cursor:pointer"><input type="radio" name="t-hand" value="${v}"${hand===v?' checked':''}> ${v==='ambidextrous'?'Both':v.charAt(0).toUpperCase()+v.slice(1)}</label>`).join('')}
+    </div>
+    <label>Backhand Style</label>
+    <div style="display:flex;gap:14px;margin-top:4px;flex-wrap:wrap">
+      ${['one-handed','two-handed'].map(v => `<label style="display:flex;align-items:center;gap:5px;font-family:'Prompt',sans-serif;font-size:9.5pt;text-transform:none;letter-spacing:0;color:var(--text);margin-top:0;cursor:pointer"><input type="radio" name="t-back" value="${v}"${back===v?' checked':''}> ${v==='one-handed'?'One-handed':'Two-handed'}</label>`).join('')}
+    </div>
+    <label>Current Coach</label>
+    <input type="text" id="t-coach" value="${escHtml(p&&p.current_coach||'')}" placeholder="e.g. Khun Pong">
+    <label>Academy or Club</label>
+    <input type="text" id="t-academy" value="${escHtml(p&&p.current_academy||'')}" placeholder="e.g. ITF Development Centre Bangkok">
+    <label>Training Hours per Week</label>
+    <input type="number" id="t-hours" value="${p&&p.training_hours_per_week!=null?p.training_hours_per_week:''}" min="0" max="40" step="0.5" placeholder="e.g. 12">
+    <label>Years Playing</label>
+    <input type="number" id="t-years" value="${p&&p.years_playing!=null?p.years_playing:''}" min="0" max="20" step="0.5" placeholder="e.g. 4">
+    <div style="display:flex;gap:8px;margin-top:16px;align-items:center">
+      <button class="tennis-save-btn" onclick="tSaveProfile()">Save</button>
+      ${p ? `<button class="tennis-cancel-btn" onclick="tToggleProfileEdit(false)">Cancel</button>` : ''}
+    </div>
+  </div>`
+}
+
+function tToggleProfileEdit(showForm) {
+  const disp = document.getElementById('tennis-profile-display')
+  const slot = document.getElementById('tennis-profile-form-slot')
+  if (!disp || !slot) return
+  if (showForm) {
+    slot.innerHTML = _tProfileForm(window._tennisData && window._tennisData.profile)
+    disp.style.display = 'none'
+  } else {
+    slot.innerHTML = ''
+    disp.style.display = ''
+  }
+}
+
+async function tSaveProfile() {
+  const hand    = ((document.querySelector('input[name="t-hand"]:checked') || {}).value) || null
+  const back    = ((document.querySelector('input[name="t-back"]:checked') || {}).value) || null
+  const coach   = (document.getElementById('t-coach')  || {}).value || null
+  const academy = (document.getElementById('t-academy')|| {}).value || null
+  const hours   = (document.getElementById('t-hours')  || {}).value
+  const years   = (document.getElementById('t-years')  || {}).value
+
+  if (!hand && !back && !coach && !academy && !hours && !years) {
+    alert('Please fill in at least one field.')
+    return
+  }
+  const btn = document.querySelector('#tennis-profile-form-slot .tennis-save-btn')
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving...' }
+  try {
+    await _tPost('save_profile', {
+      dominant_hand: hand, backhand_style: back,
+      current_coach: coach, current_academy: academy,
+      training_hours_per_week: hours ? Number(hours) : null,
+      years_playing: years ? Number(years) : null,
+    })
+    if (!window._tennisData) window._tennisData = {}
+    window._tennisData.profile = {
+      ...(window._tennisData.profile || {}),
+      dominant_hand: hand, backhand_style: back,
+      current_coach: coach, current_academy: academy,
+      training_hours_per_week: hours ? Number(hours) : null,
+      years_playing: years ? Number(years) : null,
+    }
+    const s = (D && D.student) || {}
+    const disp = document.getElementById('tennis-profile-display')
+    const slot = document.getElementById('tennis-profile-form-slot')
+    if (disp) { disp.innerHTML = _tProfileDisplay(window._tennisData.profile, s); disp.style.display = '' }
+    if (slot)  slot.innerHTML = ''
+  } catch (e) {
+    alert('Could not save profile: ' + e.message)
+    if (btn) { btn.disabled = false; btn.textContent = 'Save' }
+  }
+}
+
+// ── Card 2: Match Diary ────────────────────────────────────────────────────────
+function _tCardMatches(data) {
+  const tournNames = (data.tournaments || []).map(t => `<option value="${escHtml(t.tournament_name)}">`).join('')
+  return `<datalist id="t-tourn-names">${tournNames}</datalist>
+    <div id="tennis-match-form-slot"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div></div>
+      <button class="tennis-add-btn" onclick="tShowMatchForm(null)">+ Add Match</button>
+    </div>
+    <div id="tennis-stats-wrap">${_tStatsBar(data.stats)}</div>
+    <div id="tennis-match-list">${_tMatchList(data.matches || [], 1)}</div>`
+}
+
+function _tStatsBar(stats) {
+  if (!stats || stats.totalMatches === 0) return ''
+  const gold = stats.winRate >= 60 ? ' gold' : ''
+  return `<div class="tennis-stats-row">
+    <div class="tennis-stat"><div class="tennis-stat-num">${stats.totalMatches}</div><div class="tennis-stat-lbl">Total</div></div>
+    <div class="tennis-stat"><div class="tennis-stat-num">${stats.wins}</div><div class="tennis-stat-lbl">Wins</div></div>
+    <div class="tennis-stat"><div class="tennis-stat-num">${stats.losses}</div><div class="tennis-stat-lbl">Losses</div></div>
+    <div class="tennis-stat"><div class="tennis-stat-num${gold}">${stats.winRate}%</div><div class="tennis-stat-lbl">Win %</div></div>
+    <div class="tennis-stat"><div class="tennis-stat-num">${stats.matchesThisYear}</div><div class="tennis-stat-lbl">This Year</div></div>
+  </div>`
+}
+
+const _T_PAGE = 20
+function _tMatchList(matches, page) {
+  if (!matches.length) return `<div class="tennis-empty">No matches logged yet. After your next tournament, tap the button above to record your results. You will start seeing your win rate and match history build up over time.</div>`
+  const shown = matches.slice(0, page * _T_PAGE)
+  const rows = shown.map(m => {
+    const badge = m.result === 'win' ? '<span class="badge-w">W</span>' : '<span class="badge-l">L</span>'
+    const notesHtml = m.notes ? `<div style="margin-top:6px;font-family:'EB Garamond',serif;font-size:10.5pt;color:var(--muted);line-height:1.5">${escHtml(m.notes)}</div>` : ''
+    return `<div class="tennis-match">
+      <div class="tennis-match-main" onclick="tToggleMatch('${m.id}')">
+        <span class="tennis-match-date">${_tFmtDate(m.match_date)}</span>
+        <span class="tennis-match-info">${escHtml(m.tournament_name)}${m.opponent_name ? ' · vs ' + escHtml(m.opponent_name) : ''}</span>
+        <span class="tennis-match-score">${escHtml(m.score)}</span>
+        ${badge}
+      </div>
+      <div class="tennis-match-detail" id="t-md-${m.id}">
+        ${notesHtml}
+        <div class="tennis-match-actions">
+          <button class="tennis-match-action-link" onclick="tShowMatchForm('${m.id}')">Edit</button>
+          <button class="tennis-match-action-link" onclick="tDeleteMatch('${m.id}')" style="color:var(--red)">Delete</button>
+        </div>
+      </div>
+    </div>`
+  }).join('')
+  const more = matches.length > shown.length ? `<button class="tennis-show-more" onclick="tShowMoreMatches()">Show earlier matches</button>` : ''
+  return rows + more
+}
+
+function tToggleMatch(id) {
+  const d = document.getElementById('t-md-' + id)
+  if (d) d.style.display = d.style.display === 'block' ? 'none' : 'block'
+}
+
+function tShowMoreMatches() {
+  window._tennisMatchPage = (window._tennisMatchPage || 1) + 1
+  const el = document.getElementById('tennis-match-list')
+  if (el && window._tennisData) el.innerHTML = _tMatchList(window._tennisData.matches, window._tennisMatchPage)
+}
+
+function _tMatchForm(match) {
+  const today = new Date().toISOString().split('T')[0]
+  const r = match ? match.result : null
+  return `<div class="tennis-form" id="t-mform">
+    <label>Date</label>
+    <input type="date" id="t-m-date" value="${match ? match.match_date : today}">
+    <label>Tournament</label>
+    <input type="text" id="t-m-tourn" value="${match ? escHtml(match.tournament_name) : ''}" placeholder="e.g. PTT Junior Championships" list="t-tourn-names">
+    <label>Opponent <span style="font-weight:300;letter-spacing:0">(optional)</span></label>
+    <input type="text" id="t-m-opp" value="${match ? escHtml(match.opponent_name||'') : ''}" placeholder="e.g. Nong Film">
+    <label>Score</label>
+    <input type="text" id="t-m-score" value="${match ? escHtml(match.score) : ''}" placeholder="e.g. 6-3 4-6 7-5" oninput="tScoreInput(this.value)">
+    <label>Result</label>
+    <div class="tennis-result-btns">
+      <div class="tennis-result-btn win${r==='win'?' selected':''}" id="t-rbtn-win" onclick="tSelectResult('win')">\u2713 Win</div>
+      <div class="tennis-result-btn loss${r==='loss'?' selected':''}" id="t-rbtn-loss" onclick="tSelectResult('loss')">\u2717 Loss</div>
+    </div>
+    <input type="hidden" id="t-m-result" value="${r||''}">
+    <label>Notes <span style="font-weight:300;letter-spacing:0">(optional)</span></label>
+    <textarea id="t-m-notes" placeholder="How did the match go? Anything to work on?" rows="2">${match ? escHtml(match.notes||'') : ''}</textarea>
+    ${match ? `<input type="hidden" id="t-m-id" value="${match.id}">` : ''}
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="tennis-save-btn" onclick="tSaveMatch()">Save Match</button>
+      <button class="tennis-cancel-btn" onclick="tHideMatchForm()">Cancel</button>
+    </div>
+  </div>`
+}
+
+function tScoreInput(val) { const r = _tAutoResult(val); if (r) tSelectResult(r) }
+
+function tSelectResult(r) {
+  const hid = document.getElementById('t-m-result')
+  if (hid) hid.value = r
+  const w = document.getElementById('t-rbtn-win'), l = document.getElementById('t-rbtn-loss')
+  if (w) w.classList.toggle('selected', r === 'win')
+  if (l) l.classList.toggle('selected', r === 'loss')
+}
+
+function tShowMatchForm(matchId) {
+  const slot = document.getElementById('tennis-match-form-slot')
+  if (!slot) return
+  const match = matchId && window._tennisData ? window._tennisData.matches.find(m => m.id === matchId) : null
+  slot.innerHTML = _tMatchForm(match)
+  slot.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+}
+
+function tHideMatchForm() {
+  const slot = document.getElementById('tennis-match-form-slot')
+  if (slot) slot.innerHTML = ''
+}
+
+async function tSaveMatch() {
+  const id     = (document.getElementById('t-m-id')    ||{}).value || null
+  const date   = (document.getElementById('t-m-date')  ||{}).value
+  const tourn  = (document.getElementById('t-m-tourn') ||{}).value
+  const opp    = (document.getElementById('t-m-opp')   ||{}).value
+  const score  = (document.getElementById('t-m-score') ||{}).value
+  const result = (document.getElementById('t-m-result')||{}).value
+  const notes  = (document.getElementById('t-m-notes') ||{}).value
+  if (!date || !tourn || !score || !result) { alert('Please fill in Date, Tournament, Score, and Result.'); return }
+  const btn = document.querySelector('#t-mform .tennis-save-btn')
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving...' }
+  try {
+    const payload = { match_date: date, tournament_name: tourn, opponent_name: opp||null, score, result, notes: notes||null }
+    if (id) payload.id = id
+    const res = await _tPost('save_match', payload)
+    tHideMatchForm()
+    // Refresh data from server
+    const qs = (isAnalystView && D && D.student && D.student.id) ? '?student_id=' + D.student.id : ''
+    const r2 = await fetch('/api/get-tennis-data' + qs, { headers: _tGetHeaders() })
+    const data = await r2.json()
+    window._tennisData.matches = data.matches
+    window._tennisData.stats   = data.stats
+    window._tennisMatchPage = 1
+    const sw = document.getElementById('tennis-stats-wrap'), lw = document.getElementById('tennis-match-list')
+    if (sw) sw.innerHTML = _tStatsBar(data.stats)
+    if (lw) lw.innerHTML = _tMatchList(data.matches, 1)
+  } catch (e) {
+    alert('Could not save match: ' + e.message)
+    if (btn) { btn.disabled = false; btn.textContent = 'Save Match' }
+  }
+}
+
+async function tDeleteMatch(id) {
+  if (!confirm('Delete this match?')) return
+  try {
+    const res = await _tPost('delete_match', { id })
+    if (window._tennisData) { window._tennisData.matches = window._tennisData.matches.filter(m => m.id !== id); window._tennisData.stats = res.stats }
+    const sw = document.getElementById('tennis-stats-wrap'), lw = document.getElementById('tennis-match-list')
+    if (sw) sw.innerHTML = _tStatsBar(res.stats)
+    if (lw) lw.innerHTML = _tMatchList(window._tennisData.matches, window._tennisMatchPage || 1)
+  } catch (e) { alert('Could not delete match: ' + e.message) }
+}
+
+// ── Card 3: Tournaments ────────────────────────────────────────────────────────
+function _tCardTournaments(data) {
+  const today = new Date().toISOString().split('T')[0]
+  const yr    = new Date().getFullYear()
+  const ts    = data.tournaments || []
+  const upcoming = ts.filter(t => t.start_date >= today && t.status !== 'completed' && t.status !== 'withdrawn')
+  const past     = ts.filter(t => t.status === 'completed' || t.status === 'withdrawn' || t.start_date < today).sort((a,b) => b.start_date.localeCompare(a.start_date))
+
+  const yrLine = data.stats ? `<div class="tennis-year-count">${yr}: ${data.stats.tournamentsThisYear} tournament${data.stats.tournamentsThisYear !== 1 ? 's' : ''} played</div>` : ''
+  const upHtml = upcoming.length ? upcoming.map(_tTournCard).join('') : `<div style="font-family:'EB Garamond',serif;font-size:11pt;color:var(--muted2);padding:10px 0">No upcoming tournaments. Add your next event above.</div>`
+  const pastHtml = past.length ? past.map(_tTournCard).join('') : `<div style="font-family:'EB Garamond',serif;font-size:11pt;color:var(--muted2);padding:6px 0">No past results yet.</div>`
+
+  return `${yrLine}
+    <div id="tennis-tourn-form-slot"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-family:'Prompt',sans-serif;font-size:8.5pt;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--muted2)">Coming Up</div>
+      <button class="tennis-add-btn" onclick="tShowTournamentForm(null)">+ Add Tournament</button>
+    </div>
+    <div id="tennis-tourn-upcoming">${upHtml}</div>
+    <details class="tennis-sub-section">
+      <summary><span class="ts-arrow">\u25B6</span> Past Results (${past.length})</summary>
+      <div id="tennis-tourn-past" style="margin-top:8px">${pastHtml}</div>
+    </details>`
+}
+
+function _tTournCard(t) {
+  const dateStr = _tFmtRange(t.start_date, t.end_date)
+  const loc = [t.location, t.category].filter(Boolean).map(escHtml).join(' · ')
+  return `<div class="tennis-tournament" onclick="tToggleTournament('${t.id}')">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+      <div>
+        <div style="font-family:'Prompt',sans-serif;font-size:8pt;color:var(--muted2);margin-bottom:2px">${dateStr}</div>
+        <div style="font-family:'EB Garamond',serif;font-size:12pt;font-weight:600;color:var(--text)">${escHtml(t.tournament_name)}</div>
+        ${loc ? `<div style="font-family:'EB Garamond',serif;font-size:10.5pt;color:var(--muted)">${loc}</div>` : ''}
+        ${t.result ? `<div style="font-family:'Prompt',sans-serif;font-size:8pt;color:var(--muted2);margin-top:2px">Result: ${escHtml(t.result)}</div>` : ''}
+      </div>
+      ${_tPill(t.status)}
+    </div>
+    <div class="tennis-tournament-detail" id="t-td-${t.id}">
+      ${t.notes ? `<div style="font-family:'EB Garamond',serif;font-size:10.5pt;color:var(--muted);margin-bottom:8px">${escHtml(t.notes)}</div>` : ''}
+      <div class="tennis-tournament-actions">
+        <button class="tennis-match-action-link" onclick="tShowTournamentForm('${t.id}');event.stopPropagation()">Edit</button>
+        ${t.status !== 'completed' && t.status !== 'withdrawn' ? `<button class="tennis-match-action-link" onclick="tShowCompleteForm('${t.id}');event.stopPropagation()">Mark as Completed</button>` : ''}
+        <button class="tennis-match-action-link" onclick="tDeleteTournament('${t.id}');event.stopPropagation()" style="color:var(--red)">Delete</button>
+      </div>
+      <div id="t-comp-${t.id}"></div>
+    </div>
+  </div>`
+}
+
+function tToggleTournament(id) {
+  const d = document.getElementById('t-td-' + id)
+  if (d) d.style.display = d.style.display === 'block' ? 'none' : 'block'
+}
+
+function _tTournForm(t) {
+  const today = new Date().toISOString().split('T')[0]
+  const cur = t ? t.status : 'planning'
+  return `<div class="tennis-form" id="t-tform">
+    <label>Tournament Name</label>
+    <input type="text" id="t-t-name" value="${t ? escHtml(t.tournament_name) : ''}" placeholder="e.g. PTT Junior National Grade 3">
+    <label>Start Date</label>
+    <input type="date" id="t-t-start" value="${t ? t.start_date : today}">
+    <label>End Date <span style="font-weight:300;letter-spacing:0">(optional)</span></label>
+    <input type="date" id="t-t-end" value="${t && t.end_date ? t.end_date : ''}">
+    <label>Location <span style="font-weight:300;letter-spacing:0">(optional)</span></label>
+    <input type="text" id="t-t-loc" value="${t ? escHtml(t.location||'') : ''}" placeholder="e.g. Hua Hin, Thailand">
+    <label>Category <span style="font-weight:300;letter-spacing:0">(optional)</span></label>
+    <input type="text" id="t-t-cat" value="${t ? escHtml(t.category||'') : ''}" placeholder="e.g. National Grade 3, ITF J60, Regional">
+    <label>Status</label>
+    <div class="tennis-status-btns">
+      ${['planning','entered','confirmed'].map(s => `<div class="tennis-status-btn${cur===s?' selected':''}" onclick="tSelectTournStatus('${s}',this)">${s.charAt(0).toUpperCase()+s.slice(1)}</div>`).join('')}
+    </div>
+    <input type="hidden" id="t-t-status" value="${cur}">
+    ${t ? `<input type="hidden" id="t-t-id" value="${t.id}">` : ''}
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="tennis-save-btn" onclick="tSaveTournament()">Save</button>
+      <button class="tennis-cancel-btn" onclick="tHideTournamentForm()">Cancel</button>
+    </div>
+  </div>`
+}
+
+function tSelectTournStatus(val, el) {
+  const hid = document.getElementById('t-t-status')
+  if (hid) hid.value = val
+  el.closest('.tennis-status-btns').querySelectorAll('.tennis-status-btn').forEach(b => b.classList.remove('selected'))
+  el.classList.add('selected')
+}
+
+function tShowTournamentForm(id) {
+  const slot = document.getElementById('tennis-tourn-form-slot')
+  if (!slot) return
+  const t = id && window._tennisData ? window._tennisData.tournaments.find(x => x.id === id) : null
+  slot.innerHTML = _tTournForm(t)
+  slot.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+}
+
+function tHideTournamentForm() {
+  const slot = document.getElementById('tennis-tourn-form-slot')
+  if (slot) slot.innerHTML = ''
+}
+
+async function tSaveTournament() {
+  const id     = (document.getElementById('t-t-id')    ||{}).value || null
+  const name   = (document.getElementById('t-t-name')  ||{}).value
+  const start  = (document.getElementById('t-t-start') ||{}).value
+  const end    = (document.getElementById('t-t-end')   ||{}).value
+  const loc    = (document.getElementById('t-t-loc')   ||{}).value
+  const cat    = (document.getElementById('t-t-cat')   ||{}).value
+  const status = (document.getElementById('t-t-status')||{}).value
+  if (!name || !start) { alert('Please fill in Tournament Name and Start Date.'); return }
+  const btn = document.querySelector('#t-tform .tennis-save-btn')
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving...' }
+  try {
+    const p = { tournament_name: name, start_date: start, end_date: end||null, location: loc||null, category: cat||null, status: status||'planning' }
+    if (id) p.id = id
+    await _tPost('save_tournament', p)
+    tHideTournamentForm()
+    await _tRefreshTournaments()
+  } catch (e) {
+    alert('Could not save tournament: ' + e.message)
+    if (btn) { btn.disabled = false; btn.textContent = 'Save' }
+  }
+}
+
+async function tDeleteTournament(id) {
+  if (!confirm('Delete this tournament?')) return
+  try { await _tPost('delete_tournament', { id }); await _tRefreshTournaments() }
+  catch (e) { alert('Could not delete: ' + e.message) }
+}
+
+function tShowCompleteForm(id) {
+  const slot = document.getElementById('t-comp-' + id)
+  if (!slot) return
+  slot.innerHTML = `<div class="tennis-form" style="margin-top:10px">
+    <label>Result</label>
+    <input type="text" id="t-comp-res" placeholder="e.g. Quarter-finals, Winner, Round of 16">
+    <label>Notes <span style="font-weight:300;letter-spacing:0">(optional)</span></label>
+    <textarea id="t-comp-notes" placeholder="What did you take away from this tournament?" rows="2"></textarea>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="tennis-save-btn" onclick="tSaveComplete('${id}')">Mark Completed</button>
+      <button class="tennis-cancel-btn" onclick="document.getElementById('t-comp-${id}').innerHTML=''">Cancel</button>
+    </div>
+  </div>`
+}
+
+async function tSaveComplete(id) {
+  const result = (document.getElementById('t-comp-res')  ||{}).value
+  const notes  = (document.getElementById('t-comp-notes')||{}).value
+  const btn = document.querySelector(`#t-comp-${id} .tennis-save-btn`)
+  if (btn) { btn.disabled = true; btn.textContent = '...' }
+  try {
+    const t = window._tennisData && window._tennisData.tournaments.find(x => x.id === id)
+    await _tPost('save_tournament', {
+      id, tournament_name: t ? t.tournament_name : '', start_date: t ? t.start_date : '',
+      status: 'completed', result: result||null, notes: notes || (t && t.notes) || null,
+    })
+    await _tRefreshTournaments()
+  } catch (e) {
+    alert('Could not update tournament: ' + e.message)
+    if (btn) { btn.disabled = false; btn.textContent = 'Mark Completed' }
+  }
+}
+
+async function _tRefreshTournaments() {
+  const qs = (isAnalystView && D && D.student && D.student.id) ? '?student_id=' + D.student.id : ''
+  const res  = await fetch('/api/get-tennis-data' + qs, { headers: _tGetHeaders() })
+  const data = await res.json()
+  window._tennisData.tournaments = data.tournaments
+  window._tennisData.stats       = data.stats
+  const body = document.getElementById('tennis-body-tournaments')
+  if (body) {
+    const col = body.classList.contains('collapsed')
+    body.innerHTML = _tCardTournaments(window._tennisData)
+    if (col) body.classList.add('collapsed')
+    // Sync datalist for match form
+    const dl = document.getElementById('t-tourn-names')
+    if (dl) dl.innerHTML = data.tournaments.map(t => `<option value="${escHtml(t.tournament_name)}">`).join('')
+  }
+}
+
+// ── Card 4: Ranking Tracker ────────────────────────────────────────────────────
+function _tCardRankings(data) {
+  const rankings = data.rankings || []
+  const lockedType = rankings.length ? rankings[0].ranking_type : null
+
+  const chartHtml = rankings.length >= 2
+    ? `<div class="tennis-chart-wrap"><svg class="tennis-chart" id="tennis-ranking-svg" viewBox="0 0 600 180" preserveAspectRatio="xMidYMid meet"></svg></div>`
+    : ''
+
+  const currentHtml = rankings.length ? (() => {
+    const last = rankings[rankings.length - 1], first = rankings[0]
+    const isR = last.ranking_type.toLowerCase().includes('ranking')
+    const diff = last.ranking_value - first.ranking_value
+    const improved = isR ? diff < 0 : diff > 0
+    const prefix = isR ? '#' : ''
+    const change = diff !== 0
+      ? ` <span class="${improved ? 'tennis-change-up' : 'tennis-change-down'}">${improved ? '\u2191' : '\u2193'} from ${prefix}${first.ranking_value}</span>`
+      : ''
+    return `<div class="tennis-current">Current: ${escHtml(last.ranking_type)} ${prefix}${last.ranking_value}${change}</div>`
+  })() : ''
+
+  const logHtml = rankings.length ? `<div class="tennis-ranking-log">${[...rankings].reverse().map(r => {
+    const isR = r.ranking_type.toLowerCase().includes('ranking')
+    return `<div class="tennis-ranking-row">
+      <span class="tennis-ranking-date">${_tFmtDate(r.log_date)}</span>
+      <span class="tennis-ranking-val">${isR ? '#' : ''}${r.ranking_value}</span>
+      <span class="tennis-ranking-note">${escHtml(r.notes||'')}</span>
+      <button class="tennis-ranking-del" onclick="tDeleteRanking('${r.id}')" title="Remove">&times;</button>
+    </div>`
+  }).join('')}</div>` : ''
+
+  const emptyHtml = !rankings.length ? `<div class="tennis-empty">Track your ranking over time. Log your UTR, national ranking, or ITF ranking once a month and watch your progress on the chart.<br><br><span style="font-size:10pt">You can track: UTR rating · National ranking · ITF Junior ranking · Regional ranking</span></div>` : ''
+
+  return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+    <div style="font-family:'Prompt',sans-serif;font-size:8pt;color:var(--muted2)">${lockedType ? escHtml(lockedType) : ''}</div>
+    <button class="tennis-add-btn" onclick="tShowRankingForm()">+ Add Entry</button>
+  </div>
+  <div id="tennis-ranking-form-slot"></div>
+  ${chartHtml}${currentHtml}${logHtml}${emptyHtml}`
+}
+
+function _wireTennisChart() {
+  const svg = document.getElementById('tennis-ranking-svg')
+  if (!svg || !window._tennisData) return
+  const rankings = window._tennisData.rankings || []
+  if (rankings.length >= 2) renderRankingChart(rankings, svg)
+}
+
+function renderRankingChart(rankings, svg) {
+  const W = 600, H = 180, ml = 44, mr = 10, mt = 12, mb = 28
+  const pw = W - ml - mr, ph = H - mt - mb
+  const vals = rankings.map(r => r.ranking_value)
+  const minV = Math.min(...vals), maxV = Math.max(...vals)
+  const rng = maxV - minV || 1
+  const isR = rankings[0].ranking_type.toLowerCase().includes('ranking')
+
+  function yOf(v) {
+    const n = (v - minV) / rng
+    return isR ? mt + n * ph : mt + (1 - n) * ph
+  }
+  function xOf(i) {
+    return rankings.length < 2 ? ml + pw/2 : ml + (i / (rankings.length - 1)) * pw
+  }
+
+  const gridN = 4
+  const gridLines = Array.from({length: gridN + 1}, (_, i) => {
+    const v = minV + (rng * i / gridN)
+    const y = yOf(v)
+    const label = isR ? `#${Math.round(v)}` : `${Math.round(v * 10) / 10}`
+    return `<line x1="${ml}" y1="${y.toFixed(1)}" x2="${W-mr}" y2="${y.toFixed(1)}" stroke="#ece7df" stroke-width="1"/>
+<text x="${ml-4}" y="${(y+4).toFixed(1)}" text-anchor="end" font-family="Prompt,sans-serif" font-size="8" fill="#aaa">${label}</text>`
+  }).join('\n')
+
+  const points = rankings.map((r,i) => `${xOf(i).toFixed(1)},${yOf(r.ranking_value).toFixed(1)}`).join(' ')
+  const line = `<polyline class="trend" points="${points}"/>`
+
+  const dots = rankings.map((r,i) => {
+    const note = (r.notes||'').replace(/"/g,'&quot;')
+    return `<circle class="point" cx="${xOf(i).toFixed(1)}" cy="${yOf(r.ranking_value).toFixed(1)}" r="4" data-date="${_tFmtDate(r.log_date)}" data-val="${isR?'#':''}${r.ranking_value}" data-note="${note}"/>`
+  }).join('\n')
+
+  const step = Math.max(1, Math.ceil(rankings.length / 6))
+  const xlabs = rankings.map((r,i) => {
+    if (i % step !== 0 && i !== rankings.length - 1) return ''
+    const d = new Date(r.log_date + 'T12:00:00')
+    const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+    return `<text x="${xOf(i).toFixed(1)}" y="${H-6}" text-anchor="middle" font-family="Prompt,sans-serif" font-size="8" fill="#aaa">${mo[d.getMonth()]} ${String(d.getFullYear()).slice(2)}</text>`
+  }).join('\n')
+
+  svg.innerHTML = gridLines + '\n' + line + '\n' + dots + '\n' + xlabs
+
+  // Tooltip
+  let tip = document.getElementById('t-chart-tip')
+  if (!tip) {
+    tip = document.createElement('div')
+    tip.id = 't-chart-tip'
+    tip.className = 'tennis-chart-tooltip'
+    document.body.appendChild(tip)
+  }
+  svg.querySelectorAll('circle.point').forEach(c => {
+    c.addEventListener('mouseenter', () => {
+      const rc = c.getBoundingClientRect()
+      tip.textContent = `${c.dataset.date} · ${c.dataset.val}${c.dataset.note ? ' · ' + c.dataset.note : ''}`
+      tip.style.display = 'block'
+      tip.style.left = (rc.left + rc.width/2 - tip.offsetWidth/2) + 'px'
+      tip.style.top  = (window.scrollY + rc.top - 36) + 'px'
+    })
+    c.addEventListener('mouseleave', () => { tip.style.display = 'none' })
+    c.addEventListener('click', e => {
+      e.stopPropagation()
+      const rc = c.getBoundingClientRect()
+      tip.textContent = `${c.dataset.date} · ${c.dataset.val}${c.dataset.note ? ' · ' + c.dataset.note : ''}`
+      tip.style.display = 'block'
+      tip.style.left = (rc.left + rc.width/2 - tip.offsetWidth/2) + 'px'
+      tip.style.top  = (window.scrollY + rc.top - 36) + 'px'
+      setTimeout(() => { tip.style.display = 'none' }, 2500)
+    })
+  })
+}
+
+function tShowRankingForm() {
+  const slot = document.getElementById('tennis-ranking-form-slot')
+  if (!slot) return
+  const today = new Date().toISOString().split('T')[0]
+  const rankings = (window._tennisData && window._tennisData.rankings) || []
+  const locked = rankings.length ? rankings[0].ranking_type : null
+  const typeField = locked
+    ? `<div style="font-family:'EB Garamond',serif;font-size:11pt;color:var(--text);padding:6px 0">${escHtml(locked)}</div><input type="hidden" id="t-r-type" value="${escHtml(locked)}">`
+    : `<select id="t-r-type"><option>UTR</option><option>National Ranking</option><option>ITF Junior Ranking</option><option>Regional Ranking</option><option>Other</option></select>`
+  slot.innerHTML = `<div class="tennis-form" id="t-rform">
+    <label>Date</label>
+    <input type="date" id="t-r-date" value="${today}">
+    <label>Ranking Type</label>
+    ${typeField}
+    <label>Value</label>
+    <input type="number" id="t-r-val" placeholder="e.g. 28" min="0" step="0.1">
+    <label>Note <span style="font-weight:300;letter-spacing:0">(optional)</span></label>
+    <input type="text" id="t-r-note" placeholder="e.g. Moved up after strong results in March">
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="tennis-save-btn" onclick="tSaveRanking()">Save Entry</button>
+      <button class="tennis-cancel-btn" onclick="document.getElementById('tennis-ranking-form-slot').innerHTML=''">Cancel</button>
+    </div>
+  </div>`
+}
+
+async function tSaveRanking() {
+  const date = (document.getElementById('t-r-date')||{}).value
+  const type = (document.getElementById('t-r-type')||{}).value
+  const val  = (document.getElementById('t-r-val') ||{}).value
+  const note = (document.getElementById('t-r-note')||{}).value
+  if (!date || !type || !val) { alert('Please fill in Date, Type, and Value.'); return }
+  const btn = document.querySelector('#t-rform .tennis-save-btn')
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving...' }
+  try {
+    await _tPost('save_ranking', { log_date: date, ranking_type: type, ranking_value: Number(val), notes: note||null })
+    document.getElementById('tennis-ranking-form-slot').innerHTML = ''
+    const qs = (isAnalystView && D && D.student && D.student.id) ? '?student_id=' + D.student.id : ''
+    const res = await fetch('/api/get-tennis-data' + qs, { headers: _tGetHeaders() })
+    const data = await res.json()
+    window._tennisData.rankings = data.rankings
+    const body = document.getElementById('tennis-body-rankings')
+    if (body) {
+      const col = body.classList.contains('collapsed')
+      body.innerHTML = _tCardRankings(window._tennisData)
+      if (col) body.classList.add('collapsed')
+      _wireTennisChart()
+    }
+  } catch (e) {
+    alert('Could not save ranking: ' + e.message)
+    if (btn) { btn.disabled = false; btn.textContent = 'Save Entry' }
+  }
+}
+
+async function tDeleteRanking(id) {
+  if (!confirm('Delete this ranking entry?')) return
+  try {
+    await _tPost('delete_ranking', { id })
+    if (window._tennisData) window._tennisData.rankings = window._tennisData.rankings.filter(r => r.id !== id)
+    const body = document.getElementById('tennis-body-rankings')
+    if (body) {
+      const col = body.classList.contains('collapsed')
+      body.innerHTML = _tCardRankings(window._tennisData)
+      if (col) body.classList.add('collapsed')
+      _wireTennisChart()
+    }
+  } catch (e) { alert('Could not delete ranking: ' + e.message) }
+}
+
+// ── Card 5: Development Notes ──────────────────────────────────────────────────
+function _tCardNotes(data) {
+  const notes = data.notes || []
+  const notesList = notes.length
+    ? notes.map(n => _tNoteRow(n)).join('')
+    : `<div class="tennis-empty">Start your development journal. Log coaching advice, training observations, and important milestones. Your consultant may also add recommendations here.</div>`
+  return `<div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+    <button class="tennis-add-btn" onclick="tShowNoteForm()">+ Add Note</button>
+  </div>
+  <div id="tennis-note-form-slot"></div>
+  <div id="tennis-notes-list">${notesList}</div>`
+}
+
+function _tNoteRow(n) {
+  return `<div class="tennis-note">
+    <div class="tennis-note-meta">${_tFmtDate(n.note_date)} · <span class="tennis-note-author">${escHtml(n.author)}</span></div>
+    <div class="tennis-note-content">${escHtml(n.content)}</div>
+    <button class="tennis-note-delete" onclick="tDeleteNote('${n.id}')">Delete</button>
+  </div>`
+}
+
+function tShowNoteForm() {
+  const slot = document.getElementById('tennis-note-form-slot')
+  if (!slot) return
+  const today = new Date().toISOString().split('T')[0]
+  const defAuth = (D && D.student && (D.student.preferred_name || D.student.student_name)) || (isAnalystView ? 'Analyst' : '')
+  slot.innerHTML = `<div class="tennis-form" id="t-nform">
+    <label>Date</label>
+    <input type="date" id="t-n-date" value="${today}">
+    <label>Note</label>
+    <textarea id="t-n-content" placeholder="e.g. Coach says forehand grip needs adjustment before next tournament." rows="4"></textarea>
+    <label>Written by</label>
+    <input type="text" id="t-n-author" value="${escHtml(defAuth)}" placeholder="e.g. Mum, Coach Pong, Analyst">
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="tennis-save-btn" onclick="tSaveNote()">Save Note</button>
+      <button class="tennis-cancel-btn" onclick="document.getElementById('tennis-note-form-slot').innerHTML=''">Cancel</button>
+    </div>
+  </div>`
+  slot.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+}
+
+async function tSaveNote() {
+  const date    = (document.getElementById('t-n-date')   ||{}).value
+  const content = (document.getElementById('t-n-content')||{}).value
+  const author  = (document.getElementById('t-n-author') ||{}).value
+  if (!date || !content || !author) { alert('Please fill in all fields.'); return }
+  const btn = document.querySelector('#t-nform .tennis-save-btn')
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving...' }
+  try {
+    await _tPost('save_note', { note_date: date, content, author })
+    document.getElementById('tennis-note-form-slot').innerHTML = ''
+    const qs = (isAnalystView && D && D.student && D.student.id) ? '?student_id=' + D.student.id : ''
+    const res  = await fetch('/api/get-tennis-data' + qs, { headers: _tGetHeaders() })
+    const data = await res.json()
+    window._tennisData.notes = data.notes
+    const lel = document.getElementById('tennis-notes-list')
+    if (lel) lel.innerHTML = (data.notes||[]).length ? data.notes.map(_tNoteRow).join('') : ''
+  } catch (e) {
+    alert('Could not save note: ' + e.message)
+    if (btn) { btn.disabled = false; btn.textContent = 'Save Note' }
+  }
+}
+
+async function tDeleteNote(id) {
+  if (!confirm('Delete this note?')) return
+  try {
+    await _tPost('delete_note', { id })
+    if (window._tennisData) window._tennisData.notes = window._tennisData.notes.filter(n => n.id !== id)
+    const lel = document.getElementById('tennis-notes-list')
+    const notes = (window._tennisData && window._tennisData.notes) || []
+    if (lel) lel.innerHTML = notes.length ? notes.map(_tNoteRow).join('') : `<div class="tennis-empty">Start your development journal. Log coaching advice, training observations, and important milestones.</div>`
+  } catch (e) { alert('Could not delete note: ' + e.message) }
+}
+
+// ── School Reports Tab ─────────────────────────────────────────────────────────
 
 async function loadSchoolReports() {
   const container = document.getElementById('reports-container')

@@ -92,6 +92,7 @@ function buildStudentObj(s, isParent) {
     referralNote:            s.referral_note || '',
     show_golf_to_parent:     s.show_golf_to_parent || false,
     show_reports_to_parent:  s.show_reports_to_parent || false,
+    show_tennis_to_parent:   s.show_tennis_to_parent || false,
   }
   // Admin-only fields — never exposed via token link
   if (!isParent) {
