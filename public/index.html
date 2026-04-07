@@ -1305,6 +1305,7 @@
         <button class="btn-primary" id="dev-btn" onclick="signInWithPassword()" style="margin-top:12px">Sign In</button>
         <div class="auth-error" id="dev-error"></div>
         <div style="margin-top:14px;text-align:center;font-size:12px;color:var(--muted)">New here? <span onclick="showCreateAccount()" style="color:var(--gold);cursor:pointer;text-decoration:underline">Create a free account</span></div>
+        <div style="margin-top:8px;text-align:center;font-size:12px;color:var(--muted)"><span onclick="showForgotPassword()" style="color:var(--gold);cursor:pointer;text-decoration:underline">Forgot password?</span></div>
       </div>
       <!-- Magic link (production) -->
       <div id="magic-link-wrap">
@@ -1315,6 +1316,36 @@
         <button class="btn-primary" id="auth-btn" onclick="signIn()">Send me a login link</button>
         <div class="auth-error" id="auth-error"></div>
         <div style="margin-top:14px;text-align:center;font-size:12px;color:var(--muted)">New here? <span onclick="showCreateAccount()" style="color:var(--gold);cursor:pointer;text-decoration:underline">Create a free account</span></div>
+        <div style="margin-top:8px;text-align:center;font-size:12px;color:var(--muted)">Have a password? <span onclick="showPasswordSignIn()" style="color:var(--gold);cursor:pointer;text-decoration:underline">Sign in here</span></div>
+      </div>
+      <!-- Password sign-in (production parent accounts) -->
+      <div id="password-signin-wrap" style="display:none">
+        <div class="field-group">
+          <label>Email</label>
+          <input type="email" id="pw-email" placeholder="your@email.com" autocomplete="email" />
+        </div>
+        <div class="field-group" style="margin-top:10px">
+          <label>Password</label>
+          <input type="password" id="pw-password" placeholder="Your password" autocomplete="current-password" onkeydown="if(event.key==='Enter')signInWithPasswordProd()" />
+        </div>
+        <button class="btn-primary" id="pw-btn" onclick="signInWithPasswordProd()" style="margin-top:12px">Sign In</button>
+        <div class="auth-error" id="pw-error"></div>
+        <div style="margin-top:14px;text-align:center;font-size:12px;color:var(--muted)">
+          <span onclick="showForgotPassword()" style="color:var(--gold);cursor:pointer;text-decoration:underline">Forgot password?</span>
+          &nbsp;&middot;&nbsp;
+          <span onclick="showSignIn()" style="color:var(--gold);cursor:pointer;text-decoration:underline">Use magic link instead</span>
+        </div>
+      </div>
+      <!-- Forgot password -->
+      <div id="forgot-pw-wrap" style="display:none">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6">Enter your email and we'll send you a link to reset your password.</div>
+        <div class="field-group">
+          <label>Email address</label>
+          <input type="email" id="fp-email" placeholder="your@email.com" autocomplete="email" />
+        </div>
+        <button class="btn-primary" id="fp-btn" onclick="sendPasswordReset()" style="margin-top:12px">Send reset link</button>
+        <div class="auth-error" id="fp-error"></div>
+        <div style="margin-top:14px;text-align:center;font-size:12px;color:var(--muted)"><span onclick="showSignIn()" style="color:var(--gold);cursor:pointer;text-decoration:underline">Back to sign in</span></div>
       </div>
       <!-- Create free account -->
       <div id="create-account-wrap" style="display:none">
@@ -1680,9 +1711,11 @@ function toggleLang() {
 function resetAuthForm() {
   $id('auth-form-wrap').style.display = 'block'
   $id('auth-sent-wrap').style.display = 'none'
-  $id('auth-btn').disabled = false
-  $id('auth-btn').textContent = 'Send me a login link'
-  $id('auth-error').style.display = 'none'
+  const btn = $id('auth-btn')
+  if (btn) { btn.disabled = false; btn.textContent = 'Send me a login link' }
+  const errEl = $id('auth-error')
+  if (errEl) errEl.style.display = 'none'
+  showSignIn()
 }
 
 // ── Localhost dev bypass ──────────────────────────────────────────────────────
@@ -1709,24 +1742,100 @@ async function signInWithPassword() {
   // onAuthStateChange handles the rest
 }
 
+async function signInWithPasswordProd() {
+  const email    = ($id('pw-email').value    || '').trim()
+  const password = ($id('pw-password').value || '')
+  const errEl    = $id('pw-error')
+  const btn      = $id('pw-btn')
+  errEl.style.display = 'none'
+  if (!email || !password) { errEl.textContent = 'Email and password required.'; errEl.style.display = 'block'; return }
+  btn.disabled = true; btn.textContent = 'Signing in...'
+  const { error } = await sb.auth.signInWithPassword({ email, password })
+  btn.disabled = false; btn.textContent = 'Sign In'
+  if (error) { errEl.textContent = error.message; errEl.style.display = 'block' }
+  // onAuthStateChange handles the rest
+}
+
+async function sendPasswordReset() {
+  const email = ($id('fp-email').value || '').trim()
+  const errEl = $id('fp-error')
+  const btn   = $id('fp-btn')
+  errEl.style.display = 'none'
+  if (!email) { errEl.textContent = 'Please enter your email address.'; errEl.style.display = 'block'; return }
+  btn.disabled = true; btn.textContent = 'Sending...'
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + window.location.pathname
+  })
+  btn.disabled = false; btn.textContent = 'Send reset link'
+  if (error) {
+    errEl.textContent = error.message; errEl.style.display = 'block'
+  } else {
+    $id('auth-form-wrap').style.display = 'none'
+    $id('auth-sent-wrap').style.display = 'block'
+    $id('auth-sent-wrap').innerHTML = `
+      <div style="font-family:'Playfair Display',serif;font-size:16px;color:#eee;margin-bottom:10px">Check your email</div>
+      <div style="font-size:13px;color:#888;line-height:1.8">We sent a password reset link to<br><strong style="color:#eee">${email}</strong><br><br>Click the link to choose a new password.<br>It expires in 1 hour.</div>
+      <div style="margin-top:20px;font-size:12px;color:#666">Wrong email? <span onclick="resetAuthForm()" style="color:var(--gold);cursor:pointer">Go back</span></div>`
+  }
+}
+
+async function submitPasswordReset() {
+  const np  = $id('reset-pw-new').value
+  const cp  = $id('reset-pw-confirm').value
+  const msg = $id('reset-pw-msg')
+  if (!np || np.length < 8) { msg.style.color = 'var(--red)'; msg.textContent = 'Password must be at least 8 characters'; return }
+  if (np !== cp) { msg.style.color = 'var(--red)'; msg.textContent = 'Passwords do not match'; return }
+  msg.style.color = 'var(--gold)'; msg.textContent = 'Saving...'
+  const { error } = await sb.auth.updateUser({ password: np })
+  if (error) {
+    msg.style.color = 'var(--red)'; msg.textContent = error.message
+  } else {
+    msg.style.color = '#27ae60'; msg.textContent = '✓ Password set successfully'
+    setTimeout(() => {
+      $id('pw-reset-overlay').style.display = 'none'
+      // Portal is already loaded — show profile tab
+      showTab('profile')
+    }, 1500)
+  }
+}
+
+function _hideAllAuthForms() {
+  ['dev-login-wrap','magic-link-wrap','create-account-wrap','password-signin-wrap','forgot-pw-wrap']
+    .forEach(id => { const el = $id(id); if (el) el.style.display = 'none' })
+}
+
 function showCreateAccount() {
-  const isLocal = window.location.hostname === 'localhost' || window.location.hostname.startsWith('100.100.')
-  $id('dev-login-wrap').style.display = 'none'
-  $id('magic-link-wrap').style.display = 'none'
+  _hideAllAuthForms()
   $id('create-account-wrap').style.display = 'block'
   $id('auth-form-title').textContent = 'Create a free account'
   $id('ca-error').style.display = 'none'
 }
 
+function showPasswordSignIn() {
+  _hideAllAuthForms()
+  $id('password-signin-wrap').style.display = 'block'
+  $id('pw-error').style.display = 'none'
+  $id('auth-form-title').textContent = 'Sign in to your portal'
+}
+
+function showForgotPassword() {
+  _hideAllAuthForms()
+  $id('forgot-pw-wrap').style.display = 'block'
+  $id('fp-error').style.display = 'none'
+  $id('auth-form-title').textContent = 'Reset your password'
+  // Pre-fill email from whichever input was last used
+  const known = ($id('pw-email')?.value || $id('dev-email')?.value || $id('auth-email')?.value || '').trim()
+  if (known) $id('fp-email').value = known
+}
+
 function showSignIn() {
+  _hideAllAuthForms()
   $id('create-account-wrap').style.display = 'none'
   const isLocal = window.location.hostname === 'localhost' || window.location.hostname.startsWith('100.100.')
   if (isLocal) {
     $id('dev-login-wrap').style.display = 'block'
-    $id('magic-link-wrap').style.display = 'none'
   } else {
     $id('magic-link-wrap').style.display = 'block'
-    $id('dev-login-wrap').style.display = 'none'
   }
   $id('auth-form-title').textContent = 'Sign in to your portal'
 }
@@ -3684,6 +3793,18 @@ function renderProfile() {
               <div id="prof-login-result-email" style="font-size:13px;color:#eee;margin-bottom:4px"></div>
               <div id="prof-login-result-pass" style="font-size:13px;color:#eee;font-family:'Courier New',monospace"></div>
             </div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:#555;margin-bottom:6px">Password reset — if parent forgets, generate new credentials to share</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <button onclick="resetParentPassword()" style="background:#1a1a1a;color:#888;border:1px solid #2a2a2a;border-radius:6px;padding:7px 14px;font-size:12px;cursor:pointer">Reset Password</button>
+            <span id="prof-reset-msg" style="font-size:11px;color:var(--gold)"></span>
+          </div>
+          <div id="prof-reset-result" style="display:none;margin-top:10px;padding:12px 14px;background:#161616;border-radius:6px;border-left:3px solid #555">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#888;margin-bottom:8px">New credentials — share with parent</div>
+            <div id="prof-reset-result-email" style="font-size:13px;color:#eee;margin-bottom:4px"></div>
+            <div id="prof-reset-result-pass" style="font-size:13px;color:#eee;font-family:'Courier New',monospace"></div>
           </div>
         </div>
       </div>
@@ -9492,6 +9613,29 @@ async function createParentLogin() {
   }
 }
 
+async function resetParentPassword() {
+  const msg    = $id('prof-reset-msg')
+  const result = $id('prof-reset-result')
+  if (!D.student?.id) { msg.style.color = 'var(--red)'; msg.textContent = 'No student loaded'; return }
+  msg.style.color = 'var(--gold)'; msg.textContent = 'Generating…'
+  if (result) result.style.display = 'none'
+  try {
+    const res = await fetch('/api/reset-parent-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
+      body: JSON.stringify({ student_id: D.student.id })
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error)
+    msg.textContent = ''
+    $id('prof-reset-result-email').textContent = 'Email: ' + json.email
+    $id('prof-reset-result-pass').textContent = 'New password: ' + json.new_password
+    if (result) result.style.display = 'block'
+  } catch (err) {
+    msg.style.color = 'var(--red)'; msg.textContent = err.message
+  }
+}
+
 async function changePassword() {
   const np  = $id('cp-new').value
   const cp  = $id('cp-confirm').value
@@ -9515,6 +9659,16 @@ sb.auth.onAuthStateChange(async (event, session) => {
   // Token refresh while analyst already has a student open — just update token, don't redirect
   if (event === 'TOKEN_REFRESHED') {
     if (session) window._token = session.access_token
+    return
+  }
+  // Password recovery — parent arrived from reset email link
+  if (event === 'PASSWORD_RECOVERY' && session) {
+    window._token = session.access_token
+    $id('auth-screen').style.display = 'none'
+    $id('loading').style.display = 'none'
+    // Show the dedicated reset overlay — simpler than loading full portal
+    const overlay = $id('pw-reset-overlay')
+    if (overlay) overlay.style.display = 'flex'
     return
   }
   if (session) {
@@ -9644,6 +9798,20 @@ sb.auth.onAuthStateChange(async (event, session) => {
   renderAll()
 })
 </script>
+
+<!-- ── Password reset overlay (shown on PASSWORD_RECOVERY session) ─────────── -->
+<div id="pw-reset-overlay" style="display:none;position:fixed;inset:0;background:#0a0a0a;z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#111;border:1px solid #2a2a2a;border-radius:12px;padding:36px 40px;max-width:400px;width:90%;text-align:center">
+    <div style="font-family:'Playfair Display',serif;font-size:22px;color:#eee;margin-bottom:8px">Set New Password</div>
+    <div style="font-size:13px;color:#888;margin-bottom:28px;line-height:1.6">Choose a new password for your LINKEDU portal account.</div>
+    <div style="text-align:left;display:flex;flex-direction:column;gap:12px">
+      <input type="password" id="reset-pw-new" placeholder="New password (min 8 chars)" style="width:100%;padding:12px 14px;border:1px solid #2a2a2a;border-radius:8px;background:#161616;color:#eee;font-size:14px;outline:none;box-sizing:border-box" />
+      <input type="password" id="reset-pw-confirm" placeholder="Confirm new password" style="width:100%;padding:12px 14px;border:1px solid #2a2a2a;border-radius:8px;background:#161616;color:#eee;font-size:14px;outline:none;box-sizing:border-box" />
+    </div>
+    <button onclick="submitPasswordReset()" style="width:100%;margin-top:20px;padding:13px;background:var(--gold);color:#000;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.04em">Set Password</button>
+    <div id="reset-pw-msg" style="margin-top:12px;font-size:13px;min-height:20px"></div>
+  </div>
+</div>
 
 <!-- ── Camp date modal ──────────────────────────────────────────────────────── -->
 <div id="camp-date-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:900;align-items:center;justify-content:center">
