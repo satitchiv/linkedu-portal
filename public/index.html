@@ -7776,6 +7776,15 @@ function renderToolsTab(results) {
       <a href="https://linkeduth.netlify.app/contact.html" target="_blank" style="font-size:13px;font-weight:600;color:var(--gold);text-decoration:none">Book a free consultation \u2192</a>
     </div>`
 
+  function noDataCta(toolKey) {
+    const url = toolLinks[toolKey] || '#'
+    return `<div style="padding:20px 24px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;border-left:3px solid var(--gold)">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold);margin-bottom:6px">Not yet completed</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Take the assessment to see your results here.</p>
+      <a href="${url}" target="_blank" style="font-size:13px;font-weight:600;color:var(--gold);text-decoration:none">Start assessment \u2192</a>
+    </div>`
+  }
+
   function fmtGBP(n) {
     if (!n) return '\u2014'
     return '\u00a3' + Number(n).toLocaleString('en-GB')
@@ -7878,7 +7887,7 @@ function renderToolsTab(results) {
     const hasScores = schools.length > 0 && typeof schools[0] === 'object' && schools[0].score > 0
     const schoolsNorm = hasScores ? schools : schools.map((s, i) => ({ name: typeof s === 'string' ? s : s.name, score: Math.max(100 - i * 15, 25) }))
     const top3 = schoolsNorm.slice(0, 3)
-    const chart = top3.length > 0 ? barChart(top3, 'pm-' + (r.id || Math.random().toString(36).slice(2))) : noData
+    const chart = top3.length > 0 ? barChart(top3, 'pm-' + (r.id || Math.random().toString(36).slice(2))) : noDataCta('personality-match')
     const topName = schoolsNorm[0] ? escHtml((schoolsNorm[0].name || '').slice(0, 28)) : ''
     const headingText = topName ? `Top match: ${topName}` : 'Your top school matches'
     const boardingLabels = { full: 'Full boarding', weekly: 'Weekly boarding', flexible: 'Flexible boarding', any: 'Any boarding type' }
@@ -7934,7 +7943,7 @@ function renderToolsTab(results) {
         </div>` : ''}
       </div>
       ${totalLine}
-      ${schoolLine}` : noData
+      ${schoolLine}` : noDataCta('fee-calculator')
     return `
       <div style="${card}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
@@ -7955,7 +7964,7 @@ function renderToolsTab(results) {
     const hasScores = schools.length > 0 && typeof schools[0] === 'object' && schools[0].score > 0
     const schoolsNorm = hasScores ? schools : schools.map((s, i) => ({ name: typeof s === 'string' ? s : s.name, score: Math.max(100 - i * 15, 25) }))
     const top3 = schoolsNorm.slice(0, 3)
-    const chart = top3.length > 0 ? barChart(top3, 'sp-' + (r.id || Math.random().toString(36).slice(2))) : noData
+    const chart = top3.length > 0 ? barChart(top3, 'sp-' + (r.id || Math.random().toString(36).slice(2))) : noDataCta('sports-pathway')
     const sportBadge = sport ? `<div style="display:inline-block;padding:3px 10px;background:rgba(184,150,46,0.1);border:1px solid rgba(184,150,46,0.25);border-radius:12px;font-size:11px;font-weight:600;color:var(--gold);margin-bottom:12px">${escHtml(sport)}</div>` : ''
     return `
       <div style="${card}">
@@ -7999,7 +8008,7 @@ function renderToolsTab(results) {
             <div style="flex:1;min-width:160px;padding-top:8px">
               ${dims ? miniDimBars(dims) : `<div style="color:var(--muted);font-size:13px">Re-take to see dimension breakdown.</div>`}
             </div>
-          </div>` : noData}
+          </div>` : noDataCta('culture-fit')}
         ${cardFooter('culture-fit', toolLinks['culture-fit'])}
       </div>`
   }
@@ -8015,7 +8024,7 @@ function renderToolsTab(results) {
         </div>
         <div style="${heading}">Schools you compared</div>
         <div style="height:1px;background:var(--border);margin:14px 0"></div>
-        ${noData}
+        ${noDataCta('school-comparison')}
         ${cardFooter('school-comparison', toolLinks['school-comparison'])}
       </div>`
     // Highlight helpers
@@ -8679,7 +8688,7 @@ async function toggleReportsVisibility() {
 
 function _tGetHeaders() {
   const h = {}
-  if (window._portalToken) h['X-Access-Token'] = window._portalToken
+  if (_portalToken) h['X-Access-Token'] = _portalToken
   else if (window._token) h['Authorization'] = 'Bearer ' + window._token
   return h
 }
@@ -8688,7 +8697,7 @@ async function _tPost(action, extra) {
   const payload = { action, ...extra }
   if (isAnalystView && D && D.student) payload.target_student_id = D.student.id
   const headers = { 'Content-Type': 'application/json' }
-  if (window._portalToken) headers['X-Access-Token'] = window._portalToken
+  if (_portalToken) headers['X-Access-Token'] = _portalToken
   else if (window._token) headers['Authorization'] = 'Bearer ' + window._token
   const res = await fetch('/api/save-tennis-data', { method: 'POST', headers, body: JSON.stringify(payload) })
   if (!res.ok) {
