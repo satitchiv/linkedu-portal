@@ -4,6 +4,7 @@
 
 const { createClient } = require('@supabase/supabase-js')
 const https = require('https')
+const { trackEvent } = require('./utils/track-event')
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -45,7 +46,61 @@ exports.handler = async (event) => {
     return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) }
 
   try {
-    const { topic, student_id } = JSON.parse(event.body || '{}')
+    const { topic, student_id, direct_message, free_contact } = JSON.parse(event.body || '{}')
+
+    // ── Free user contact request path ────────────────────────────────────────
+    if (free_contact) {
+      const token = (event.headers.authorization || '').replace('Bearer ', '')
+      if (!token) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) }
+      const { data: { user }, error: authErr } = await supabase.auth.getUser(token)
+      if (authErr || !user) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Invalid token' }) }
+      const { data: profile } = await supabase
+        .from('user_profiles').select('role, email, parent_name, account_type').eq('id', user.id).single()
+      if (!profile || profile.account_type !== 'free') {
+        return { statusCode: 403, headers, body: JSON.stringify({ error: 'Free accounts only' }) }
+      }
+      // Flag contact requested
+      await supabase.from('user_profiles').update({ contact_requested: true }).eq('id', user.id)
+      // Notify via Telegram
+      const msg = `<b>LINKEDU — Free User Contact Request</b>\n\n<b>Email:</b> ${profile.email}\n<b>Name:</b> ${profile.parent_name || '—'}\n<b>Re:</b> ${topic || 'General enquiry'}`
+      await sendTelegram(msg)
+      // Track funnel event
+      const { count: toolCount } = await supabase
+        .from('saved_tool_results')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+      await trackEvent(user.id, 'consultation_requested', {
+        email: profile.email,
+        tool_count: toolCount || 0,
+      })
+      return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) }
+    }
+
+    // ── Direct message path (for free users, admin secret OR analyst JWT) ────
+    if (direct_message) {
+      const secret = event.headers['x-admin-secret'] || event.headers['X-Admin-Secret']
+      const isAdminDirect = secret && secret === process.env.ADMIN_SECRET
+      if (!isAdminDirect) {
+        // Also allow analyst JWT
+        const token = (event.headers.authorization || '').replace('Bearer ', '')
+        if (token) {
+          const { data: { user }, error: authErr } = await supabase.auth.getUser(token)
+          if (authErr || !user) {
+            return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) }
+          }
+          const { data: profile } = await supabase
+            .from('user_profiles').select('role').eq('id', user.id).single()
+          if (!profile || profile.role !== 'analyst') {
+            return { statusCode: 403, headers, body: JSON.stringify({ error: 'Analysts only' }) }
+          }
+        } else {
+          return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) }
+        }
+      }
+      await sendTelegram(`<b>LINKEDU — Free User Alert</b>\n\n${direct_message}`)
+      return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) }
+    }
+
     if (!topic) return { statusCode: 400, headers, body: JSON.stringify({ error: 'topic is required' }) }
 
     // ── Resolve student ──────────────────────────────────────────────────────

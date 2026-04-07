@@ -11,5 +11,8 @@
     "@notionhq/client": "^2.2.14",
     "@supabase/supabase-js": "^2.39.0",
     "googleapis": "^144.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2"
   }
 }

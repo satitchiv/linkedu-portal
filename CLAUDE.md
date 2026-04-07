@@ -52,6 +52,14 @@
 - Netlify auto-deploys on push to main — pushing = live instantly
 - Always commit locally and wait for approval
 
+## Playwright Proof Test — mandatory before handoff (top priority)
+
+After any new feature or UI change, run `/proof-test` before calling it done. The test must open a real browser, complete the full user flow (click buttons, fill forms, submit), and verify results appear. Never tell Satit to test or deploy without this passing. No exceptions.
+
+**Every branching path must be tested — not just the expected one.** If a feature has two paths (session / no session, signed in / signed out, free / client), test BOTH. A proof test that only covers one path is incomplete.
+
+**Bypass rule:** When adding a shortcut that skips part of an existing flow, trace every downstream function and ask: what UI state does it assume was set by the code it is now bypassing? Each assumption must either still hold or be explicitly handled in the new path. Failure to do this is how silent bugs like "auto-save succeeds but nothing shows" happen.
+
 ## Pre-deploy checklist — mandatory before any fix is "done" (top priority)
 Run these three checks every time, no exceptions:
 1. **`git status`** — every file touched must be committed. Untracked files = not deployed. This caught a function that existed locally but never reached Netlify (404 in prod).
@@ -61,6 +69,19 @@ Run these three checks every time, no exceptions:
 ## Worktree rule
 - Before any multi-file edit or new feature, assess if worktree is needed
 - If risky, parallel, or long-running → ask Satit first
+
+## QA Engineer — mandatory before any proof test (top priority)
+
+Before running any proof test or calling any user-facing feature done, the QA Engineer must answer these four questions. No exceptions.
+
+1. **What happens if the user is already signed in?** — Does the flow assume a fresh session? Does it skip UI steps that show feedback?
+2. **What happens if they do this a second time?** — Does the feature handle repeat actions (upserts, duplicate saves, already-exists errors)?
+3. **What happens if a previous step failed silently?** — Is there an assumption that an earlier step succeeded when it might not have?
+4. **What is the user's actual state when they arrive — and is it different from what I assumed during testing?** — Signed in vs. signed out, free vs. client, first visit vs. returning.
+
+Every branching path identified by these questions must be tested in the proof test — not just the happy path. A proof test that skips a known branch is incomplete and cannot be marked as passing.
+
+**Her authority:** Blocks any "ready to test" or "ready to deploy" call until all four questions are answered and tested.
 
 ## Devil's Advocate — mandatory second opinion (top priority)
 Before presenting ANY result to Satit, a devil's advocate pass is required. No exceptions.

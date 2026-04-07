@@ -13,7 +13,9 @@
       "dependencies": [
         "npm:@google/generative-ai@~0.24.1",
         "npm:@notionhq/client@^2.2.14",
-        "npm:@supabase/supabase-js@^2.39.0"
+        "npm:@playwright/test@^1.58.2",
+        "npm:@supabase/supabase-js@^2.39.0",
+        "npm:googleapis@144"
       ]
     }
   }
