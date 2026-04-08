@@ -3983,20 +3983,23 @@ function renderProfile() {
           </div>
         </div>
         <div style="padding-top:12px;border-top:1px solid #1e1e1e">
-          <div style="font-size:11px;color:#555;margin-bottom:6px">LINE activation link — parent taps this link, then taps Send in LINE to link their account
+          <div style="font-size:11px;color:#555;margin-bottom:6px">LINE activation — send the token below to the parent. They open LINE, add the OA, and send the token as a message.
             ${D.student && D.student.line_user_id
               ? `<span style="margin-left:8px;color:#2e7d32;font-weight:600">Linked</span>`
               : `<span style="margin-left:8px;color:#555">Not linked yet</span>`
             }
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-            <button onclick="generateLineLink()" style="background:#1a1a1a;color:#ccc;border:1px solid #2a2a2a;border-radius:6px;padding:7px 14px;font-size:12px;cursor:pointer">Generate LINE Link</button>
+            <button onclick="generateLineLink()" style="background:#1a1a1a;color:#ccc;border:1px solid #2a2a2a;border-radius:6px;padding:7px 14px;font-size:12px;cursor:pointer">Generate Token</button>
             <span id="prof-line-msg" style="font-size:11px;color:var(--gold)"></span>
           </div>
           <div id="prof-line-link-wrap" style="display:none;margin-top:8px">
-            <input id="prof-line-link" type="text" readonly style="width:100%;background:#161616;border:1px solid #2a2a2a;border-radius:6px;padding:8px 12px;font-size:11px;color:#ccc;font-family:'Courier New',monospace;box-sizing:border-box;outline:none" />
-            <div style="font-size:10px;color:#555;margin-top:4px">Send this link to the parent via WhatsApp or email. They tap it, then tap Send in LINE.</div>
-            <button onclick="copyLineLink()" style="margin-top:6px;background:none;border:1px solid var(--gold);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;color:var(--gold)">Copy</button>
+            <div style="font-size:10px;color:#555;margin-bottom:6px">Step 1 — parent adds your LINE OA: <a href="https://line.me/ti/p/@387htsyz" target="_blank" style="color:var(--gold)">line.me/ti/p/@387htsyz</a></div>
+            <div style="font-size:10px;color:#555;margin-bottom:4px">Step 2 — parent sends this code in LINE chat:</div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <input id="prof-line-link" type="text" readonly style="flex:1;background:#161616;border:1px solid #2a2a2a;border-radius:6px;padding:8px 12px;font-size:12px;color:#ccc;font-family:'Courier New',monospace;box-sizing:border-box;outline:none" />
+              <button onclick="copyLineLink()" style="background:none;border:1px solid var(--gold);border-radius:6px;padding:6px 14px;font-size:11px;cursor:pointer;color:var(--gold);white-space:nowrap">Copy</button>
+            </div>
           </div>
         </div>
       </div>
@@ -10917,9 +10920,8 @@ async function generateLineLink() {
     const url = new URL(json.link)
     const token = url.searchParams.get('token')
     if (!token) throw new Error('Could not extract token from portal link')
-    // OA-specific deep link format — text goes after /? unencoded
-    const lineUrl = `https://line.me/R/oaMessage/${LINE_OA_ID}/?token:${token}`
-    $id('prof-line-link').value = lineUrl
+    // Show just the token code — parent copies and sends it in LINE chat
+    $id('prof-line-link').value = `token:${token}`
     wrap.style.display = 'block'
     msg.textContent = ''
   } catch (err) {
