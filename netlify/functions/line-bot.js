@@ -343,11 +343,16 @@ exports.handler = async (event) => {
 
   if (event.httpMethod !== 'POST') return OK
 
-  const rawBody  = event.body || ''
+  const isBase64 = event.isBase64Encoded === true
+  const rawBody  = isBase64 ? Buffer.from(event.body || '', 'base64').toString('utf8') : (event.body || '')
   const signature = event.headers['x-line-signature'] || event.headers['X-Line-Signature'] || ''
 
+  console.log('LINE webhook received — isBase64:', isBase64, 'sig present:', !!signature, 'body length:', rawBody.length)
+
   // Verify webhook signature
-  if (!verifySignature(rawBody, signature)) return OK
+  const sigOk = verifySignature(rawBody, signature)
+  console.log('LINE signature valid:', sigOk)
+  if (!sigOk) return OK
 
   let payload
   try { payload = JSON.parse(rawBody) } catch(e) { return OK }
