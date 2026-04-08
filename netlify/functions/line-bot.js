@@ -120,11 +120,10 @@ async function buildParentContext(studentId) {
       .order('priority'),
 
     supabase.from('school_timeline_items')
-      .select('school_name, item_type, due_date, completed, notes')
+      .select('title, item_type, date, notes')
       .eq('student_id', studentId)
-      .eq('completed', false)
-      .gte('due_date', today)
-      .order('due_date')
+      .gte('date', today)
+      .order('date')
       .limit(10),
 
     supabase.from('student_recommendations')
@@ -152,7 +151,7 @@ function formatContext(ctx) {
     : '  (no schools added yet)'
 
   const deadlineLines = upcomingDeadlines.length
-    ? upcomingDeadlines.map(d => `  - ${d.due_date}: ${d.school_name} — ${d.item_type}${d.notes ? ` (${d.notes})` : ''}`).join('\n')
+    ? upcomingDeadlines.map(d => `  - ${d.date}: ${d.title} — ${d.item_type}${d.notes ? ` (${d.notes})` : ''}`).join('\n')
     : '  (no upcoming deadlines)'
 
   const recLines = recommendations.length
@@ -224,31 +223,36 @@ Use the tools to answer questions. Keep replies short — under 200 words.`
 
   const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
 
-  const result = await model.generateContent({
-    systemInstruction,
-    contents: [{ role: 'user', parts: [{ text: userMessage }] }],
-    tools: [{ functionDeclarations: TOOL_DEFS }],
-    toolConfig: { functionCallingConfig: { mode: FunctionCallingMode.AUTO } },
-  })
+  try {
+    const result = await model.generateContent({
+      systemInstruction,
+      contents: [{ role: 'user', parts: [{ text: userMessage }] }],
+      tools: [{ functionDeclarations: TOOL_DEFS }],
+      toolConfig: { functionCallingConfig: { mode: FunctionCallingMode.AUTO } },
+    })
 
-  const response = result.response
-  const fcs = response.functionCalls()
+    const response = result.response
+    const fcs = response.functionCalls()
 
-  if (fcs && fcs.length) {
-    const { name, args } = fcs[0]
-    switch (name) {
-      case 'get_status':       return actionGetStatus(replyToken, ctx)
-      case 'get_deadlines':    return actionGetDeadlines(replyToken, ctx)
-      case 'get_school_detail': return actionGetSchoolDetail(replyToken, ctx, args.school_name)
-      case 'request_callback': return actionRequestCallback(replyToken, ctx)
-      default:
-        return reply(replyToken, 'I didn\'t understand that request. Please try again or tap a menu button.')
+    if (fcs && fcs.length) {
+      const { name, args } = fcs[0]
+      switch (name) {
+        case 'get_status':        return actionGetStatus(replyToken, ctx)
+        case 'get_deadlines':     return actionGetDeadlines(replyToken, ctx)
+        case 'get_school_detail': return actionGetSchoolDetail(replyToken, ctx, args.school_name)
+        case 'request_callback':  return actionRequestCallback(replyToken, ctx)
+        default:
+          return reply(replyToken, 'I didn\'t understand that request. Please try again or tap a menu button.')
+      }
     }
-  }
 
-  const text = response.text()
-  if (text) return reply(replyToken, text)
-  return reply(replyToken, 'Sorry, I didn\'t catch that. Please try again.')
+    const text = response.text()
+    if (text) return reply(replyToken, text)
+    return reply(replyToken, 'Sorry, I didn\'t catch that. Please try again.')
+  } catch (err) {
+    console.error('Gemini error:', err.message)
+    return reply(replyToken, 'Sorry, I ran into a technical issue. Please try again in a moment.')
+  }
 }
 
 // ── Tool action handlers ───────────────────────────────────────────────────────
@@ -292,8 +296,8 @@ function actionGetDeadlines(replyToken, ctx) {
   }
 
   const lines = upcomingDeadlines.map(d => {
-    const date = new Date(d.due_date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-    return `${date} · ${d.school_name} — ${d.item_type}${d.notes ? ` (${d.notes})` : ''}`
+    const date = new Date((d.date || d.due_date) + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+    return `${date} · ${d.title || d.school_name} — ${d.item_type}${d.notes ? ` (${d.notes})` : ''}`
   })
 
   return reply(replyToken, `Upcoming deadlines for ${name}:\n\n${lines.join('\n')}`)
