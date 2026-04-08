@@ -1,19 +1,18 @@
-// LinkedU LINE parent bot — Gemini Flash powered
+// LinkedU LINE parent bot — Claude Haiku powered
 // Verified parents only — whitelist enforced via line_user_id in students table
 // Reactive model: all replies use replyToken (free). Push used only for follow event.
-// Cost: ~$1/month at 20 families. Strangers cost zero — no Gemini called.
+// Cost: ~$1/month at 20 families. Strangers cost zero — no AI called.
 
-const { GoogleGenerativeAI, FunctionCallingMode } = require('@google/generative-ai')
 const { createClient } = require('@supabase/supabase-js')
 const https  = require('https')
 const crypto = require('crypto')
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
-const genAI    = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
 
-const LINE_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN
-const LINE_SECRET       = process.env.LINE_CHANNEL_SECRET
-const BOT_TOKEN         = process.env.TELEGRAM_BOT_TOKEN // for consultant callback alerts
+const LINE_ACCESS_TOKEN  = process.env.LINE_CHANNEL_ACCESS_TOKEN
+const LINE_SECRET        = process.env.LINE_CHANNEL_SECRET
+const BOT_TOKEN          = process.env.TELEGRAM_BOT_TOKEN
+const ANTHROPIC_API_KEY  = process.env.ANTHROPIC_API_KEY
 
 // ── Signature verification ─────────────────────────────────────────────────────
 function verifySignature(rawBody, signature) {
@@ -173,84 +172,67 @@ ${recLines}
 `.trim()
 }
 
-// ── Gemini tools ───────────────────────────────────────────────────────────────
-const TOOL_DEFS = [
-  {
-    name: 'get_status',
-    description: 'Get the current application status for the student — all schools and their pipeline stages, latest updates.',
-    parameters: { type: 'OBJECT', properties: {} }
-  },
-  {
-    name: 'get_deadlines',
-    description: 'Get all upcoming deadlines for the student in the next 30 days.',
-    parameters: { type: 'OBJECT', properties: {} }
-  },
-  {
-    name: 'get_school_detail',
-    description: 'Get details about a specific recommended school — fees, tier, match reasons, consultant note.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        school_name: { type: 'STRING', description: 'Name of the school to get details for' }
+// ── Claude Haiku API call ─────────────────────────────────────────────────────
+function callClaude(systemPrompt, userMessage) {
+  return new Promise((resolve, reject) => {
+    const data = JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 512,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userMessage }],
+    })
+    const req = https.request({
+      hostname: 'api.anthropic.com',
+      path: '/v1/messages',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'Content-Length': Buffer.byteLength(data),
       },
-      required: ['school_name']
-    }
-  },
-  {
-    name: 'request_callback',
-    description: 'Log a callback request from the parent — sends a Telegram alert to the consultant.',
-    parameters: { type: 'OBJECT', properties: {} }
-  },
-]
+    }, (res) => {
+      let body = ''
+      res.on('data', chunk => body += chunk)
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(body)
+          const text = parsed.content && parsed.content[0] && parsed.content[0].text
+          resolve(text || '')
+        } catch (e) {
+          reject(new Error('Claude parse error: ' + body.slice(0, 200)))
+        }
+      })
+    })
+    req.on('error', reject)
+    req.write(data)
+    req.end()
+  })
+}
 
-// ── Process message through Gemini ────────────────────────────────────────────
-async function processWithGemini(replyToken, userMessage, ctx) {
+// ── Process message through Claude Haiku ─────────────────────────────────────
+async function processWithClaude(replyToken, userMessage, ctx) {
   const studentName = ctx.student.preferred_name || ctx.student.student_name || 'the student'
   const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
-  const systemInstruction = `You are a helpful assistant for LINKEDU, a UK boarding school consultancy based in Bangkok.
+  const systemPrompt = `You are a helpful assistant for LINKEDU, a UK boarding school consultancy based in Bangkok.
 You are talking to the parent of ${studentName}.
 Today is ${today}.
 
-Be warm, clear, and concise — parents read on mobile.
+Be warm, clear, and concise — parents read on mobile. Keep replies under 200 words.
 Reply in the same language the parent uses (Thai or English). If they write in Thai, reply in Thai.
 Never mention other students or families.
+If the parent asks to speak to their consultant or requests a callback, tell them their consultant will be in touch shortly.
 
 Current application data for ${studentName}:
-${formatContext(ctx)}
-
-Use the tools to answer questions. Keep replies short — under 200 words.`
-
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+${formatContext(ctx)}`
 
   try {
-    const result = await model.generateContent({
-      systemInstruction,
-      contents: [{ role: 'user', parts: [{ text: userMessage }] }],
-      tools: [{ functionDeclarations: TOOL_DEFS }],
-      toolConfig: { functionCallingConfig: { mode: FunctionCallingMode.AUTO } },
-    })
-
-    const response = result.response
-    const fcs = response.functionCalls()
-
-    if (fcs && fcs.length) {
-      const { name, args } = fcs[0]
-      switch (name) {
-        case 'get_status':        return actionGetStatus(replyToken, ctx)
-        case 'get_deadlines':     return actionGetDeadlines(replyToken, ctx)
-        case 'get_school_detail': return actionGetSchoolDetail(replyToken, ctx, args.school_name)
-        case 'request_callback':  return actionRequestCallback(replyToken, ctx)
-        default:
-          return reply(replyToken, 'I didn\'t understand that request. Please try again or tap a menu button.')
-      }
-    }
-
-    const text = response.text()
+    const text = await callClaude(systemPrompt, userMessage)
     if (text) return reply(replyToken, text)
     return reply(replyToken, 'Sorry, I didn\'t catch that. Please try again.')
   } catch (err) {
-    console.error('Gemini error:', err.message)
+    console.error('Claude error:', err.message)
     return reply(replyToken, 'Sorry, I ran into a technical issue. Please try again in a moment.')
   }
 }
@@ -503,5 +485,5 @@ async function handleEvent(ev) {
 
   // ── Build context + call Gemini ───────────────────────────────────────────
   const ctx = await buildParentContext(student.id)
-  await processWithGemini(replyToken, text, ctx)
+  await processWithClaude(replyToken, text, ctx)
 }
