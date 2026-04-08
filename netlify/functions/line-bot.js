@@ -113,7 +113,7 @@ async function buildParentContext(studentId) {
       .eq('id', studentId).single(),
 
     supabase.from('student_schools')
-      .select('id, school_name, application_status, priority, latest_update, latest_update_at')
+      .select('school_name, application_status, priority')
       .eq('student_id', studentId)
       .neq('application_status', 'abandoned')
       .order('priority'),
@@ -123,10 +123,10 @@ async function buildParentContext(studentId) {
       .eq('student_id', studentId)
       .gte('date', today)
       .order('date')
-      .limit(10),
+      .limit(5),
 
     supabase.from('student_recommendations')
-      .select('school_name, score, tier, fee, match_reasons, consultant_note')
+      .select('school_name, score, tier')
       .eq('student_id', studentId)
       .eq('approved', true)
       .order('score', { ascending: false }),
@@ -146,7 +146,7 @@ function formatContext(ctx) {
   const name = student.preferred_name || student.student_name || 'the student'
 
   const schoolLines = schools.length
-    ? schools.map(s => `  - ${s.school_name}: ${s.application_status}${s.latest_update ? ` (last update: ${s.latest_update})` : ''}`).join('\n')
+    ? schools.map(s => `  - ${s.school_name}: ${s.application_status}`).join('\n')
     : '  (no schools added yet)'
 
   const deadlineLines = upcomingDeadlines.length
@@ -154,7 +154,7 @@ function formatContext(ctx) {
     : '  (no upcoming deadlines)'
 
   const recLines = recommendations.length
-    ? recommendations.map(r => `  - ${r.school_name} (tier: ${r.tier || '-'}, fee: £${r.fee ? r.fee.toLocaleString() : '?'}/yr)${r.consultant_note ? ` — ${r.consultant_note}` : ''}`).join('\n')
+    ? recommendations.map(r => `  - ${r.school_name} (tier: ${r.tier || '-'})`).join('\n')
     : '  (no recommendations yet)'
 
   return `
@@ -215,16 +215,19 @@ async function processWithClaude(replyToken, userMessage, ctx) {
   const studentName = ctx.student.preferred_name || ctx.student.student_name || 'the student'
   const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
-  const systemPrompt = `You are a helpful assistant for LINKEDU, a UK boarding school consultancy based in Bangkok.
-You are talking to the parent of ${studentName}.
-Today is ${today}.
+  const systemPrompt = `You are LINKEDU's assistant, chatting with the parent of ${studentName} on LINE.
+Today: ${today}
 
-Be warm, clear, and concise — parents read on mobile. Keep replies under 200 words.
-Reply in the same language the parent uses (Thai or English). If they write in Thai, reply in Thai.
-Never mention other students or families.
-If the parent asks to speak to their consultant or requests a callback, tell them their consultant will be in touch shortly.
+Rules:
+- 3-5 lines max. This is LINE chat, not email.
+- No markdown. No **, no bullets, no dashes.
+- Max 3 items in any list. Say "and a few others" if more.
+- No fees unless asked.
+- Don't end every reply with a question.
+- Match parent's language. Thai → Thai. English → English. Never mix.
+- Warm and casual. Sound like a person, not a brochure.
 
-Current application data for ${studentName}:
+Student data:
 ${formatContext(ctx)}`
 
   try {
