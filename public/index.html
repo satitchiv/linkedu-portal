@@ -11048,7 +11048,7 @@ async function claimAccount() {
 // ── LINE connect card (parent-facing, overview tab) ───────────────────────────
 
 function renderLineConnectCard() {
-  if (isAnalystView || !isTokenView) return ''
+  if (isAnalystView) return ''
   const student = (D && D.student) ? D.student : {}
 
   if (student.line_user_id) {
@@ -11057,7 +11057,7 @@ function renderLineConnectCard() {
     </div>`
   }
 
-  const tokenCode = 'token:' + (_portalToken || '')
+  const tokenCode = 'token:' + (_portalToken || student.access_token || '')
   return `<div style="background:#161616;border:1px solid #2a2a2a;border-radius:8px;padding:20px 20px 16px;margin-top:24px">
     <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">Connect LINE for instant updates</div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:18px">Get real-time answers about your application directly in LINE.</div>
@@ -11077,7 +11077,7 @@ function renderLineConnectCard() {
 }
 
 function lineTokenCopy() {
-  _copyText('token:' + (_portalToken || '')).then(() => {
+  _copyText('token:' + (_portalToken || (D && D.student && D.student.access_token) || '')).then(() => {
     const btn = $id('line-token-copy-btn')
     if (btn) { btn.textContent = 'Copied'; setTimeout(() => { btn.textContent = 'Copy' }, 2000) }
   })
