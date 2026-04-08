@@ -94,9 +94,11 @@ function buildStudentObj(s, isParent) {
     show_reports_to_parent:  s.show_reports_to_parent || false,
     show_tennis_to_parent:   s.show_tennis_to_parent || false,
   }
-  // Admin-only fields — never exposed via token link
+  // Admin-only fields — never exposed via token link or parent JWT
   if (!isParent) {
     obj.consultantNotes = s.consultant_notes || ''
+    obj.access_token    = s.access_token     || null  // needed for LINE deep link generation
+    obj.line_user_id    = s.line_user_id     || null  // shows linked/not-linked status in portal
   }
   return obj
 }

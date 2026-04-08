@@ -607,9 +607,10 @@
     /* ── Responsive ────────────────────────────────────── */
     @media (max-width: 640px) {
       #main { padding: 20px 16px; }
-      #header { padding: 0 16px; gap: 10px; overflow: hidden; }
+      #header { padding: 0 16px; gap: 10px; }
+      #btn-new-student { display: none !important; }
       .header-student { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      #tabnav { padding: 0 0 0 16px; -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 70%, transparent 100%); mask-image: linear-gradient(90deg, #000 0%, #000 70%, transparent 100%); }
+      #tabnav { padding: 0 0 0 16px; -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 80%, transparent 95%); mask-image: linear-gradient(90deg, #000 0%, #000 80%, transparent 95%); }
       .tab-btn { padding: 12px 14px; font-size: 11px; }
       .hero-fields { gap: 20px; }
       .form-row { grid-template-columns: 1fr; }
@@ -671,6 +672,7 @@
       /* School card head — stack vertically, badges left-aligned not floating right */
       .sa-card-head { flex-direction: column; gap: 10px; }
       .sa-card-head > div:last-child { flex-direction: row !important; align-items: center !important; gap: 8px !important; }
+
     }
   
     /* ── Overview cockpit ──────────────────────────────── */
@@ -1231,40 +1233,51 @@
     .rpt-card { background: #fff; border: 1px solid #e0d9cc; margin-bottom: 18px; font-family: 'EB Garamond', Georgia, serif; }
     .rpt-card-head { display: flex; align-items: flex-start; justify-content: space-between; padding: 22px 28px 18px; cursor: pointer; user-select: none; border-bottom: 1px solid #eee8de; }
     .rpt-card-head:hover { background: #faf8f4; }
-    .rpt-rank-badge { font-family: 'Prompt', sans-serif; font-size: 11px; font-weight: 500; letter-spacing: 0.12em; color: #fff; background: #8B7F5A; padding: 4px 10px; margin-right: 12px; flex-shrink: 0; margin-top: 5px; }
+    .rpt-rank-badge { font-family: 'EB Garamond', Georgia, serif; font-size: 13px; font-weight: 500; letter-spacing: 0.12em; color: #fff; background: #8B7F5A; padding: 4px 10px; margin-right: 12px; flex-shrink: 0; margin-top: 5px; }
     .rpt-school-name { font-family: 'EB Garamond', Georgia, serif; font-size: 26px; font-weight: 400; color: #0a0a0a; line-height: 1.15; }
-    .rpt-school-loc { font-family: 'Prompt', sans-serif; font-size: 12px; font-weight: 300; color: #999; letter-spacing: 0.08em; margin-top: 4px; }
+    .rpt-school-loc { font-family: 'EB Garamond', Georgia, serif; font-size: 15px; font-weight: 400; color: #999; letter-spacing: 0.04em; margin-top: 4px; font-style: italic; }
     .rpt-arrow { font-size: 16px; color: #bbb; user-select: none; padding-top: 6px; flex-shrink: 0; }
     .rpt-card-body { padding: 4px 28px 28px; }
-    /* Section header — PDF .sh style, screen-sized */
-    .rpt-sh { font-family: 'Prompt', sans-serif; font-weight: 600; font-size: 10px; letter-spacing: 0.28em; text-transform: uppercase; color: #8B7F5A; margin: 22px 0 12px; display: flex; align-items: center; gap: 10px; }
+    /* Section header — Playfair Display matches portal h1/h2 */
+    .rpt-sh { font-family: 'Playfair Display', Georgia, serif; font-weight: 600; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: #8B7F5A; margin: 22px 0 12px; display: flex; align-items: center; gap: 10px; }
     .rpt-sh::after { content: ''; flex: 1; height: 1px; background: #8B7F5A; opacity: 0.3; }
     /* Data rows */
     .rpt-dr { display: flex; justify-content: space-between; align-items: baseline; padding: 7px 0; border-bottom: 1px solid #f5f1ea; gap: 16px; }
     .rpt-dr:last-child { border-bottom: none; }
-    .rpt-lbl { font-family: 'Prompt', sans-serif; font-size: 11px; font-weight: 300; color: #999; letter-spacing: 0.03em; flex-shrink: 0; }
-    .rpt-val { font-family: 'Prompt', sans-serif; font-size: 13px; font-weight: 500; color: #0a0a0a; text-align: right; }
+    .rpt-lbl { font-family: 'EB Garamond', Georgia, serif; font-size: 14px; font-weight: 400; color: #999; letter-spacing: 0.02em; flex-shrink: 0; }
+    .rpt-val { font-family: 'EB Garamond', Georgia, serif; font-size: 16px; font-weight: 500; color: #0a0a0a; text-align: right; }
     .rpt-val.gold { color: #8B7F5A; font-weight: 600; }
     /* Body text (overview, notes) */
-    .rpt-body-text { font-family: 'EB Garamond', Georgia, serif; font-size: 16px; color: #444; line-height: 1.7; margin-bottom: 10px; }
+    .rpt-body-text { font-family: 'EB Garamond', Georgia, serif; font-size: 17px; color: #444; line-height: 1.7; margin-bottom: 10px; }
     /* Two-column data grid */
     .rpt-data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 4px; }
     .rpt-data-block { border: 1px solid #ede8de; padding: 14px 16px; }
-    .rpt-db-title { font-family: 'Prompt', sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: #8B7F5A; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #ede8de; }
+    .rpt-db-title { font-family: 'Playfair Display', Georgia, serif; font-size: 11px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: #8B7F5A; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #ede8de; }
     /* LTA / info panel */
     .rpt-lta-panel { background: #f5f1e8; border-left: 3px solid #8B7F5A; padding: 14px 18px; margin-top: 10px; }
-    .rpt-lta-lbl { font-family: 'Prompt', sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: #8B7F5A; margin-bottom: 5px; }
-    .rpt-lta-text { font-family: 'EB Garamond', Georgia, serif; font-size: 15px; color: #555; line-height: 1.6; }
+    .rpt-lta-lbl { font-family: 'Playfair Display', Georgia, serif; font-size: 11px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: #8B7F5A; margin-bottom: 5px; }
+    .rpt-lta-text { font-family: 'EB Garamond', Georgia, serif; font-size: 17px; color: #555; line-height: 1.6; }
     /* Map */
     .rpt-map { width: 100%; height: 220px; border: none; display: block; }
     .rpt-map-wrap { border: 1px solid #ede8de; overflow: hidden; margin-bottom: 6px; margin-top: 18px; }
-    .rpt-map-caption { font-family: 'Prompt', sans-serif; font-size: 10px; color: #bbb; letter-spacing: 0.05em; font-style: italic; margin-bottom: 4px; }
+    .rpt-map-caption { font-family: 'EB Garamond', Georgia, serif; font-size: 13px; color: #bbb; letter-spacing: 0.03em; font-style: italic; margin-bottom: 4px; }
     /* Analyst notes editor */
     .rpt-notes-editor { min-height: 56px; padding: 12px 14px; background: #faf8f4; border: 1px solid #ede8de; font-family: 'EB Garamond', Georgia, serif; font-size: 16px; color: #333; line-height: 1.65; outline: none; cursor: text; width: 100%; box-sizing: border-box; }
     .rpt-notes-editor:focus { border-color: #8B7F5A; background: #fff; }
+    /* Comparison table */
+    .rpt-cmp-wrap { margin-bottom: 32px; }
+    .rpt-cmp-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .rpt-cmp-tbl { width: 100%; border-collapse: collapse; }
+    .rpt-cmp-tbl thead tr { border-bottom: 2px solid #8B7F5A; }
+    .rpt-cmp-school { font-family: 'EB Garamond', Georgia, serif; font-size: 16px; font-weight: 500; color: #0a0a0a; padding: 10px 16px 10px 8px; text-align: left; white-space: nowrap; min-width: 140px; }
+    .rpt-cmp-lbl-col { width: 170px; min-width: 170px; }
+    .rpt-cmp-row-lbl { font-family: 'EB Garamond', Georgia, serif; font-size: 15px; color: #888; padding: 9px 16px 9px 0; white-space: nowrap; border-bottom: 1px solid #f5f1ea; }
+    .rpt-cmp-cell { font-family: 'EB Garamond', Georgia, serif; font-size: 16px; font-weight: 400; color: #0a0a0a; padding: 9px 16px 9px 8px; border-bottom: 1px solid #f5f1ea; vertical-align: top; }
+    .rpt-cmp-best { color: #8B7F5A; font-weight: 600; }
+    .rpt-cmp-na { color: #ccc; font-weight: 300; }
     @media (max-width: 680px) {
       .rpt-data-grid { grid-template-columns: 1fr; }
-      .rpt-school-name { font-size: 22px; }
+      .rpt-school-name { font-size: 24px; }
       .rpt-card-head { padding: 18px 20px 14px; }
       .rpt-card-body { padding: 4px 20px 20px; }
     }
@@ -1328,7 +1341,14 @@
 
     .tennis-chart-wrap { width: 100%; overflow: hidden; }
     .tennis-chart { width: 100%; height: 180px; display: block; }
-    .tennis-chart-tooltip { position: fixed; background: var(--text); color: #fff; font-family: 'Prompt', sans-serif; font-size: 9pt; padding: 4px 10px; border-radius: 4px; pointer-events: none; z-index: 100; display: none; white-space: nowrap; }
+    .tennis-chart-tooltip { position: fixed; background: var(--text); color: #fff; font-family: 'EB Garamond', serif; font-size: 9pt; padding: 4px 10px; border-radius: 4px; pointer-events: none; z-index: 100; display: none; white-space: nowrap; }
+    .tennis-chart .trend { fill: none; stroke: #B8962E; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+    .tennis-chart .point { fill: #B8962E; stroke: #fff; stroke-width: 1.5; cursor: pointer; }
+    .tennis-tracker-section { padding-top: 18px; margin-top: 18px; border-top: 1px solid var(--border2); }
+    .tennis-tracker-section:first-of-type { border-top: none; margin-top: 0; padding-top: 0; }
+    .t-tracker-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .t-tracker-title { font-family: 'EB Garamond', serif; font-size: 13pt; font-weight: 600; color: var(--text); letter-spacing: 0.02em; }
+    .t-trackers-container { margin-top: 0; }
     .tennis-current { font-family: 'EB Garamond', serif; font-size: 18px; color: var(--gold); font-weight: 600; text-align: center; margin-top: 10px; }
     .tennis-change-up   { color: #1e7e34; font-size: 13px; }
     .tennis-change-down { color: #c0392b; font-size: 13px; }
@@ -1398,6 +1418,32 @@
       .tennis-card-body { display: block !important; }
       .tennis-add-btn, .tennis-save-btn, .tennis-cancel-btn, .tennis-form, .tennis-vis-bar { display: none !important; }
       .tennis-card { break-inside: avoid; page-break-inside: avoid; }
+    }
+
+    /* ── Mobile overrides (post-base) — must appear after all base rules ── */
+    @media (max-width: 640px) {
+      /* Glance table th — horizontal padding so stage labels have spacing */
+      .glance-table th { padding: 0 6px 14px; }
+
+      /* Timeline — shrink decorative number column so body text has room */
+      .jny2-item { grid-template-columns: 32px 1fr 56px; gap: 8px; }
+      .jny2-num { font-size: 18px; color: rgba(26,26,26,0.08); }
+      .jny2-item.now .jny2-num { font-size: 20px; }
+      .jny2-item.done .jny2-num { font-size: 14px; }
+
+      /* Recommendations sub-tabs — scrollable row, tighter buttons + right-edge fade */
+      #rec-subtab-nav { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; position: relative; -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 78%, transparent 98%); mask-image: linear-gradient(90deg, #000 0%, #000 78%, transparent 98%); }
+      .rec-stab-btn { font-size: 12px; padding: 10px 14px; white-space: nowrap; }
+
+      /* Applying tab — stat cards: wrap to 2×2 grid so 4th card is never clipped */
+      .sa-summary { flex-wrap: wrap; }
+      .sa-sum-card { flex: 0 0 calc(50% - 7px); min-width: 0; }
+
+      /* Applying tab — hide decorative number + days column in .sa-timeline-always */
+      .sa-timeline-always .jny2-item { grid-template-columns: 1fr; gap: 2px; }
+      .sa-timeline-always .jny2-num { display: none; }
+      .sa-timeline-always .jny2-count { display: none; }
+      .sa-timeline-always .jny2-item.now { margin: 0 -16px; padding: 16px; }
     }
 
   </style>
@@ -3934,6 +3980,23 @@ function renderProfile() {
             <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#888;margin-bottom:8px">New credentials — share with parent</div>
             <div id="prof-reset-result-email" style="font-size:13px;color:#eee;margin-bottom:4px"></div>
             <div id="prof-reset-result-pass" style="font-size:13px;color:#eee;font-family:'Courier New',monospace"></div>
+          </div>
+        </div>
+        <div style="padding-top:12px;border-top:1px solid #1e1e1e">
+          <div style="font-size:11px;color:#555;margin-bottom:6px">LINE activation link — parent taps this link, then taps Send in LINE to link their account
+            ${D.student && D.student.line_user_id
+              ? `<span style="margin-left:8px;color:#2e7d32;font-weight:600">Linked</span>`
+              : `<span style="margin-left:8px;color:#555">Not linked yet</span>`
+            }
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <button onclick="generateLineLink()" style="background:#1a1a1a;color:#ccc;border:1px solid #2a2a2a;border-radius:6px;padding:7px 14px;font-size:12px;cursor:pointer">Generate LINE Link</button>
+            <span id="prof-line-msg" style="font-size:11px;color:var(--gold)"></span>
+          </div>
+          <div id="prof-line-link-wrap" style="display:none;margin-top:8px">
+            <input id="prof-line-link" type="text" readonly style="width:100%;background:#161616;border:1px solid #2a2a2a;border-radius:6px;padding:8px 12px;font-size:11px;color:#ccc;font-family:'Courier New',monospace;box-sizing:border-box;outline:none" />
+            <div style="font-size:10px;color:#555;margin-top:4px">Send this link to the parent via WhatsApp or email. They tap it, then tap Send in LINE.</div>
+            <button onclick="copyLineLink()" style="margin-top:6px;background:none;border:1px solid var(--gold);border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;color:var(--gold)">Copy</button>
           </div>
         </div>
       </div>
@@ -9306,51 +9369,89 @@ async function _tRefreshTournaments() {
 }
 
 // ── Card 4: Ranking Tracker ────────────────────────────────────────────────────
+const _ALL_RANKING_TYPES = ['UTR', 'National Ranking', 'ITF Junior Ranking', 'Regional Ranking']
+
+function _typeId(type) {
+  return (type || '').toLowerCase().replace(/[^a-z0-9]/g, '-')
+}
+
 function _tCardRankings(data) {
   const rankings = data.rankings || []
-  const lockedType = rankings.length ? rankings[0].ranking_type : null
 
-  const chartHtml = rankings.length >= 2
-    ? `<div class="tennis-chart-wrap"><svg class="tennis-chart" id="tennis-ranking-svg" viewBox="0 0 600 180" preserveAspectRatio="xMidYMid meet"></svg></div>`
+  // Group by ranking_type, sorted by date within each group
+  const trackerMap = {}
+  for (const r of rankings) {
+    const t = r.ranking_type || 'Unknown'
+    if (!trackerMap[t]) trackerMap[t] = []
+    trackerMap[t].push(r)
+  }
+  for (const t in trackerMap) {
+    trackerMap[t].sort((a, b) => a.log_date.localeCompare(b.log_date))
+  }
+  window._rankingTrackers = trackerMap
+  const trackerTypes = Object.keys(trackerMap)
+
+  const emptyHtml = !trackerTypes.length
+    ? `<div class="tennis-empty">Track your ranking over time. Log your UTR, national ranking, or ITF ranking once a month and watch your progress on the chart.<br><br><span style="font-size:10pt">You can track: UTR rating &middot; National ranking &middot; ITF Junior ranking &middot; Regional ranking</span></div>`
     : ''
 
-  const currentHtml = rankings.length ? (() => {
-    const last = rankings[rankings.length - 1], first = rankings[0]
-    const isR = last.ranking_type.toLowerCase().includes('ranking')
-    const diff = last.ranking_value - first.ranking_value
-    const improved = isR ? diff < 0 : diff > 0
+  const sectionsHtml = trackerTypes.map(type => {
+    const typeId = _typeId(type)
+    const rks = trackerMap[type]
+    const isR = type.toLowerCase().includes('ranking')
     const prefix = isR ? '#' : ''
-    const change = diff !== 0
-      ? ` <span class="${improved ? 'tennis-change-up' : 'tennis-change-down'}">${improved ? '\u2191' : '\u2193'} from ${prefix}${first.ranking_value}</span>`
+
+    const chartHtml = rks.length >= 2
+      ? `<div class="tennis-chart-wrap"><svg class="tennis-chart" id="tennis-ranking-svg-${typeId}" viewBox="0 0 600 180" preserveAspectRatio="xMidYMid meet"></svg></div>`
       : ''
-    return `<div class="tennis-current">Current: ${escHtml(last.ranking_type)} ${prefix}${last.ranking_value}${change}</div>`
-  })() : ''
 
-  const logHtml = rankings.length ? `<div class="tennis-ranking-log">${[...rankings].reverse().map(r => {
-    const isR = r.ranking_type.toLowerCase().includes('ranking')
-    return `<div class="tennis-ranking-row">
-      <span class="tennis-ranking-date">${_tFmtDate(r.log_date)}</span>
-      <span class="tennis-ranking-val">${isR ? '#' : ''}${r.ranking_value}</span>
-      <span class="tennis-ranking-note">${escHtml(r.notes||'')}</span>
-      <button class="tennis-ranking-del" onclick="tDeleteRanking('${r.id}')" title="Remove">&times;</button>
+    const currentHtml = rks.length ? (() => {
+      const last = rks[rks.length - 1], first = rks[0]
+      const diff = last.ranking_value - first.ranking_value
+      const improved = isR ? diff < 0 : diff > 0
+      const change = diff !== 0
+        ? ` <span class="${improved ? 'tennis-change-up' : 'tennis-change-down'}">${improved ? '\u2191' : '\u2193'} from ${prefix}${first.ranking_value}</span>`
+        : ''
+      return `<div class="tennis-current">Current: ${prefix}${last.ranking_value}${change}</div>`
+    })() : ''
+
+    const logHtml = rks.length
+      ? `<div class="tennis-ranking-log">${[...rks].reverse().map(r => `<div class="tennis-ranking-row">
+          <span class="tennis-ranking-date">${_tFmtDate(r.log_date)}</span>
+          <span class="tennis-ranking-val">${isR ? '#' : ''}${r.ranking_value}</span>
+          <span class="tennis-ranking-note">${escHtml(r.notes||'')}</span>
+          <button class="tennis-ranking-del" onclick="tDeleteRanking('${r.id}')" title="Remove">&times;</button>
+        </div>`).join('')}</div>`
+      : ''
+
+    return `<div class="tennis-tracker-section">
+      <div class="t-tracker-header">
+        <span class="t-tracker-title">${escHtml(type)}</span>
+        <button class="tennis-add-btn" onclick="tShowRankingForm('${escHtml(type)}')">+ Add Entry</button>
+      </div>
+      <div id="t-rank-slot-${typeId}"></div>
+      ${chartHtml}${currentHtml}${logHtml}
     </div>`
-  }).join('')}</div>` : ''
+  }).join('')
 
-  const emptyHtml = !rankings.length ? `<div class="tennis-empty">Track your ranking over time. Log your UTR, national ranking, or ITF ranking once a month and watch your progress on the chart.<br><br><span style="font-size:10pt">You can track: UTR rating · National ranking · ITF Junior ranking · Regional ranking</span></div>` : ''
-
-  return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-    <div style="font-family:'Prompt',sans-serif;font-size:8pt;color:var(--muted2)">${lockedType ? escHtml(lockedType) : ''}</div>
-    <button class="tennis-add-btn" onclick="tShowRankingForm()">+ Add Entry</button>
+  return `<div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+    <button class="tennis-add-btn" onclick="tShowNewTrackerForm()">+ New Ranking Tracker</button>
   </div>
-  <div id="tennis-ranking-form-slot"></div>
-  ${chartHtml}${currentHtml}${logHtml}${emptyHtml}`
+  <div id="t-new-tracker-slot"></div>
+  <div class="t-trackers-container">
+    ${sectionsHtml}
+    ${emptyHtml}
+  </div>`
 }
 
 function _wireTennisChart() {
-  const svg = document.getElementById('tennis-ranking-svg')
-  if (!svg || !window._tennisData) return
-  const rankings = window._tennisData.rankings || []
-  if (rankings.length >= 2) renderRankingChart(rankings, svg)
+  const trackerMap = window._rankingTrackers || {}
+  for (const type in trackerMap) {
+    const typeId = _typeId(type)
+    const svg = document.getElementById('tennis-ranking-svg-' + typeId)
+    const rks = trackerMap[type]
+    if (svg && rks && rks.length >= 2) renderRankingChart(rks, svg)
+  }
 }
 
 function renderRankingChart(rankings, svg) {
@@ -9425,42 +9526,93 @@ function renderRankingChart(rankings, svg) {
   })
 }
 
-function tShowRankingForm() {
-  const slot = document.getElementById('tennis-ranking-form-slot')
+function tShowRankingForm(type) {
+  const typeId = _typeId(type)
+  const slot = document.getElementById('t-rank-slot-' + typeId)
   if (!slot) return
   const today = new Date().toISOString().split('T')[0]
-  const rankings = (window._tennisData && window._tennisData.rankings) || []
-  const locked = rankings.length ? rankings[0].ranking_type : null
-  const typeField = locked
-    ? `<div style="font-family:'EB Garamond',serif;font-size:11pt;color:var(--text);padding:6px 0">${escHtml(locked)}</div><input type="hidden" id="t-r-type" value="${escHtml(locked)}">`
-    : `<select id="t-r-type"><option>UTR</option><option>National Ranking</option><option>ITF Junior Ranking</option><option>Regional Ranking</option><option>Other</option></select>`
-  slot.innerHTML = `<div class="tennis-form" id="t-rform">
+  slot.innerHTML = `<div class="tennis-form" id="t-rform-${typeId}">
+    <input type="hidden" id="t-r-type-${typeId}" value="${escHtml(type)}">
     <label>Date</label>
-    <input type="date" id="t-r-date" value="${today}">
-    <label>Ranking Type</label>
-    ${typeField}
+    <input type="date" id="t-r-date-${typeId}" value="${today}">
     <label>Value</label>
-    <input type="number" id="t-r-val" placeholder="e.g. 28" min="0" step="0.1">
+    <input type="number" id="t-r-val-${typeId}" placeholder="e.g. 28" min="0" step="0.1">
     <label>Note <span style="font-weight:300;letter-spacing:0">(optional)</span></label>
-    <input type="text" id="t-r-note" placeholder="e.g. Moved up after strong results in March">
+    <input type="text" id="t-r-note-${typeId}" placeholder="e.g. Moved up after strong results in March">
     <div style="display:flex;gap:8px;margin-top:14px">
-      <button class="tennis-save-btn" onclick="tSaveRanking()">Save Entry</button>
-      <button class="tennis-cancel-btn" onclick="document.getElementById('tennis-ranking-form-slot').innerHTML=''">Cancel</button>
+      <button class="tennis-save-btn" onclick="tSaveRanking('${typeId}')">Save Entry</button>
+      <button class="tennis-cancel-btn" onclick="document.getElementById('t-rank-slot-${typeId}').innerHTML=''">Cancel</button>
     </div>
   </div>`
 }
 
-async function tSaveRanking() {
-  const date = (document.getElementById('t-r-date')||{}).value
-  const type = (document.getElementById('t-r-type')||{}).value
-  const val  = (document.getElementById('t-r-val') ||{}).value
-  const note = (document.getElementById('t-r-note')||{}).value
+function tShowNewTrackerForm() {
+  const existing = Object.keys(window._rankingTrackers || {})
+  const available = _ALL_RANKING_TYPES.filter(t => !existing.includes(t))
+  const slot = document.getElementById('t-new-tracker-slot')
+  if (!slot) return
+  const opts = available.map(t => `<option value="${escHtml(t)}">${escHtml(t)}</option>`).join('')
+  slot.innerHTML = `<div class="tennis-form" style="margin-bottom:16px">
+    <label>Ranking Type</label>
+    <select id="t-new-type">
+      ${opts}
+      <option value="__custom__">Custom...</option>
+    </select>
+    <div id="t-new-custom-wrap" style="display:none;margin-top:8px">
+      <input type="text" id="t-new-custom-name" placeholder="e.g. Club Ranking">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="tennis-save-btn" onclick="tStartNewTracker()">Start Tracking</button>
+      <button class="tennis-cancel-btn" onclick="document.getElementById('t-new-tracker-slot').innerHTML=''">Cancel</button>
+    </div>
+  </div>`
+  const sel = document.getElementById('t-new-type')
+  if (sel) sel.addEventListener('change', function() {
+    const w = document.getElementById('t-new-custom-wrap')
+    if (w) w.style.display = this.value === '__custom__' ? 'block' : 'none'
+  })
+}
+
+function tStartNewTracker() {
+  const sel = document.getElementById('t-new-type')
+  let type = sel ? sel.value : ''
+  if (type === '__custom__') {
+    type = ((document.getElementById('t-new-custom-name')||{}).value || '').trim()
+  }
+  if (!type) { alert('Please select or enter a ranking type.'); return }
+  const today = new Date().toISOString().split('T')[0]
+  const slot = document.getElementById('t-new-tracker-slot')
+  if (!slot) return
+  slot.innerHTML = `<div class="tennis-form" id="t-rform-new" style="margin-bottom:16px">
+    <div style="font-family:'EB Garamond',serif;font-size:11pt;color:var(--muted2);margin-bottom:12px">Starting tracker: ${escHtml(type)}</div>
+    <input type="hidden" id="t-r-type-new" value="${escHtml(type)}">
+    <label>Date</label>
+    <input type="date" id="t-r-date-new" value="${today}">
+    <label>Value</label>
+    <input type="number" id="t-r-val-new" placeholder="e.g. 28" min="0" step="0.1">
+    <label>Note <span style="font-weight:300;letter-spacing:0">(optional)</span></label>
+    <input type="text" id="t-r-note-new" placeholder="e.g. Starting baseline">
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="tennis-save-btn" onclick="tSaveRanking('new')">Save Entry</button>
+      <button class="tennis-cancel-btn" onclick="document.getElementById('t-new-tracker-slot').innerHTML=''">Cancel</button>
+    </div>
+  </div>`
+}
+
+async function tSaveRanking(sfx) {
+  const date = (document.getElementById('t-r-date-' + sfx)||{}).value
+  const type = (document.getElementById('t-r-type-' + sfx)||{}).value
+  const val  = (document.getElementById('t-r-val-'  + sfx)||{}).value
+  const note = (document.getElementById('t-r-note-' + sfx)||{}).value
   if (!date || !type || !val) { alert('Please fill in Date, Type, and Value.'); return }
-  const btn = document.querySelector('#t-rform .tennis-save-btn')
+  const btn = document.querySelector('#t-rform-' + sfx + ' .tennis-save-btn')
   if (btn) { btn.disabled = true; btn.textContent = 'Saving...' }
   try {
     await _tPost('save_ranking', { log_date: date, ranking_type: type, ranking_value: Number(val), notes: note||null })
-    document.getElementById('tennis-ranking-form-slot').innerHTML = ''
+    if (sfx === 'new') {
+      const slot = document.getElementById('t-new-tracker-slot')
+      if (slot) slot.innerHTML = ''
+    }
     const qs = (isAnalystView && D && D.student && D.student.id) ? '?student_id=' + D.student.id : ''
     const res = await fetch('/api/get-tennis-data' + qs, { headers: _tGetHeaders() })
     const data = await res.json()
@@ -9569,7 +9721,45 @@ async function tDeleteNote(id) {
 
 // ── School Reports Tab ─────────────────────────────────────────────────────────
 
-async function loadSchoolReports() {
+function _reportsRender(schools, container, fromCache) {
+  container.innerHTML = schools.length
+    ? renderComparisonTable(schools) + renderReportCards(schools)
+    : '<div class="rpt-outer"><p style="font-family:\'EB Garamond\',serif;font-size:16px;color:#999;padding:24px 0;text-align:center">Your school reports are being prepared. Check back soon.</p></div>'
+  container.querySelectorAll('.rpt-card-head').forEach(h => {
+    h.addEventListener('click', () => {
+      const body = h.nextElementSibling
+      const isOpen = body.style.display !== 'none'
+      body.style.display = isOpen ? 'none' : ''
+      h.querySelector('.rpt-arrow').textContent = isOpen ? '\u25b8' : '\u25be'
+    })
+  })
+  if (isAnalystView) wireReportNoteEditors()
+  // Inject refresh bar
+  const existing = document.getElementById('reports-refresh-bar')
+  if (existing) existing.remove()
+  const bar = document.createElement('div')
+  bar.id = 'reports-refresh-bar'
+  bar.style.cssText = 'display:flex;align-items:center;justify-content:flex-end;padding:4px 20px 0;gap:10px'
+  const ts = fromCache ? `<span style="font-family:'EB Garamond',serif;font-size:13px;color:#bbb;font-style:italic">Loaded from cache</span>` : ''
+  bar.innerHTML = `${ts}<button onclick="refreshSchoolReports()" style="background:none;border:none;font-family:'EB Garamond',serif;font-size:13px;color:#8B7F5A;cursor:pointer;padding:0;text-decoration:underline">Refresh</button>`
+  const tabPanel = document.getElementById('tab-reports')
+  tabPanel.insertBefore(bar, container)
+}
+
+async function refreshSchoolReports() {
+  const studentId = D && D.student && D.student.id
+  const cacheKey = 'rpt_cache_' + (studentId || 'parent')
+  try { localStorage.removeItem(cacheKey) } catch(e) {}
+  _reportsLoaded = false
+  const bar = document.getElementById('reports-refresh-bar')
+  if (bar) bar.remove()
+  const container = document.getElementById('reports-container')
+  if (container) container.innerHTML = '<div class="rpt-outer"><p style="font-family:\'EB Garamond\',serif;font-size:16px;color:#999;padding:24px 0;text-align:center">Refreshing\u2026</p></div>'
+  _reportsLoaded = true
+  await loadSchoolReports(true)
+}
+
+async function loadSchoolReports(forceRefresh) {
   const container = document.getElementById('reports-container')
   if (!container) return
 
@@ -9587,6 +9777,23 @@ async function loadSchoolReports() {
     _updateReportsVisBar()
   }
 
+  // Cache: only for parent view (not analyst, who switches students)
+  const studentId = D && D.student && D.student.id
+  const cacheKey = 'rpt_cache_' + (studentId || 'parent')
+  const TTL = 60 * 60 * 1000 // 1 hour
+
+  if (!isAnalystView && !forceRefresh) {
+    try {
+      const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null')
+      if (cached && (Date.now() - cached.ts) < TTL && Array.isArray(cached.schools)) {
+        _reportsRender(cached.schools, container, true)
+        return
+      }
+    } catch(e) {}
+  }
+
+  container.innerHTML = '<div class="rpt-outer"><p style="font-family:\'EB Garamond\',serif;font-size:16px;color:#999;padding:24px 0;text-align:center">Loading school reports\u2026</p></div>'
+
   try {
     const headers = {}
     if (window._portalToken) headers['X-Access-Token'] = window._portalToken
@@ -9595,24 +9802,80 @@ async function loadSchoolReports() {
     const res = await fetch('/api/get-school-reports' + qs, { headers })
     if (!res.ok) throw new Error('HTTP ' + res.status)
     const schools = await res.json()
-    container.innerHTML = schools.length
-      ? renderReportCards(schools)
-      : '<div class="rpt-outer"><p style="font-family:\'Prompt\',sans-serif;font-size:12px;color:#999;padding:24px 0;text-align:center;letter-spacing:.05em">Your school reports are being prepared. Check back soon.</p></div>'
-    // Wire expand toggles
-    container.querySelectorAll('.rpt-card-head').forEach(h => {
-      h.addEventListener('click', () => {
-        const body = h.nextElementSibling
-        const isOpen = body.style.display !== 'none'
-        body.style.display = isOpen ? 'none' : ''
-        h.querySelector('.rpt-arrow').textContent = isOpen ? '\u25b8' : '\u25be'
-      })
-    })
-    // Wire analyst note editors
-    if (isAnalystView) wireReportNoteEditors()
+    // Cache for parent view
+    if (!isAnalystView) {
+      try { localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), schools })) } catch(e) {}
+    }
+    _reportsRender(schools, container, false)
   } catch (e) {
-    container.innerHTML = '<p style="font-size:13px;color:var(--muted);padding:20px 0">Could not load school reports. Try again shortly.</p>'
+    container.innerHTML = '<p style="font-size:16px;font-family:\'EB Garamond\',serif;color:var(--muted);padding:20px 0">Could not load school reports. Try again shortly.</p>'
     console.error('loadSchoolReports error:', e)
   }
+}
+
+function renderComparisonTable(schools) {
+  if (!schools || schools.length < 2) return ''
+
+  const rows = [
+    { label: 'Location',              key: 'location' },
+    { label: 'Type',                  key: 'school_type' },
+    { label: 'Annual Fee',            key: 'fees_per_year',           highlight: 'min', numKey: 'fee' },
+    { label: 'GCSE (9\u20137)',       key: 'gcse_results' },
+    { label: 'A-Level (A*\u2013A)',   key: 'alevel_results',          highlight: 'max', numKey: null },
+    { label: 'Russell Group',         key: 'russell_group' },
+    { label: 'Oxbridge',              key: 'oxbridge' },
+    { label: 'ISI Strengths',         key: 'isi_key_strengths',       truncate: 60 },
+    { label: 'Tennis Teams',          key: 'tennis_teams',            highlight: 'max', numKey: 'tennis_teams' },
+    { label: 'Tennis Matches / Year', key: 'tennis_4yr_avg_fixtures', highlight: 'max', numKey: 'tennis_4yr_avg_fixtures' },
+    { label: 'Tennis National Level', key: 'tennis_national' },
+    { label: 'Saturday School',       key: 'saturday_school' },
+    { label: 'Founded',               key: 'founded_year' },
+  ]
+
+  const activeRows = rows.filter(r => schools.some(s => s[r.key] != null && s[r.key] !== ''))
+  if (!activeRows.length) return ''
+
+  return `
+  <div class="rpt-outer" style="padding-bottom:0">
+    <div class="rpt-cmp-wrap">
+      <div class="rpt-sh" style="margin-top:0">At a Glance</div>
+      <div class="rpt-cmp-scroll">
+        <table class="rpt-cmp-tbl">
+          <thead><tr>
+            <th class="rpt-cmp-lbl-col"></th>
+            ${schools.map(s => `<th class="rpt-cmp-school">${s.school_name}</th>`).join('')}
+          </tr></thead>
+          <tbody>
+            ${activeRows.map(r => {
+              let bestIdx = -1
+              if (r.highlight) {
+                const nums = schools.map(s => {
+                  const raw = r.numKey ? s[r.numKey] : parseFloat((s[r.key] || '').toString().replace(/[^0-9.]/g, ''))
+                  return (raw == null || isNaN(raw)) ? null : raw
+                })
+                const valid = nums.filter(n => n !== null)
+                if (valid.length) {
+                  const best = r.highlight === 'min' ? Math.min(...valid) : Math.max(...valid)
+                  bestIdx = nums.indexOf(best)
+                }
+              }
+              return `<tr>
+                <td class="rpt-cmp-row-lbl">${r.label}</td>
+                ${schools.map((s, i) => {
+                  const v = s[r.key]
+                  const isEmpty = v == null || v === ''
+                  const display = isEmpty
+                    ? '<span class="rpt-cmp-na">\u2014</span>'
+                    : (r.truncate && String(v).length > r.truncate ? String(v).slice(0, r.truncate) + '\u2026' : v)
+                  return `<td class="rpt-cmp-cell${i === bestIdx ? ' rpt-cmp-best' : ''}">${display}</td>`
+                }).join('')}
+              </tr>`
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>`
 }
 
 function renderReportCards(schools) {
@@ -9620,7 +9883,7 @@ function renderReportCards(schools) {
   return `<div class="rpt-outer">${schools.map((s, i) => {
     const defaultOpen = !isMobile && i < 3
     const arrowChar   = defaultOpen ? '\u25be' : '\u25b8'
-    const hasTennis   = s.tennis_teams || s.tennis_age_groups
+    const hasTennis   = s.tennis_teams || s.tennis_age_groups || s.tennis_historical_fixtures || s.tennis_4yr_avg_fixtures != null
     const mapQ        = encodeURIComponent((s.school_name || '') + (s.location ? ', ' + s.location : ''))
 
     // Map embed
@@ -9639,14 +9902,27 @@ function renderReportCards(schools) {
       : ''
 
     // Academics
-    const acadHtml = (s.gcse_results || s.alevel_results || s.russell_group || s.oxbridge || s.isi_key_strengths)
+    const acadHtml = (s.gcse_results || s.alevel_results || s.russell_group || s.oxbridge || s.isi_key_strengths || s.cs_gcse || s.cs_alevel || s.coding_programme)
       ? `<div class="rpt-sh">Academics</div>
         ${s.gcse_results    ? `<div class="rpt-dr"><span class="rpt-lbl">GCSE (9-7)</span><span class="rpt-val">${s.gcse_results}</span></div>` : ''}
         ${s.alevel_results  ? `<div class="rpt-dr"><span class="rpt-lbl">A-Level (A*-A)</span><span class="rpt-val">${s.alevel_results}</span></div>` : ''}
         ${s.russell_group   ? `<div class="rpt-dr"><span class="rpt-lbl">Russell Group</span><span class="rpt-val">${s.russell_group}</span></div>` : ''}
         ${s.oxbridge        ? `<div class="rpt-dr"><span class="rpt-lbl">Oxbridge</span><span class="rpt-val">${s.oxbridge}</span></div>` : ''}
         ${s.a_level_subjects  ? `<div class="rpt-dr"><span class="rpt-lbl">A-Level Subjects</span><span class="rpt-val">${s.a_level_subjects}</span></div>` : ''}
-        ${s.isi_key_strengths ? `<div class="rpt-dr"><span class="rpt-lbl">ISI Strengths</span><span class="rpt-val">${s.isi_key_strengths}</span></div>` : ''}`
+        ${s.isi_key_strengths ? `<div class="rpt-dr"><span class="rpt-lbl">ISI Strengths</span><span class="rpt-val">${s.isi_key_strengths}</span></div>` : ''}
+        ${s.cs_gcse   ? `<div class="rpt-dr"><span class="rpt-lbl">CS at GCSE</span><span class="rpt-val">${s.cs_gcse}</span></div>` : ''}
+        ${s.cs_alevel ? `<div class="rpt-dr"><span class="rpt-lbl">CS at A-Level</span><span class="rpt-val">${s.cs_alevel}</span></div>` : ''}
+        ${s.coding_programme ? `<div class="rpt-lta-panel" style="margin-top:8px"><div class="rpt-lta-lbl">Coding &amp; Digital</div><p class="rpt-lta-text">${s.coding_programme}</p></div>` : ''}`
+      : ''
+
+    // Notable Alumni
+    const alumniHtml = s.notable_alumni
+      ? (() => {
+          const sep = s.notable_alumni.includes(';') ? ';' : ','
+          const names = s.notable_alumni.split(sep).map(n => n.trim()).filter(Boolean).slice(0, 8)
+          return `<div class="rpt-sh">Notable Alumni</div>
+            <div class="rpt-lta-panel"><p class="rpt-lta-text">${names.join(' \u00b7 ')}</p></div>`
+        })()
       : ''
 
     // Sports & Pastoral
@@ -9669,6 +9945,8 @@ function renderReportCards(schools) {
             ${s.tennis_1st_record     ? `<div class="rpt-dr"><span class="rpt-lbl">1st Team Record</span><span class="rpt-val gold">${s.tennis_1st_record}</span></div>` : ''}
             ${s.tennis_national       ? `<div class="rpt-dr"><span class="rpt-lbl">National Level</span><span class="rpt-val gold">${s.tennis_national}</span></div>` : ''}
             ${s.tennis_coach          ? `<div class="rpt-dr"><span class="rpt-lbl">Head Coach</span><span class="rpt-val">${s.tennis_coach}</span></div>` : ''}
+            ${s.tennis_historical_fixtures ? `<div class="rpt-dr"><span class="rpt-lbl">Matches Played (Last 4 Seasons)</span><span class="rpt-val" style="font-size:10px">${s.tennis_historical_fixtures}</span></div>` : ''}
+            ${s.tennis_4yr_avg_fixtures != null ? `<div class="rpt-dr"><span class="rpt-lbl">Avg Matches Per Year</span><span class="rpt-val gold">${s.tennis_4yr_avg_fixtures}</span></div>` : ''}
           </div>
           <div class="rpt-data-block">
             <div class="rpt-db-title">Fixtures by Age Group</div>
@@ -9723,6 +10001,7 @@ function renderReportCards(schools) {
         ${overviewHtml}
         ${acadHtml}
         ${sportsHtml}
+        ${alumniHtml}
         ${tennisHtml}
         ${factsHtml}
         ${notesHtml}
@@ -10612,6 +10891,50 @@ async function generateMagicLink() {
   } catch (err) {
     msg.style.color = 'var(--red)'; msg.textContent = err.message
   }
+}
+
+// ── LINE activation link (analyst only) ───────────────────────────────────────
+const LINE_OA_ID = '@linkedu' // Update this to the real OA ID after LINE account is created
+
+async function generateLineLink() {
+  const msg  = $id('prof-line-msg')
+  const wrap = $id('prof-line-link-wrap')
+  if (!D.student || !D.student.id) {
+    if (msg) { msg.style.color = 'var(--red)'; msg.textContent = 'No student loaded' }
+    return
+  }
+  msg.style.color = 'var(--gold)'; msg.textContent = 'Generating…'
+  try {
+    // Reuse get-portal-link to get the token — then build LINE deep link
+    const res = await fetch('/api/get-portal-link', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
+      body: JSON.stringify({ student_id: D.student.id, type: 'token' })
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error)
+    // Extract access_token from the portal link URL
+    const url = new URL(json.link)
+    const token = url.searchParams.get('token')
+    if (!token) throw new Error('Could not extract token from portal link')
+    const lineText = encodeURIComponent('token:' + token)
+    const lineUrl = `https://line.me/R/ti/p/${LINE_OA_ID}?text=${lineText}`
+    $id('prof-line-link').value = lineUrl
+    wrap.style.display = 'block'
+    msg.textContent = ''
+  } catch (err) {
+    if (msg) { msg.style.color = 'var(--red)'; msg.textContent = err.message }
+  }
+}
+
+function copyLineLink() {
+  const input = $id('prof-line-link')
+  const msg   = $id('prof-line-msg')
+  if (!input || !input.value) return
+  navigator.clipboard.writeText(input.value).then(() => {
+    if (msg) { msg.style.color = 'var(--gold)'; msg.textContent = '✓ Copied — send to parent via WhatsApp or email' }
+    setTimeout(() => { if (msg) msg.textContent = '' }, 3000)
+  })
 }
 
 function copyMagicLink() {
