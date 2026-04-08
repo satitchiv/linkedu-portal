@@ -10917,8 +10917,8 @@ async function generateLineLink() {
     const url = new URL(json.link)
     const token = url.searchParams.get('token')
     if (!token) throw new Error('Could not extract token from portal link')
-    const lineText = encodeURIComponent('token:' + token)
-    const lineUrl = `https://line.me/R/ti/p/${LINE_OA_ID}?text=${lineText}`
+    // OA-specific deep link format — text goes after /? unencoded
+    const lineUrl = `https://line.me/R/oaMessage/${LINE_OA_ID}/?token:${token}`
     $id('prof-line-link').value = lineUrl
     wrap.style.display = 'block'
     msg.textContent = ''
@@ -10931,10 +10931,19 @@ function copyLineLink() {
   const input = $id('prof-line-link')
   const msg   = $id('prof-line-msg')
   if (!input || !input.value) return
-  navigator.clipboard.writeText(input.value).then(() => {
+  const val = input.value
+  // Try clipboard API first, fall back to execCommand
+  const done = () => {
     if (msg) { msg.style.color = 'var(--gold)'; msg.textContent = '✓ Copied — send to parent via WhatsApp or email' }
     setTimeout(() => { if (msg) msg.textContent = '' }, 3000)
-  })
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(val).then(done).catch(() => {
+      input.select(); document.execCommand('copy'); done()
+    })
+  } else {
+    input.select(); document.execCommand('copy'); done()
+  }
 }
 
 function copyMagicLink() {
