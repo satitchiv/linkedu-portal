@@ -3983,23 +3983,20 @@ function renderProfile() {
           </div>
         </div>
         <div style="padding-top:12px;border-top:1px solid #1e1e1e">
-          <div style="font-size:11px;color:#555;margin-bottom:6px">LINE activation — send the token below to the parent. They open LINE, add the OA, and send the token as a message.
+          <div style="font-size:11px;color:#555;margin-bottom:8px">LINE
             ${D.student && D.student.line_user_id
-              ? `<span style="margin-left:8px;color:#2e7d32;font-weight:600">Linked</span>`
-              : `<span style="margin-left:8px;color:#555">Not linked yet</span>`
+              ? `<span style="margin-left:6px;color:#2e7d32;font-weight:600">· Linked</span>`
+              : `<span style="margin-left:6px;color:#555">· Not linked yet</span>`
             }
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-            <button onclick="generateLineLink()" style="background:#1a1a1a;color:#ccc;border:1px solid #2a2a2a;border-radius:6px;padding:7px 14px;font-size:12px;cursor:pointer">Generate Token</button>
+            <button onclick="generateLineMsg()" style="background:#1a1a1a;color:#ccc;border:1px solid #2a2a2a;border-radius:6px;padding:7px 14px;font-size:12px;cursor:pointer">Generate Activation Message</button>
             <span id="prof-line-msg" style="font-size:11px;color:var(--gold)"></span>
           </div>
-          <div id="prof-line-link-wrap" style="display:none;margin-top:8px">
-            <div style="font-size:10px;color:#555;margin-bottom:6px">Step 1 — parent adds your LINE OA: <a href="https://line.me/ti/p/@387htsyz" target="_blank" style="color:var(--gold)">line.me/ti/p/@387htsyz</a></div>
-            <div style="font-size:10px;color:#555;margin-bottom:4px">Step 2 — parent sends this code in LINE chat:</div>
-            <div style="display:flex;gap:6px;align-items:center">
-              <input id="prof-line-link" type="text" readonly style="flex:1;background:#161616;border:1px solid #2a2a2a;border-radius:6px;padding:8px 12px;font-size:12px;color:#ccc;font-family:'Courier New',monospace;box-sizing:border-box;outline:none" />
-              <button onclick="copyLineLink()" style="background:none;border:1px solid var(--gold);border-radius:6px;padding:6px 14px;font-size:11px;cursor:pointer;color:var(--gold);white-space:nowrap">Copy</button>
-            </div>
+          <div id="prof-line-link-wrap" style="display:none;margin-top:10px">
+            <div style="font-size:10px;color:#555;margin-bottom:6px">Copy this message and send to the parent via WhatsApp or email:</div>
+            <textarea id="prof-line-link" readonly style="width:100%;background:#161616;border:1px solid #2a2a2a;border-radius:6px;padding:10px 12px;font-size:11px;color:#ccc;font-family:'Courier New',monospace;box-sizing:border-box;outline:none;resize:none;line-height:1.6" rows="7"></textarea>
+            <button onclick="copyLineLink()" style="margin-top:6px;background:none;border:1px solid var(--gold);border-radius:6px;padding:5px 14px;font-size:11px;cursor:pointer;color:var(--gold)">Copy</button>
           </div>
         </div>
       </div>
@@ -10899,7 +10896,7 @@ async function generateMagicLink() {
 // ── LINE activation link (analyst only) ───────────────────────────────────────
 const LINE_OA_ID = '@387htsyz'
 
-async function generateLineLink() {
+async function generateLineMsg() {
   const msg  = $id('prof-line-msg')
   const wrap = $id('prof-line-link-wrap')
   if (!D.student || !D.student.id) {
@@ -10908,7 +10905,6 @@ async function generateLineLink() {
   }
   msg.style.color = 'var(--gold)'; msg.textContent = 'Generating…'
   try {
-    // Reuse get-portal-link to get the token — then build LINE deep link
     const res = await fetch('/api/get-portal-link', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
@@ -10916,12 +10912,12 @@ async function generateLineLink() {
     })
     const json = await res.json()
     if (!res.ok) throw new Error(json.error)
-    // Extract access_token from the portal link URL
     const url = new URL(json.link)
     const token = url.searchParams.get('token')
-    if (!token) throw new Error('Could not extract token from portal link')
-    // Show just the token code — parent copies and sends it in LINE chat
-    $id('prof-line-link').value = `token:${token}`
+    if (!token) throw new Error('Could not extract token')
+    const parentName = D.student.parentName || 'there'
+    const activationMsg = `Hi ${parentName},\n\nTo connect your LINE to the LINKEDU portal, please follow these 2 steps:\n\n1. Add LINKEDU on LINE:\nhttps://line.me/ti/p/@387htsyz\n\n2. In the LINE chat, send this code exactly as written:\ntoken:${token}\n\nYou will receive a confirmation message once linked.`
+    $id('prof-line-link').value = activationMsg
     wrap.style.display = 'block'
     msg.textContent = ''
   } catch (err) {
@@ -10930,21 +10926,20 @@ async function generateLineLink() {
 }
 
 function copyLineLink() {
-  const input = $id('prof-line-link')
-  const msg   = $id('prof-line-msg')
-  if (!input || !input.value) return
-  const val = input.value
-  // Try clipboard API first, fall back to execCommand
+  const ta  = $id('prof-line-link')
+  const msg = $id('prof-line-msg')
+  if (!ta || !ta.value) return
+  const val = ta.value
   const done = () => {
-    if (msg) { msg.style.color = 'var(--gold)'; msg.textContent = '✓ Copied — send to parent via WhatsApp or email' }
-    setTimeout(() => { if (msg) msg.textContent = '' }, 3000)
+    if (msg) { msg.style.color = 'var(--gold)'; msg.textContent = '✓ Copied — paste into WhatsApp or email and send to parent' }
+    setTimeout(() => { if (msg) msg.textContent = '' }, 4000)
   }
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(val).then(done).catch(() => {
-      input.select(); document.execCommand('copy'); done()
+      ta.select(); document.execCommand('copy'); done()
     })
   } else {
-    input.select(); document.execCommand('copy'); done()
+    ta.select(); document.execCommand('copy'); done()
   }
 }
 

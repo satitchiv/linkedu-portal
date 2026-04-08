@@ -436,17 +436,20 @@ async function handleEvent(ev) {
   if (!text) return
 
   // ── Token verification flow ───────────────────────────────────────────────
-  // Parent sends "token:XXXXXXXX" (pre-filled by portal deep link)
+  // Parent sends "token:XXXXXXXX" — links their LINE ID to their student record
   if (text.toLowerCase().startsWith('token:')) {
     const token = text.slice(6).trim()
+    console.log('LINE token attempt:', { token: token.slice(0,4)+'...', lineUserId: lineUserId.slice(0,6)+'...' })
     const { data: match } = await supabase
       .from('students')
       .select('id, student_name, preferred_name, line_user_id')
       .eq('access_token', token)
       .single()
 
+    console.log('LINE token match:', match ? match.student_name : 'NOT FOUND')
+
     if (!match) {
-      await reply(replyToken, 'That activation code was not recognised. Please ask your consultant for a fresh link.')
+      await reply(replyToken, 'That activation code was not recognised. Please ask your consultant for a fresh code.')
       return
     }
 
@@ -475,11 +478,7 @@ async function handleEvent(ev) {
     .single()
 
   if (!student) {
-    // Stranger — generic reply, no Gemini, no cost
-    await reply(replyToken,
-      'This is a private service for LINKEDU families.\n\n' +
-      'If you are a client, please contact your consultant to activate your LINE access.'
-    )
+    // Stranger — complete silence, no reply, no cost
     return
   }
 
