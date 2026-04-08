@@ -1572,6 +1572,7 @@
             <th style="text-align:left;padding:0 0 10px 16px;font-weight:400">Status</th>
             <th style="text-align:left;padding:0 0 10px 16px;font-weight:400">Entry</th>
             <th style="text-align:left;padding:0 0 10px 16px;font-weight:400">Created</th>
+            <th style="text-align:left;padding:0 0 10px 16px;font-weight:400">LINE</th>
             <th style="text-align:right;padding:0 0 10px 16px;font-weight:400">Actions</th>
           </tr>
         </thead>
@@ -1612,7 +1613,20 @@
     <button class="tab-btn" id="tab-btn-communications" onclick="showTab('communications')">Communications</button>
     <button class="tab-btn" onclick="showTab('profile')">Profile</button>
     <button class="tab-btn" id="tab-btn-tools" onclick="showTab('tools')">My Tools</button>
+    <button class="tab-btn" id="tab-btn-line-chats" onclick="showTab('line-chats')" style="display:none">LINE Chats</button>
   </div>
+  <div id="claim-banner" style="display:none;margin:0 0 16px;padding:16px 20px;background:#161616;border-radius:8px;border:1px solid #2a2a2a">
+    <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">Save your access</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Create a password so you can sign in from any device without needing this link.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <input id="claim-email" type="email" placeholder="Your email" style="padding:8px 12px;background:#111;border:1px solid #333;border-radius:5px;font-size:13px;color:var(--text);outline:none;font-family:inherit;min-width:0;flex:1" />
+      <input id="claim-pass" type="password" placeholder="Password (8+ characters)" style="padding:8px 12px;background:#111;border:1px solid #333;border-radius:5px;font-size:13px;color:var(--text);outline:none;font-family:inherit;min-width:0;flex:1" />
+      <button onclick="claimAccount()" style="padding:8px 16px;background:#1a1a1a;border:1px solid #333;border-radius:5px;font-size:13px;color:var(--text);cursor:pointer;white-space:nowrap">Save</button>
+      <button onclick="dismissClaimBanner()" style="padding:8px 10px;background:none;border:none;font-size:12px;color:var(--muted2);cursor:pointer">Not now</button>
+    </div>
+    <div id="claim-msg" style="font-size:12px;margin-top:8px"></div>
+  </div>
+
   <div id="main">
     <div class="tab-panel active" id="tab-overview"><div id="overview-content"></div></div>
     <div class="tab-panel" id="tab-journey"><div id="journey-content"></div></div>
@@ -1680,6 +1694,7 @@
       <div id="tennis-container"><p style="font-size:13px;color:var(--muted);padding:20px 0">Loading...</p></div>
     </div>
     <div class="tab-panel" id="tab-tools"><div id="tools-content"></div></div>
+    <div class="tab-panel" id="tab-line-chats"><div id="line-chats-content"></div></div>
     <div class="tab-panel" id="tab-reports"><div id="reports-container" style="padding:4px 0"><p style="font-size:13px;color:var(--muted);padding:20px 0">Loading school reports...</p></div></div>
   </div>
 </div>
@@ -1762,6 +1777,8 @@ let _commsData = []
 let _commsLoaded = false
 let _reportsLoaded = false
 let _tennisLoaded = false
+let _lineChatsLoaded = false
+let _lineChatsData = []
 let _gmailEmails = []
 
 function escHtml(s) {
@@ -2237,6 +2254,10 @@ function showTab(name) {
   if (name === 'communications' && !_commsLoaded) renderCommunications()
   if (name === 'reports' && !_reportsLoaded) { _reportsLoaded = true; loadSchoolReports() }
   if (name === 'tennis' && !_tennisLoaded) { _tennisLoaded = true; loadTennisTab() }
+  if (name === 'line-chats' && !_lineChatsLoaded) renderLineChats()
+  // LINE Chats button is not in the index-based tabs array — toggle it separately
+  const lcBtn = document.getElementById('tab-btn-line-chats')
+  if (lcBtn) lcBtn.classList.toggle('active', name === 'line-chats')
 }
 
 // ── Overview (cockpit) ────────────────────────────────────────────────────────
@@ -2412,7 +2433,8 @@ function renderOverview() {
       <div class="ov-wn-hdr">What's Next — Top 3</div>
       ${wn3 || '<div style="padding:14px 20px;color:var(--muted);font-size:13px">No upcoming items</div>'}
     </div>
-    ${toolResultsHtml}`
+    ${toolResultsHtml}
+    ${renderLineConnectCard()}`
 
   $id('overview-content').innerHTML = html
 }
@@ -7229,6 +7251,67 @@ function buildCommCard(c) {
   </div>`
 }
 
+// ── LINE Chats tab ────────────────────────────────────────────────────────────
+
+async function renderLineChats() {
+  _lineChatsLoaded = true
+  const el = $id('line-chats-content')
+  if (!el) return
+  el.innerHTML = '<div style="color:var(--muted2);font-size:13px;padding:24px 0">Loading...</div>'
+
+  try {
+    const sid = D && D.student && D.student.id ? D.student.id : ''
+    const res = await fetch('/api/line-chats?student_id=' + sid, {
+      headers: { Authorization: 'Bearer ' + (window._token || '') }
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Load failed')
+
+    _lineChatsData = json.chats || []
+    _renderLineChatsList()
+
+  } catch (e) {
+    const el2 = $id('line-chats-content')
+    if (el2) el2.innerHTML = `<div style="color:#c0392b;font-size:13px;padding:24px 0">${escHtml(e.message)}</div>`
+  }
+}
+
+function _renderLineChatsList() {
+  const el = $id('line-chats-content')
+  if (!el) return
+
+  let html = '<div style="padding:0 0 24px">'
+  html += `<div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted2);margin-bottom:20px">${_lineChatsData.length} message${_lineChatsData.length !== 1 ? 's' : ''}</div>`
+
+  if (_lineChatsData.length === 0) {
+    html += `<div style="color:var(--muted2);font-size:13px;padding:16px 0">No LINE messages yet.</div>`
+  } else {
+    _lineChatsData.forEach(c => { html += buildLineChatCard(c) })
+  }
+
+  html += '</div>'
+  el.innerHTML = html
+}
+
+function buildLineChatCard(c) {
+  const dateStr = c.created_at ? new Date(c.created_at).toLocaleString('en-GB', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : ''
+  const totalTokens = (c.input_tokens || 0) + (c.output_tokens || 0)
+  const cost = parseFloat(c.cost_usd) || 0
+
+  return `<div class="comm-card" style="margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+      <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--gold)">Parent</span>
+      <span style="font-size:11px;color:var(--muted2)">${escHtml(dateStr)}</span>
+    </div>
+    <div style="font-size:13px;color:var(--text);margin-bottom:12px;white-space:pre-wrap">${escHtml(c.parent_message)}</div>
+    <div style="background:#1a1a1a;border-radius:6px;padding:12px 14px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">LINKEDU Bot</div>
+      <div style="font-size:13px;color:var(--muted);white-space:pre-wrap">${escHtml(c.bot_reply)}</div>
+    </div>
+    <div style="font-size:11px;color:var(--muted2)">${totalTokens} tokens · $${cost.toFixed(5)}</div>
+  </div>`
+}
+
 function openCommModal(id = null) {
   $id('comm-edit-id').value = id || ''
   $id('comm-modal-title').textContent = id ? 'Edit Email' : 'Log Email'
@@ -8635,6 +8718,8 @@ function renderFreePreviewTabs_DELETED() { return // removed — free users see 
 }
 
 function renderAll() {
+  _lineChatsLoaded = false
+  checkClaimBanner()
   renderOverview()
   renderJourney()
   renderSchools()
@@ -8676,6 +8761,10 @@ function applyTabVisibility() {
   const tennisBtn = document.getElementById('tab-btn-tennis')
   if (tennisBtn) {
     tennisBtn.style.display = isAnalystView || (D && D.student && D.student.show_tennis_to_parent) ? '' : 'none'
+  }
+  const lineChatsBtn = document.getElementById('tab-btn-line-chats')
+  if (lineChatsBtn) {
+    lineChatsBtn.style.display = isAnalystView && D && D.student && D.student.line_user_id ? '' : 'none'
   }
 }
 
@@ -10577,6 +10666,9 @@ function renderStudentsList(students) {
     const sid = s.id
     const analystUrl = s.accessToken ? `${window.location.origin}/?token=${s.accessToken}` : ''
     const parentUrl  = s.accessToken ? `${window.location.origin}/?token=${s.accessToken}&view=parent` : ''
+    const lineCell = s.lineSpendThisMonth > 0
+      ? `<span style="color:#8a7a3a;font-size:11px">$${s.lineSpendThisMonth.toFixed(4)} · ${s.lineMessagesThisMonth} msg${s.lineMessagesThisMonth !== 1 ? 's' : ''}</span>`
+      : `<span style="color:#333">—</span>`
     return `
     <tr id="sl-row-${sid}" onclick="openStudentFromList('${s.accessToken}')" style="cursor:pointer;border-bottom:1px solid rgba(0,0,0,0.07)" onmouseover="this.style.background='rgba(184,150,46,0.04)'" onmouseout="this.style.background=''">
       <td style="padding:12px 0;font-size:13px;color:var(--text);font-weight:500">${s.name}</td>
@@ -10585,6 +10677,7 @@ function renderStudentsList(students) {
       <td style="padding:12px 16px;font-size:12px;color:var(--muted);text-transform:capitalize">${s.status || '—'}</td>
       <td style="padding:12px 16px;font-size:12px;color:var(--muted)">${s.targetEntryYear || '—'}</td>
       <td style="padding:12px 16px;font-size:12px;color:var(--muted2)">${created}</td>
+      <td style="padding:12px 16px">${lineCell}</td>
       <td style="padding:12px 0 12px 16px;text-align:right;white-space:nowrap">
         <div style="display:flex;gap:6px;justify-content:flex-end;align-items:center">
           ${analystUrl ? `<button onclick="event.stopPropagation();window.open('${analystUrl}','_blank')" style="padding:4px 10px;background:var(--gold);color:#111;border:none;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer">Open</button>` : ''}
@@ -10595,7 +10688,7 @@ function renderStudentsList(students) {
       </td>
     </tr>
     <tr id="sl-editrow-${sid}" style="display:none;background:var(--surface);border-bottom:2px solid rgba(184,150,46,0.2)">
-      <td colspan="7" style="padding:16px">
+      <td colspan="8" style="padding:16px">
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-bottom:14px">
           <div><label style="${labelStyle}">Student Name</label><input id="sl-ef-name-${sid}" value="${slEsc(s.studentName)}" style="${inputStyle}" /></div>
           <div><label style="${labelStyle}">Preferred Name</label><input id="sl-ef-pname-${sid}" value="${slEsc(s.preferredName)}" style="${inputStyle}" /></div>
@@ -10835,6 +10928,17 @@ async function createNewStudent() {
 }
 
 // ── Portal link controls (profile page, analyst only) ─────────────────────────
+function _copyText(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(text)
+  }
+  const ta = document.createElement('textarea')
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'
+  document.body.appendChild(ta); ta.select(); document.execCommand('copy')
+  document.body.removeChild(ta)
+  return Promise.resolve()
+}
+
 async function copyPortalLink() {
   const msg = $id('prof-link-msg')
   if (!D.student?.id) { if (msg) { msg.style.color = 'var(--red)'; msg.textContent = 'No student loaded' } return }
@@ -10846,7 +10950,7 @@ async function copyPortalLink() {
     })
     const json = await res.json()
     if (!res.ok) throw new Error(json.error)
-    await navigator.clipboard.writeText(json.link)
+    await _copyText(json.link)
     msg.textContent = '✓ Link copied'
     setTimeout(() => { msg.textContent = '' }, 2500)
   } catch (err) {
@@ -10865,7 +10969,7 @@ async function regeneratePortalLink() {
     })
     const json = await res.json()
     if (!res.ok) throw new Error(json.error)
-    await navigator.clipboard.writeText(json.link)
+    await _copyText(json.link)
     msg.textContent = '✓ New link generated and copied — old link is now invalid'
     setTimeout(() => { msg.textContent = '' }, 4000)
   } catch (err) {
@@ -10891,6 +10995,92 @@ async function generateMagicLink() {
   } catch (err) {
     msg.style.color = 'var(--red)'; msg.textContent = err.message
   }
+}
+
+// ── Claim account banner (parent token-view only) ────────────────────────────
+
+async function checkClaimBanner() {
+  const banner = $id('claim-banner')
+  if (!banner) return
+  if (!isTokenView || isAnalystView) { banner.style.display = 'none'; return }
+  if (localStorage.getItem('portal_claimed_dismissed')) return
+
+  const { data: { session } } = await sb.auth.getSession()
+  if (session) return // Already has a password account
+
+  const emailInput = $id('claim-email')
+  if (emailInput && D && D.student && D.student.parentEmail) {
+    emailInput.value = D.student.parentEmail
+  }
+  banner.style.display = 'block'
+}
+
+function dismissClaimBanner() {
+  const banner = $id('claim-banner')
+  if (banner) banner.style.display = 'none'
+  localStorage.setItem('portal_claimed_dismissed', '1')
+}
+
+async function claimAccount() {
+  const email    = ($id('claim-email').value || '').trim()
+  const password = ($id('claim-pass').value  || '').trim()
+  const msg      = $id('claim-msg')
+  if (!email)             { msg.style.color = 'var(--red)'; msg.textContent = 'Email required'; return }
+  if (password.length < 8) { msg.style.color = 'var(--red)'; msg.textContent = 'Password must be 8+ characters'; return }
+  msg.style.color = 'var(--gold)'; msg.textContent = 'Creating account...'
+  try {
+    const res  = await fetch('/api/claim-account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Access-Token': _portalToken || '' },
+      body: JSON.stringify({ email, password }),
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Failed')
+    msg.style.color = 'var(--green)'
+    msg.textContent = '✓ Account created — you can now sign in with email and password from any device'
+    localStorage.setItem('portal_claimed_dismissed', '1')
+    setTimeout(() => { const b = $id('claim-banner'); if (b) b.style.display = 'none' }, 3500)
+  } catch (err) {
+    msg.style.color = 'var(--red)'; msg.textContent = err.message
+  }
+}
+
+// ── LINE connect card (parent-facing, overview tab) ───────────────────────────
+
+function renderLineConnectCard() {
+  if (isAnalystView || !isTokenView) return ''
+  const student = (D && D.student) ? D.student : {}
+
+  if (student.line_user_id) {
+    return `<div style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:#161616;border-radius:20px;font-size:12px;color:var(--muted);margin-top:20px">
+      <span style="color:#00b900;font-size:10px">&#9679;</span> LINE · Connected
+    </div>`
+  }
+
+  const tokenCode = 'token:' + (_portalToken || '')
+  return `<div style="background:#161616;border:1px solid #2a2a2a;border-radius:8px;padding:20px 20px 16px;margin-top:24px">
+    <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">Connect LINE for instant updates</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:18px">Get real-time answers about your application directly in LINE.</div>
+
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted2);margin-bottom:8px">Step 1 — Add LINKEDU on LINE</div>
+    <a href="https://line.me/ti/p/@387htsyz" target="_blank" rel="noopener"
+       style="display:inline-block;padding:8px 18px;background:#00b900;color:#fff;border-radius:5px;font-size:13px;font-weight:600;text-decoration:none;margin-bottom:20px">Add on LINE →</a>
+
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted2);margin-bottom:8px">Step 2 — Send this code in the chat</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <code style="background:#111;border:1px solid #333;border-radius:5px;padding:8px 14px;font-size:13px;color:var(--text);letter-spacing:.04em;font-family:monospace">${escHtml(tokenCode)}</code>
+      <button id="line-token-copy-btn" onclick="lineTokenCopy()"
+              style="padding:8px 14px;background:#1a1a1a;border:1px solid #333;border-radius:5px;font-size:12px;color:var(--muted);cursor:pointer">Copy</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted2)">Type this exactly as shown. You will receive a confirmation message once linked.</div>
+  </div>`
+}
+
+function lineTokenCopy() {
+  _copyText('token:' + (_portalToken || '')).then(() => {
+    const btn = $id('line-token-copy-btn')
+    if (btn) { btn.textContent = 'Copied'; setTimeout(() => { btn.textContent = 'Copy' }, 2000) }
+  })
 }
 
 // ── LINE activation link (analyst only) ───────────────────────────────────────

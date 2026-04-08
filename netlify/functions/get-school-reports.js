@@ -90,6 +90,12 @@ function parseNotionSchool(page) {
     tennis_lta:              extractText(p['Tennis LTA']),
     tennis_coach:            extractText(p['Tennis Coach']),
     tennis_competitions:     extractText(p['Tennis Competitions']),
+    // History + CS (new)
+    tennis_historical_fixtures: extractText(p['Tennis Historical Fixtures']),
+    tennis_4yr_avg_fixtures:    p['Tennis 4yr Avg Fixtures']?.number ?? null,
+    cs_gcse:                    p['CS at GCSE']?.select?.name ?? null,
+    cs_alevel:                  p['CS at A-Level']?.select?.name ?? null,
+    coding_programme:           extractText(p['Coding Programme']),
   }
 }
 
@@ -241,6 +247,11 @@ exports.handler = async (event) => {
         tennis_lta:              notionData.tennis_lta              || null,
         tennis_coach:            notionData.tennis_coach            || null,
         tennis_competitions:     notionData.tennis_competitions     || null,
+        tennis_historical_fixtures: notionData.tennis_historical_fixtures || null,
+        tennis_4yr_avg_fixtures:    notionData.tennis_4yr_avg_fixtures    ?? null,
+        cs_gcse:                    notionData.cs_gcse                    || null,
+        cs_alevel:                  notionData.cs_alevel                  || null,
+        coding_programme:           notionData.coding_programme           || null,
       }
     })
 

@@ -198,7 +198,8 @@ function callClaude(systemPrompt, userMessage) {
         try {
           const parsed = JSON.parse(body)
           const text = parsed.content && parsed.content[0] && parsed.content[0].text
-          resolve(text || '')
+          const usage = parsed.usage || {}
+          resolve({ text: text || '', inputTokens: usage.input_tokens || 0, outputTokens: usage.output_tokens || 0 })
         } catch (e) {
           reject(new Error('Claude parse error: ' + body.slice(0, 200)))
         }
@@ -231,9 +232,23 @@ Student data:
 ${formatContext(ctx)}`
 
   try {
-    const text = await callClaude(systemPrompt, userMessage)
-    if (text) return reply(replyToken, text)
-    return reply(replyToken, 'Sorry, I didn\'t catch that. Please try again.')
+    const { text, inputTokens, outputTokens } = await callClaude(systemPrompt, userMessage)
+    if (text) await reply(replyToken, text)
+    else await reply(replyToken, 'Sorry, I didn\'t catch that. Please try again.')
+
+    // Log to Supabase — non-blocking, never fails the reply
+    // Haiku 4.5 pricing: $1.00/MTok input, $5.00/MTok output
+    const costUsd = (inputTokens * 1.00 + outputTokens * 5.00) / 1_000_000
+    supabase.from('line_chat_history').insert({
+      student_id:     ctx.student.id,
+      student_name:   ctx.student.preferred_name || ctx.student.student_name || '',
+      line_user_id:   ctx.student.line_user_id || '',
+      parent_message: userMessage,
+      bot_reply:      text || '',
+      input_tokens:   inputTokens,
+      output_tokens:  outputTokens,
+      cost_usd:       costUsd,
+    }).then(({ error }) => { if (error) console.error('LINE log error:', error.message) })
   } catch (err) {
     console.error('Claude error:', err.message)
     return reply(replyToken, 'Sorry, I ran into a technical issue. Please try again in a moment.')
@@ -467,7 +482,7 @@ async function handleEvent(ev) {
   // ── Whitelist check ───────────────────────────────────────────────────────
   const { data: student } = await supabase
     .from('students')
-    .select('id, student_name, preferred_name, parent_name, parent_phone, target_entry_year, target_year_group, stage, line_daily_count, line_daily_reset')
+    .select('id, student_name, preferred_name, parent_name, parent_phone, target_entry_year, target_year_group, stage, line_user_id, line_daily_count, line_daily_reset')
     .eq('line_user_id', lineUserId)
     .single()
 

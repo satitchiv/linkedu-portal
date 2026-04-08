@@ -43,35 +43,54 @@ exports.handler = async (event) => {
       }
     }
 
-    const { data: students, error } = await supabase
-      .from('students')
-      .select('id, student_name, preferred_name, notion_student_id, access_token, parent_name, parent_email, parent_phone, status, stage, target_entry_year, primary_sport, current_school, created_at, updated_at, services_active')
-      .order('created_at', { ascending: false })
+    const monthStart = new Date()
+    monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0)
 
-    if (error) throw error
+    const [studentsRes, lineSpendRes] = await Promise.all([
+      supabase
+        .from('students')
+        .select('id, student_name, preferred_name, notion_student_id, access_token, parent_name, parent_email, parent_phone, status, stage, target_entry_year, primary_sport, current_school, created_at, updated_at, services_active')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('line_chat_history')
+        .select('student_id, cost_usd')
+        .gte('created_at', monthStart.toISOString()),
+    ])
+
+    if (studentsRes.error) throw studentsRes.error
+
+    // Build per-student spend map for this month
+    const spendMap = {}
+    for (const row of lineSpendRes.data || []) {
+      if (!spendMap[row.student_id]) spendMap[row.student_id] = { cost: 0, count: 0 }
+      spendMap[row.student_id].cost  += parseFloat(row.cost_usd) || 0
+      spendMap[row.student_id].count += 1
+    }
 
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
-        students: (students || []).map(s => ({
-          id:               s.id,
-          name:             s.preferred_name || s.student_name || 'Unknown',
-          studentName:      s.student_name || '',
-          preferredName:    s.preferred_name || '',
-          notionStudentId:  s.notion_student_id,
-          accessToken:      s.access_token || '',
-          parentName:       s.parent_name || '',
-          parentEmail:      s.parent_email || '',
-          parentPhone:      s.parent_phone || '',
-          status:           s.status || 'active',
-          stage:            s.stage || '',
-          targetEntryYear:  s.target_entry_year || '',
-          primarySport:     s.primary_sport || '',
-          currentSchool:    s.current_school || '',
-          servicesActive:   s.services_active || [],
-          createdAt:        s.created_at,
-          updatedAt:        s.updated_at,
+        students: (studentsRes.data || []).map(s => ({
+          id:                    s.id,
+          name:                  s.preferred_name || s.student_name || 'Unknown',
+          studentName:           s.student_name || '',
+          preferredName:         s.preferred_name || '',
+          notionStudentId:       s.notion_student_id,
+          accessToken:           s.access_token || '',
+          parentName:            s.parent_name || '',
+          parentEmail:           s.parent_email || '',
+          parentPhone:           s.parent_phone || '',
+          status:                s.status || 'active',
+          stage:                 s.stage || '',
+          targetEntryYear:       s.target_entry_year || '',
+          primarySport:          s.primary_sport || '',
+          currentSchool:         s.current_school || '',
+          servicesActive:        s.services_active || [],
+          createdAt:             s.created_at,
+          updatedAt:             s.updated_at,
+          lineSpendThisMonth:    spendMap[s.id] ? parseFloat(spendMap[s.id].cost.toFixed(5)) : 0,
+          lineMessagesThisMonth: spendMap[s.id]?.count || 0,
         }))
       })
     }
