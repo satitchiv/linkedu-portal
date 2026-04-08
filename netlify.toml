@@ -22,6 +22,9 @@
 [functions.golf-trackman]
   timeout = 26
 
+[functions.line-bot]
+  timeout = 26
+
 [[redirects]]
   from = "/playgolf"
   to   = "/analyst.html"
