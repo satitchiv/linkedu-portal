@@ -3,6 +3,7 @@
 // Auth: Bearer JWT (analyst/admin, or parent with access to this student)
 
 const { createClient } = require('@supabase/supabase-js')
+const { isAuthorizedAnalyst } = require('./utils/auth')
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -30,16 +31,10 @@ exports.handler = async (event) => {
     const student_id = (event.queryStringParameters || {}).student_id
     if (!student_id) return { statusCode: 400, headers, body: JSON.stringify({ error: 'student_id required' }) }
 
-    // Check analyst / admin role
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('role')
-      .eq('user_id', user.id)
-      .limit(1)
-    const role = profile && profile[0] && profile[0].role
-    const isAnalyst = role === 'analyst' || role === 'admin'
+    // Check analyst / admin role (uses shared utility — queries user_profiles.id correctly)
+    const analystOk = await isAuthorizedAnalyst(event)
 
-    if (!isAnalyst) {
+    if (!analystOk) {
       // Parent: verify they are linked to this student
       const { data: link } = await supabase
         .from('parent_students')
