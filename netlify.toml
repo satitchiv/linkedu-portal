@@ -28,6 +28,9 @@
 [functions.add-child-by-token]
   timeout = 10
 
+[functions.get-family]
+  timeout = 10
+
 [functions.add-child-self]
   timeout = 10
 

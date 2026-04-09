@@ -648,6 +648,14 @@
       .cmb-actions { margin-left: 0; }
     }
 
+    /* ── Analyst family bar (siblings of currently-viewed student) ── */
+    #analyst-family-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #161616; border: 1px solid #2a2a2a; border-radius: 8px; padding: 8px 14px; margin: 0 0 18px 0; }
+    .afb-label { color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; }
+    .afb-siblings { display: flex; gap: 8px; flex-wrap: wrap; }
+    .afb-sibling-btn { background: #1e1e1e; border: 1px solid #2a2a2a; color: #ccc; font-size: 12px; padding: 4px 12px; border-radius: 6px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+    .afb-sibling-btn:hover { border-color: var(--gold); color: var(--gold); }
+    @media (max-width: 600px) { #analyst-family-bar { flex-direction: column; align-items: flex-start; } }
+
     /* ── Add child modal ────────────────────────────────────────── */
     #add-child-modal { display: none; position: fixed; inset: 0; z-index: 9998; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; padding: 20px; }
     .add-child-card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 12px; padding: 32px; max-width: 480px; width: 100%; }
@@ -2043,8 +2051,10 @@ function resetAuthForm() {
 if (window.location.hostname === 'localhost' || window.location.hostname.startsWith('100.100.')) {
   const devWrap = $id('dev-login-wrap')
   const magicWrap = $id('magic-link-wrap')
+  const pwWrap = $id('password-signin-wrap')
   if (devWrap) devWrap.style.display = 'block'
   if (magicWrap) magicWrap.style.display = 'none'
+  if (pwWrap) pwWrap.style.display = 'none'
 }
 
 async function signInWithPassword() {
@@ -8867,6 +8877,7 @@ function renderAll() {
   renderTutoringRecs()
   renderGolf()
   applyTabVisibility()
+  if (isAnalystView) renderAnalystFamilyBar()
 }
 
 function applyTabVisibility() {
@@ -10294,6 +10305,10 @@ if (isTokenView) {
                 } catch(e) {}
               }
               renderAll()
+            } else {
+              // Parent has an existing session — enable child manager bar silently
+              window._token = session.access_token
+              await initChildSwitcher(session.access_token)
             }
           } catch (e) { /* network error — show overlay */ }
         }
@@ -11182,7 +11197,7 @@ async function submitClaimAccount() {
 let _myStudents = []
 
 async function initChildSwitcher(jwtToken) {
-  if (isTokenView || isAnalystView) return
+  if (isAnalystView || !jwtToken) return
   try {
     const res = await fetch('/api/my-students', { headers: { Authorization: 'Bearer ' + jwtToken } })
     if (!res.ok) return
@@ -11205,7 +11220,7 @@ async function initChildSwitcher(jwtToken) {
 }
 
 function renderChildSwitcher() {
-  if (isTokenView || isAnalystView) return
+  if (isAnalystView || !window._token) return
   const main = $id('main')
   if (!main) return
   // Remove any existing bar before re-rendering
@@ -11230,6 +11245,35 @@ function renderChildSwitcher() {
     </div>
   `
   main.insertAdjacentElement('afterbegin', bar)
+}
+
+async function renderAnalystFamilyBar() {
+  if (!isAnalystView) return
+  if (!D || !D.student || !D.student.id || !window._token) return
+  try {
+    const res = await fetch('/api/get-family?student_id=' + D.student.id, {
+      headers: { Authorization: 'Bearer ' + window._token }
+    })
+    if (!res.ok) return  // leave any existing bar untouched on error
+    const { siblings } = await res.json()
+    // Only update DOM once we have fresh data
+    const existing = $id('analyst-family-bar')
+    if (existing) existing.remove()
+    if (!siblings || siblings.length === 0) return
+    const bar = document.createElement('div')
+    bar.id = 'analyst-family-bar'
+    bar.innerHTML = `
+      <span class="afb-label">Family:</span>
+      <div class="afb-siblings">
+        ${siblings.map(s => {
+          const name = escHtml(s.preferredName || s.studentName)
+          return `<button class="afb-sibling-btn" onclick="switchChild('${s.id}')">${name}</button>`
+        }).join('')}
+      </div>
+    `
+    const main = $id('main')
+    if (main) main.insertAdjacentElement('afterbegin', bar)
+  } catch(e) { /* non-blocking */ }
 }
 
 async function removeChildFromAccount(studentId, studentName) {
@@ -11349,11 +11393,11 @@ async function switchChild(studentId) {
     const nameSpan = $id('header-name')
     if (nameSpan) nameSpan.textContent = D.student?.preferredName || D.student?.studentName || 'Portal'
 
-    // Re-render all tabs
+    // Re-render all tabs (also calls renderAnalystFamilyBar for analyst)
     renderAll()
 
-    // Rebuild child manager bar to reflect new active child
-    renderChildSwitcher()
+    // Rebuild child manager bar for parent view
+    if (!isAnalystView) renderChildSwitcher()
   } catch(e) { console.error('switchChild error:', e) }
 }
 
@@ -11658,7 +11702,14 @@ sb.auth.onAuthStateChange(async (event, session) => {
   try {
     const _acr = await fetch('/api/check-analyst', { headers: { 'Authorization': 'Bearer ' + session.access_token } })
     const { isAnalyst } = await _acr.json()
-    if (!isAnalyst) return
+    if (!isAnalyst) {
+      // Parent signed in at token URL — enable child manager bar
+      window._token = session.access_token
+      const overlay = $id('analyst-login-overlay')
+      if (overlay) overlay.style.display = 'none'
+      await initChildSwitcher(session.access_token)
+      return
+    }
   } catch (e) { return }
   window._token = session.access_token
   isAnalystView = true
