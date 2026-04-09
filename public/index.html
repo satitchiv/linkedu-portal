@@ -11150,6 +11150,7 @@ async function generateMagicLink() {
 async function checkClaimBanner() {
   const banner = $id('claim-banner')
   if (!banner) return
+  if (window._token) { banner.style.display = 'none'; return } // already signed in — has an account
   if (!isTokenView) { banner.style.display = 'none'; return }
   if (isAnalystView) { banner.style.display = 'none'; return }
   if (localStorage.getItem('portal_claimed_dismissed')) return
