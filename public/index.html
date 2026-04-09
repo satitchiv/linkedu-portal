@@ -1566,6 +1566,7 @@
     <div class="auth-error" id="auth-error" style="display:none;margin-top:12px"></div>
     <div id="auth-form-wrap">
       <h2 id="auth-form-title">Sign in to your portal</h2>
+      <p id="auth-form-note" style="display:none;font-size:13px;color:var(--muted);margin:4px 0 16px;line-height:1.6"></p>
       <!-- Dev login (localhost only — hidden on production) -->
       <div id="dev-login-wrap" style="display:none">
         <div style="font-size:11px;color:#B8962E;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px">Local Dev</div>
@@ -2166,11 +2167,14 @@ function showParentSignIn() {
   $id('app').style.display = 'none'
   $id('auth-screen').style.display = 'flex'
   showSignIn()
+  const note = $id('auth-form-note')
+  if (note) { note.textContent = 'Sign in to manage all your children in one place — you can link multiple children to your account.'; note.style.display = 'block' }
 }
 
 function showSignIn() {
   _hideAllAuthForms()
   $id('create-account-wrap').style.display = 'none'
+  const note = $id('auth-form-note'); if (note) note.style.display = 'none'
   const isLocal = window.location.hostname === 'localhost' || window.location.hostname.startsWith('100.100.')
   if (isLocal) {
     $id('dev-login-wrap').style.display = 'block'
@@ -10288,12 +10292,12 @@ if (isTokenView) {
       // Silently check for existing session — applies features without blocking
       const { data: { session } } = await sb.auth.getSession()
       if (session) {
-        if ($id('btn-parent-signin')) $id('btn-parent-signin').style.display = 'none'
         try {
           const _acr = await fetch('/api/check-analyst', { headers: { 'Authorization': 'Bearer ' + session.access_token } })
           const { isAnalyst } = await _acr.json()
           if (isAnalyst && !isParentView) {
             // Analyst session — apply analyst features silently
+            if ($id('btn-parent-signin')) $id('btn-parent-signin').style.display = 'none'
             window._token = session.access_token
             isAnalystView = true
             if (D && D.student && D.student.id) {
@@ -10304,10 +10308,12 @@ if (isTokenView) {
             }
             renderAll()
           } else if (!isAnalyst) {
-            // Parent has an existing session — enable child switcher silently
+            // Parent has an existing session — hide sign-in button, enable child switcher
+            if ($id('btn-parent-signin')) $id('btn-parent-signin').style.display = 'none'
             window._token = session.access_token
             await initChildSwitcher(session.access_token)
           }
+          // isAnalyst && isParentView: session not applied — sign-in button stays visible
         } catch (e) { /* network error — continue read-only */ }
       } else {
         // No session — show sign-in button and minimal Add child bar
@@ -11680,14 +11686,13 @@ sb.auth.onAuthStateChange(async (event, session) => {
 sb.auth.onAuthStateChange(async (event, session) => {
   if (!isTokenView) return
   if (!session) return
-  // Any valid session — hide the sign-in button
-  if ($id('btn-parent-signin')) $id('btn-parent-signin').style.display = 'none'
   // Verify analyst role via backend (bypasses broken RLS on user_profiles)
   try {
     const _acr = await fetch('/api/check-analyst', { headers: { 'Authorization': 'Bearer ' + session.access_token } })
     const { isAnalyst } = await _acr.json()
     if (!isAnalyst) {
-      // Parent signed in — hide auth-screen if it was shown, show app, enable child switcher
+      // Parent signed in — hide sign-in button, hide auth-screen if shown, enable child switcher
+      if ($id('btn-parent-signin')) $id('btn-parent-signin').style.display = 'none'
       $id('auth-screen').style.display = 'none'
       $id('app').style.display = 'flex'
       $id('app').classList.add('visible')
@@ -11699,6 +11704,8 @@ sb.auth.onAuthStateChange(async (event, session) => {
   } catch (e) { return }
   // ?view=parent URLs always show parent experience — never apply analyst view
   if (isParentView) return
+  // Analyst session applied — hide sign-in button
+  if ($id('btn-parent-signin')) $id('btn-parent-signin').style.display = 'none'
   window._token = session.access_token
   isAnalystView = true
   if ($id('btn-new-student')) $id('btn-new-student').style.display = 'inline-block'
