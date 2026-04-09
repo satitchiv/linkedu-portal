@@ -10304,6 +10304,7 @@ if (isTokenView) {
     } catch (err) {
       $id('loading').style.display = 'none'
       $id('auth-screen').style.display = 'flex'
+      $id('auth-form-wrap').style.display = 'none'
       const errEl = $id('auth-error')
       errEl.textContent = 'This link is invalid or has expired. Please contact your consultant.'
       errEl.style.display = 'block'
@@ -11665,6 +11666,8 @@ sb.auth.onAuthStateChange(async (event, session) => {
       return
     }
   } catch (e) { return }
+  // ?view=parent URLs always show parent experience — never apply analyst view
+  if (isParentView) return
   window._token = session.access_token
   isAnalystView = true
   if ($id('btn-new-student')) $id('btn-new-student').style.display = 'inline-block'
