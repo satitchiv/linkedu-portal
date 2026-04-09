@@ -1571,19 +1571,9 @@
         <div style="margin-top:14px;text-align:center;font-size:12px;color:var(--muted)">New here? <span onclick="showCreateAccount()" style="color:var(--gold);cursor:pointer;text-decoration:underline">Create a free account</span></div>
         <div style="margin-top:8px;text-align:center;font-size:12px;color:var(--muted)"><span onclick="showForgotPassword()" style="color:var(--gold);cursor:pointer;text-decoration:underline">Forgot password?</span></div>
       </div>
-      <!-- Magic link (production) -->
-      <div id="magic-link-wrap">
-        <div class="field-group">
-          <label>Email address</label>
-          <input type="email" id="auth-email" placeholder="your@email.com" autocomplete="email" />
-        </div>
-        <button class="btn-primary" id="auth-btn" onclick="signIn()">Send me a login link</button>
-        <div class="auth-error" id="auth-error"></div>
-        <div style="margin-top:14px;text-align:center;font-size:12px;color:var(--muted)">New here? <span onclick="showCreateAccount()" style="color:var(--gold);cursor:pointer;text-decoration:underline">Create a free account</span></div>
-        <div style="margin-top:8px;text-align:center;font-size:12px;color:var(--muted)">Have a password? <span onclick="showPasswordSignIn()" style="color:var(--gold);cursor:pointer;text-decoration:underline">Sign in here</span></div>
-      </div>
-      <!-- Password sign-in (production parent accounts) -->
-      <div id="password-signin-wrap" style="display:none">
+      <!-- Password sign-in (default for production) -->
+      <div id="magic-link-wrap" style="display:none"></div>
+      <div id="password-signin-wrap">
         <div class="field-group">
           <label>Email</label>
           <input type="email" id="pw-email" placeholder="your@email.com" autocomplete="email" />
@@ -1596,8 +1586,6 @@
         <div class="auth-error" id="pw-error"></div>
         <div style="margin-top:14px;text-align:center;font-size:12px;color:var(--muted)">
           <span onclick="showForgotPassword()" style="color:var(--gold);cursor:pointer;text-decoration:underline">Forgot password?</span>
-          &nbsp;&middot;&nbsp;
-          <span onclick="showSignIn()" style="color:var(--gold);cursor:pointer;text-decoration:underline">Use magic link instead</span>
         </div>
       </div>
       <!-- Forgot password -->

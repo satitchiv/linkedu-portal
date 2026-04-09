@@ -78,6 +78,27 @@ exports.handler = async (event) => {
       student_id:     student.id,
     }, { onConflict: 'parent_user_id,student_id' })
 
+    // Propagate LINE user ID from any sibling that already has one
+    const { data: siblings } = await supabase
+      .from('parent_students')
+      .select('student_id')
+      .eq('parent_user_id', user.id)
+      .neq('student_id', student.id)
+    if (siblings && siblings.length > 0) {
+      const { data: sibWithLine } = await supabase
+        .from('students')
+        .select('line_user_id')
+        .in('id', siblings.map(s => s.student_id))
+        .not('line_user_id', 'is', null)
+        .limit(1)
+        .single()
+      if (sibWithLine && sibWithLine.line_user_id) {
+        await supabase.from('students')
+          .update({ line_user_id: sibWithLine.line_user_id })
+          .eq('id', student.id)
+      }
+    }
+
     // Notify Satit via Telegram — non-blocking
     sendTelegram([
       'New child added by parent',

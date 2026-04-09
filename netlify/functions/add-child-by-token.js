@@ -60,6 +60,29 @@ exports.handler = async (event) => {
 
     if (insertErr) throw insertErr
 
+    // Propagate LINE user ID from any sibling that already has one
+    if (!student.line_user_id) {
+      const { data: siblings } = await supabase
+        .from('parent_students')
+        .select('student_id')
+        .eq('parent_user_id', user.id)
+        .neq('student_id', student.id)
+      if (siblings && siblings.length > 0) {
+        const { data: sibWithLine } = await supabase
+          .from('students')
+          .select('line_user_id')
+          .in('id', siblings.map(s => s.student_id))
+          .not('line_user_id', 'is', null)
+          .limit(1)
+          .single()
+        if (sibWithLine && sibWithLine.line_user_id) {
+          await supabase.from('students')
+            .update({ line_user_id: sibWithLine.line_user_id })
+            .eq('id', student.id)
+        }
+      }
+    }
+
     return {
       statusCode: 200,
       headers,

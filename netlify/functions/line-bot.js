@@ -534,11 +534,13 @@ async function handleEvent(ev) {
   //   students.id → parent_students.parent_user_id → all parent_students rows
   let studentIds = [student.id]
 
-  const { data: parentLink } = await supabase
+  const { data: parentLinks } = await supabase
     .from('parent_students')
     .select('parent_user_id')
     .eq('student_id', student.id)
-    .single()
+    .limit(1)
+
+  const parentLink = parentLinks && parentLinks[0]
 
   if (parentLink) {
     const { data: siblingLinks } = await supabase
