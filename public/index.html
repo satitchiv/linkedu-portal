@@ -10310,8 +10310,9 @@ if (isTokenView) {
           }
         } catch (e) { /* network error — continue read-only */ }
       } else {
-        // No session — show sign-in button so returning parents can access child switcher
+        // No session — show sign-in button and minimal Add child bar
         if ($id('btn-parent-signin')) $id('btn-parent-signin').style.display = 'inline-block'
+        renderChildSwitcher()
       }
       checkClaimBanner()
     } catch (err) {
@@ -11221,6 +11222,18 @@ async function initChildSwitcher(jwtToken) {
 }
 
 function renderChildSwitcher() {
+  // Token view without session: show minimal bar with just "Add child" — clicking prompts sign-in
+  if (isTokenView && !isAnalystView && !window._token) {
+    const main = $id('main')
+    if (!main) return
+    const existing = $id('child-manager-bar')
+    if (existing) existing.remove()
+    const bar = document.createElement('div')
+    bar.id = 'child-manager-bar'
+    bar.innerHTML = `<div class="cmb-actions"><button class="cmb-add-btn" onclick="showParentSignIn()">+ Add child</button></div>`
+    main.insertAdjacentElement('afterbegin', bar)
+    return
+  }
   if (isAnalystView || !window._token) return
   const main = $id('main')
   if (!main) return
