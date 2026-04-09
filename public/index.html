@@ -1927,7 +1927,7 @@ function escHtml(s) {
 const _urlParams    = new URLSearchParams(window.location.search)
 const _portalToken  = _urlParams.get('token')
 const isTokenView   = !!_portalToken
-const isParentView  = window.location.search.includes('view=parent')
+const isParentView  = false // ?view=parent deprecated — all token URLs now show sign-in overlay
 // isAnalystView is confirmed only after JWT login — never assumed from URL alone
 let isAnalystView = false
 
@@ -4392,7 +4392,7 @@ function renderRecommendations() {
   }))
 
   const approved = filteredRecs.filter(r => r.approved)
-  const pending  = (isAgent || (isTokenView && !isParentView)) ? filteredRecs.filter(r => !r.approved) : []
+  const pending  = (isAgent || isTokenView) ? filteredRecs.filter(r => !r.approved) : []
 
   // School details link using slug
   function schoolLink(r) {
@@ -10287,35 +10287,33 @@ if (isTokenView) {
       $id('auth-screen').style.display = 'none'
       $id('app').style.display = 'flex'
       $id('app').classList.add('visible')
-      // Check for existing analyst session (e.g. after magic link redirect)
-      if (!isParentView) {
-        const { data: { session } } = await sb.auth.getSession()
-        if (session) {
-          try {
-            const _acr = await fetch('/api/check-analyst', { headers: { 'Authorization': 'Bearer ' + session.access_token } })
-            const { isAnalyst } = await _acr.json()
-            if (isAnalyst) {
-              window._token = session.access_token
-              isAnalystView = true
-              // Reload D with analyst-level data to get consultant_notes and other analyst fields
-              if (D && D.student && D.student.id) {
-                try {
-                  const _sr = await fetch(`/api/student?student_id=${D.student.id}`, { headers: { Authorization: 'Bearer ' + session.access_token } })
-                  if (_sr.ok) D = await _sr.json()
-                } catch(e) {}
-              }
-              renderAll()
-            } else {
-              // Parent has an existing session — enable child manager bar silently
-              window._token = session.access_token
-              await initChildSwitcher(session.access_token)
+      // Check for existing analyst/parent session (e.g. after page reload)
+      const { data: { session } } = await sb.auth.getSession()
+      if (session) {
+        try {
+          const _acr = await fetch('/api/check-analyst', { headers: { 'Authorization': 'Bearer ' + session.access_token } })
+          const { isAnalyst } = await _acr.json()
+          if (isAnalyst) {
+            window._token = session.access_token
+            isAnalystView = true
+            // Reload D with analyst-level data to get consultant_notes and other analyst fields
+            if (D && D.student && D.student.id) {
+              try {
+                const _sr = await fetch(`/api/student?student_id=${D.student.id}`, { headers: { Authorization: 'Bearer ' + session.access_token } })
+                if (_sr.ok) D = await _sr.json()
+              } catch(e) {}
             }
-          } catch (e) { /* network error — show overlay */ }
-        }
-        if (!isAnalystView && !isParentView) {
-          const overlay = $id('analyst-login-overlay')
-          if (overlay) overlay.style.display = 'flex'
-        }
+            renderAll()
+          } else {
+            // Parent has an existing session — enable child manager bar silently
+            window._token = session.access_token
+            await initChildSwitcher(session.access_token)
+          }
+        } catch (e) { /* network error — show overlay */ }
+      }
+      if (!isAnalystView) {
+        const overlay = $id('analyst-login-overlay')
+        if (overlay) overlay.style.display = 'flex'
       }
     } catch (err) {
       $id('loading').style.display = 'none'
@@ -10816,7 +10814,7 @@ function renderStudentsList(students) {
     const stage = s.stage ? s.stage.replace(/_/g, ' ') : '—'
     const sid = s.id
     const analystUrl = s.accessToken ? `${window.location.origin}/?token=${s.accessToken}` : ''
-    const parentUrl  = s.accessToken ? `${window.location.origin}/?token=${s.accessToken}&view=parent` : ''
+    const parentUrl  = s.accessToken ? `${window.location.origin}/?token=${s.accessToken}` : ''
     const lineCell = s.lineSpendThisMonth > 0
       ? `<span style="color:#8a7a3a;font-size:11px">$${s.lineSpendThisMonth.toFixed(4)} · ${s.lineMessagesThisMonth} msg${s.lineMessagesThisMonth !== 1 ? 's' : ''}</span>`
       : `<span style="color:#333">—</span>`
@@ -11664,15 +11662,15 @@ sb.auth.onAuthStateChange(async (event, session) => {
 <!-- Analyst login overlay (token view, no ?view=parent) -->
 <div id="analyst-login-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:500;align-items:center;justify-content:center">
   <div style="background:#161616;border:1px solid #2a2a2a;border-radius:10px;padding:36px 32px;width:340px;text-align:center">
-    <div style="font-family:'Cormorant Garamond',serif;color:#B8962E;font-size:20px;margin-bottom:6px">Analyst Access</div>
-    <div id="al-prompt" style="font-size:12px;color:#555;margin-bottom:20px">Sign in to view analyst tools</div>
+    <div style="font-family:'Cormorant Garamond',serif;color:#B8962E;font-size:20px;margin-bottom:6px">Sign in to your portal</div>
+    <div id="al-prompt" style="font-size:12px;color:#555;margin-bottom:20px">Parents and consultants sign in here</div>
     <div id="al-form">
       <input type="email" id="al-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')$id('al-password').focus()" style="width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;font-size:14px;color:#eee;outline:none;text-align:center;box-sizing:border-box" />
       <input type="password" id="al-password" placeholder="password" onkeydown="if(event.key==='Enter')signInAnalyst()" style="margin-top:8px;width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;font-size:14px;color:#eee;outline:none;text-align:center;box-sizing:border-box" />
       <button onclick="signInAnalyst()" id="al-btn" style="margin-top:12px;width:100%;padding:10px;background:#B8962E;color:#111;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">Sign In</button>
     </div>
     <div id="al-error" style="color:#e74c3c;font-size:12px;margin-top:8px;display:none"></div>
-    <div style="margin-top:16px"><button onclick="document.getElementById('analyst-login-overlay').style.display='none'" style="background:none;border:1px solid #444;border-radius:6px;color:#aaa;font-size:12px;cursor:pointer;padding:8px 16px">Continue as parent view</button></div>
+    <div style="margin-top:16px"><button onclick="document.getElementById('analyst-login-overlay').style.display='none'" style="background:none;border:1px solid #444;border-radius:6px;color:#aaa;font-size:12px;cursor:pointer;padding:8px 16px">Continue without signing in</button></div>
   </div>
 </div>
 
@@ -11696,7 +11694,7 @@ async function signInAnalyst() {
 
 // Handle sign-in session on page load / auth state change (token view)
 sb.auth.onAuthStateChange(async (event, session) => {
-  if (!isTokenView || isParentView) return
+  if (!isTokenView) return
   if (!session) return
   // Verify analyst role via backend (bypasses broken RLS on user_profiles)
   try {
