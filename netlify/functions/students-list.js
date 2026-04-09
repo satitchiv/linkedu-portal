@@ -49,7 +49,7 @@ exports.handler = async (event) => {
     const [studentsRes, lineSpendRes] = await Promise.all([
       supabase
         .from('students')
-        .select('id, student_name, preferred_name, notion_student_id, access_token, parent_name, parent_email, parent_phone, status, stage, target_entry_year, primary_sport, current_school, created_at, updated_at, services_active')
+        .select('id, student_name, preferred_name, notion_student_id, access_token, parent_name, parent_email, parent_phone, status, stage, target_entry_year, primary_sport, current_school, created_at, updated_at, services_active, created_by_parent')
         .order('created_at', { ascending: false }),
       supabase
         .from('line_chat_history')
@@ -91,6 +91,7 @@ exports.handler = async (event) => {
           updatedAt:             s.updated_at,
           lineSpendThisMonth:    spendMap[s.id] ? parseFloat(spendMap[s.id].cost.toFixed(5)) : 0,
           lineMessagesThisMonth: spendMap[s.id]?.count || 0,
+          createdByParent:       s.created_by_parent || false,
         }))
       })
     }

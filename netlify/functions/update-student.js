@@ -55,6 +55,9 @@ exports.handler = async (event) => {
       if (fields.summer_camp_budget_gbp === '' || fields.summer_camp_budget_gbp === undefined) fields.summer_camp_budget_gbp = null
       else if (fields.summer_camp_budget_gbp !== null) fields.summer_camp_budget_gbp = parseInt(fields.summer_camp_budget_gbp) || null
 
+      // Normalise date fields: empty string → null (Postgres rejects "" for DATE columns)
+      if (fields.dob === '') fields.dob = null
+
       const updates = { ...fields, updated_at: new Date().toISOString() }
       if (Object.keys(fields).length === 0) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: 'No fields to update' }) }
@@ -81,6 +84,8 @@ exports.handler = async (event) => {
           updates[key] = val.split(',').map(s => s.trim()).filter(Boolean)
         } else if (key === 'budget_gbp' || key === 'summer_camp_budget_gbp') {
           updates[key] = (val === '' || val === undefined || val === null) ? null : (parseInt(val) || null)
+        } else if (key === 'dob') {
+          updates[key] = (val === '' || val === undefined) ? null : val
         } else {
           updates[key] = val
         }
@@ -102,20 +107,44 @@ exports.handler = async (event) => {
     const { data: { user }, error: authErr } = await supabase.auth.getUser(token)
     if (authErr || !user) return { statusCode: 401, headers, body: JSON.stringify({ error: 'Invalid token' }) }
 
-    const { data: profile } = await supabase
-      .from('user_profiles').select('*').eq('id', user.id).single()
+    // Determine which student to update.
+    // If body.student_id is provided (multi-child parent viewing a switched child),
+    // verify the parent is linked to that student via parent_students before allowing.
+    // Otherwise fall back to user_profiles.student_id (legacy single-child path).
+    let targetStudentId = null
 
-    if (!profile || !profile.student_id) {
-      return { statusCode: 404, headers, body: JSON.stringify({ error: 'No student linked to this account' }) }
+    if (body.student_id) {
+      const { data: link } = await supabase
+        .from('parent_students')
+        .select('student_id')
+        .eq('parent_user_id', user.id)
+        .eq('student_id', body.student_id)
+        .single()
+
+      if (!link) {
+        return { statusCode: 403, headers, body: JSON.stringify({ error: 'Not authorized for this student' }) }
+      }
+      targetStudentId = body.student_id
+    } else {
+      const { data: profile } = await supabase
+        .from('user_profiles').select('student_id').eq('id', user.id).single()
+
+      if (!profile || !profile.student_id) {
+        return { statusCode: 404, headers, body: JSON.stringify({ error: 'No student linked to this account' }) }
+      }
+      targetStudentId = profile.student_id
     }
 
     const updates = {}
     for (const [key, val] of Object.entries(body)) {
+      if (key === 'student_id') continue  // lookup key, not a DB field to update
       if (!PARENT_EDITABLE.has(key)) continue
       if (key === 'destination' && typeof val === 'string') {
         updates[key] = val.split(',').map(s => s.trim()).filter(Boolean)
-      } else if (key === 'budget_gbp') {
+      } else if (key === 'budget_gbp' || key === 'summer_camp_budget_gbp') {
         updates[key] = (val === '' || val === undefined || val === null) ? null : (parseInt(val) || null)
+      } else if (key === 'dob') {
+        updates[key] = (val === '' || val === undefined) ? null : val
       } else {
         updates[key] = val
       }
@@ -128,7 +157,7 @@ exports.handler = async (event) => {
     updates.updated_at = new Date().toISOString()
 
     const { data, error } = await supabase
-      .from('students').update(updates).eq('id', profile.student_id).select().single()
+      .from('students').update(updates).eq('id', targetStudentId).select().single()
 
     if (error) throw error
     return { statusCode: 200, headers, body: JSON.stringify({ ok: true, student: data }) }

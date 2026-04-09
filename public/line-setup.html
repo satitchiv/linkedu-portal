@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>LINKEDU — LINE Setup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #f5f0e4;
+      --card:     #fffdf8;
+      --border:   #ddd3be;
+      --gold:     #b69a40;
+      --gold-lt:  #c4a44a;
+      --gold-dk:  #a68b3a;
+      --green:    #00b900;
+      --text:     #3a3224;
+      --muted:    #8a7d6b;
+      --muted2:   #b5a88e;
+      --benefit:  #6b5e4a;
+      --input-bg: #f0ebe0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, sans-serif;
+      min-height: 100vh;
+      padding-bottom: 60px;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 36px;
+    }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .header-logo {
+      font-family: 'EB Garamond', Georgia, serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--gold);
+      letter-spacing: .08em;
+    }
+    .beta-badge {
+      background: var(--gold);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-family: 'Inter', sans-serif;
+      letter-spacing: 0.05em;
+    }
+    .header-label {
+      font-size: 11px;
+      color: var(--muted2);
+      text-transform: uppercase;
+      letter-spacing: .15em;
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* ── Container ── */
+    .container {
+      max-width: 440px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* ── Greeting ── */
+    .greeting { margin-bottom: 32px; }
+    .greeting-hi { font-size: 14px; color: var(--muted); margin-bottom: 6px; }
+    .greeting-title {
+      font-family: 'EB Garamond', Georgia, serif;
+      font-size: 26px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+      margin-bottom: 8px;
+    }
+    .greeting-sub { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+    /* ── Why card ── */
+    .why-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .why-heading {
+      font-family: 'EB Garamond', Georgia, serif;
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .why-sub {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 18px;
+    }
+    .why-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .why-item {
+      border-left: 2px solid var(--border);
+      padding-left: 12px;
+    }
+    .why-item.featured { border-left-color: var(--gold); }
+    .why-item-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 3px;
+    }
+    .why-item.featured .why-item-title { color: var(--gold); }
+    .why-item-desc { font-size: 11px; color: var(--muted); line-height: 1.6; }
+
+    /* ── Step cards ── */
+    .step-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+    .step-header {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .step-num {
+      font-family: 'EB Garamond', Georgia, serif;
+      font-size: 30px;
+      font-weight: 300;
+      color: var(--gold-lt);
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .step-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.3;
+    }
+    .step-body {
+      padding-left: 42px;
+    }
+    .step-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 16px;
+    }
+    .step-hint {
+      font-size: 11px;
+      color: var(--muted2);
+      line-height: 1.6;
+      margin-top: 12px;
+    }
+
+    /* ── Buttons ── */
+    .btn-line {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      background: var(--green);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      text-align: center;
+      text-decoration: none;
+      cursor: pointer;
+      letter-spacing: .02em;
+    }
+    .btn-line:hover { opacity: .92; }
+
+    .token-box {
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 18px;
+      font-family: 'JetBrains Mono', 'SF Mono', 'Courier New', monospace;
+      font-size: 15px;
+      color: var(--text);
+      letter-spacing: .04em;
+      word-break: break-all;
+      text-align: center;
+      margin-bottom: 10px;
+      user-select: all;
+    }
+
+    .btn-copy {
+      display: block;
+      width: 100%;
+      padding: 13px;
+      background: transparent;
+      color: var(--gold);
+      border: 2px solid var(--gold);
+      border-radius: 8px;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: .02em;
+      transition: background .15s, color .15s;
+    }
+    .btn-copy:hover { background: var(--gold); color: #fff; }
+    .btn-copy.copied { background: #2e7d32; color: #fff; border-color: #2e7d32; }
+
+    /* ── Try asking block ── */
+    .try-block {
+      background: var(--input-bg);
+      border-left: 3px solid var(--gold);
+      border-radius: 0 8px 8px 0;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+    }
+    .try-heading {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 10px;
+    }
+    .try-item {
+      font-size: 13px;
+      font-style: italic;
+      color: var(--text);
+      padding: 7px 0;
+      border-bottom: 1px solid var(--border);
+      line-height: 1.5;
+    }
+    .try-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+    /* ── Return link ── */
+    .return-link {
+      display: block;
+      text-align: center;
+      padding: 13px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: none;
+      background: var(--card);
+      transition: border-color .15s, color .15s;
+      margin-bottom: 28px;
+    }
+    .return-link:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* ── Footer ── */
+    .footer {
+      text-align: center;
+      font-size: 10px;
+      color: var(--muted2);
+      opacity: .6;
+    }
+
+    /* ── Error ── */
+    .error-box {
+      background: #fff4f4;
+      border: 1px solid #e8c0c0;
+      border-radius: 12px;
+      padding: 28px 24px;
+      text-align: center;
+    }
+    .error-title { font-family: 'EB Garamond', Georgia, serif; font-size: 18px; color: #8b2020; margin-bottom: 8px; }
+    .error-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+    @media (max-width: 480px) {
+      .why-grid { grid-template-columns: 1fr; }
+      .header { padding: 16px 20px; }
+      .step-body { padding-left: 0; padding-top: 8px; }
+      .step-header { flex-direction: row; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-left">
+      <div class="header-logo">LINKEDU</div>
+      <span class="beta-badge">BETA</span>
+    </div>
+    <div class="header-label">LINE Setup</div>
+  </div>
+
+  <div class="container">
+    <div id="main-content">
+      <div style="font-size:13px;color:#8a7d6b;padding:20px 0">Loading your details...</div>
+    </div>
+  </div>
+
+  <script>
+    const params    = new URLSearchParams(window.location.search)
+    const token     = params.get('token') || ''
+    const tokenCode = token ? ('token:' + token) : ''
+    const portalUrl = token ? ('/?token=' + encodeURIComponent(token)) : '/'
+
+    function escHtml(s) {
+      if (!s) return ''
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+    }
+
+    function render(parentName, studentName) {
+      const greetingName = parentName ? escHtml(parentName) : null
+      const portalLabel  = studentName ? escHtml(studentName) + ' portal' : 'your LINKEDU portal'
+
+      document.getElementById('main-content').innerHTML = `
+
+        <div class="greeting">
+          ${greetingName ? `<div class="greeting-hi">Hi ${greetingName},</div>` : ''}
+          <div class="greeting-title">Connect LINE to ${portalLabel}</div>
+          <div class="greeting-sub">Follow these 3 steps &mdash; it takes under 2 minutes.</div>
+        </div>
+
+        <div class="why-card">
+          <div class="why-heading">Why connect LINE?</div>
+          <div class="why-sub">Your portal has everything about your children&rsquo;s applications. LINE puts it in your pocket.</div>
+          <div class="why-grid">
+            <div class="why-item featured">
+              <div class="why-item-title">Instant status updates</div>
+              <div class="why-item-desc">Ask about your application status and get an answer in seconds &mdash; no waiting for email</div>
+            </div>
+            <div class="why-item featured">
+              <div class="why-item-title">Deadline reminders</div>
+              <div class="why-item-desc">Never miss a registration deadline, exam date, or document submission</div>
+            </div>
+            <div class="why-item">
+              <div class="why-item-title">Direct consultant access</div>
+              <div class="why-item-desc">Request a callback from your consultant with one tap</div>
+            </div>
+            <div class="why-item">
+              <div class="why-item-title">School information</div>
+              <div class="why-item-desc">Ask about fees, programmes, or entry requirements for any shortlisted school</div>
+            </div>
+            <div class="why-item">
+              <div class="why-item-title">Available 24/7</div>
+              <div class="why-item-desc">Get answers in Thai or English anytime &mdash; even outside office hours</div>
+            </div>
+            <div class="why-item">
+              <div class="why-item-title">It&rsquo;s free</div>
+              <div class="why-item-desc">No extra charge. LINE connection is included with your LINKEDU service</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-header">
+            <div class="step-num">1</div>
+            <div class="step-title">Add LINKEDU on LINE</div>
+          </div>
+          <div class="step-body">
+            <div class="step-desc">Tap the button below to open LINE and add the LINKEDU official account as a friend.</div>
+            <a href="https://line.me/ti/p/@387htsyz" target="_blank" rel="noopener" class="btn-line">Add on LINE &rarr;</a>
+            <div class="step-hint">Don&rsquo;t have LINE? Download free from the App Store or Google Play.</div>
+          </div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-header">
+            <div class="step-num">2</div>
+            <div class="step-title">Send your personal code</div>
+          </div>
+          <div class="step-body">
+            <div class="step-desc">Open the LINKEDU chat in LINE and send the code below exactly as shown &mdash; do not change anything.</div>
+            <div class="token-box">${escHtml(tokenCode)}</div>
+            <button class="btn-copy" id="copy-btn" onclick="copyCode()">Copy code</button>
+            <div class="step-hint">Tap copy &rarr; open LINE &rarr; find LINKEDU &rarr; paste the code &rarr; send.</div>
+          </div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-header">
+            <div class="step-num">3</div>
+            <div class="step-title">You&rsquo;re connected</div>
+          </div>
+          <div class="step-body">
+            <div class="step-desc">LINKEDU will reply in LINE to confirm your account is linked. From that moment, you can ask about deadlines, school details, and application status &mdash; anytime, in Thai or English.</div>
+          </div>
+        </div>
+
+        <div class="try-block">
+          <div class="try-heading">Try asking</div>
+          <div class="try-item">&ldquo;What schools are we applying to?&rdquo;</div>
+          <div class="try-item">&ldquo;When is the next deadline?&rdquo;</div>
+          <div class="try-item">&ldquo;ค่าเทอม Reed&rsquo;s เท่าไหร่คะ&rdquo;</div>
+          <div class="try-item">&ldquo;Can my consultant call me?&rdquo;</div>
+        </div>
+
+        <a href="${escHtml(portalUrl)}" class="return-link">Return to your portal &rarr;</a>
+
+        <div class="footer">LINKEDU Parent Portal &middot; Beta &middot; No additional charges apply</div>
+      `
+    }
+
+    function renderError() {
+      document.getElementById('main-content').innerHTML = `
+        <div class="error-box">
+          <div class="error-title">Link not recognised</div>
+          <div class="error-desc">This link is missing your access code. Please ask your consultant to resend the setup link.</div>
+        </div>
+      `
+    }
+
+    function copyCode() {
+      const btn  = document.getElementById('copy-btn')
+      const done = () => {
+        btn.textContent = 'Copied \u2713'
+        btn.classList.add('copied')
+        setTimeout(() => {
+          btn.textContent = 'Copy code'
+          btn.classList.remove('copied')
+        }, 2500)
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(tokenCode).then(done).catch(() => { fallbackCopy(); done() })
+      } else {
+        fallbackCopy(); done()
+      }
+    }
+
+    function fallbackCopy() {
+      const ta = document.createElement('textarea')
+      ta.value = tokenCode
+      ta.style.cssText = 'position:fixed;opacity:0'
+      document.body.appendChild(ta); ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    }
+
+    async function init() {
+      if (!token) { renderError(); return }
+
+      // Render immediately so page is usable before the API responds
+      render('', '')
+
+      try {
+        const res = await fetch('/api/student', { headers: { 'X-Access-Token': token } })
+        if (!res.ok) throw new Error('fetch failed')
+        const data = await res.json()
+        const s    = data.student || {}
+        render(
+          s.parentName  || s.parent_name  || '',
+          s.preferredName || s.studentName || s.student_name || ''
+        )
+      } catch (e) {
+        // API failed — page already usable with anonymous greeting
+      }
+    }
+
+    init()
+  </script>
+
+</body>
+</html>

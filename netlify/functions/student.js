@@ -94,11 +94,12 @@ function buildStudentObj(s, isParent) {
     show_reports_to_parent:  s.show_reports_to_parent || false,
     show_tennis_to_parent:   s.show_tennis_to_parent || false,
   }
+  // Available to all views — parents need these for LINE setup
+  obj.access_token = s.access_token  || null  // parent already has it in their URL; needed for LINE setup page
+  obj.line_user_id = s.line_user_id  || null  // shows connected/not-connected status in overview card
   // Admin-only fields — never exposed via token link or parent JWT
   if (!isParent) {
     obj.consultantNotes = s.consultant_notes || ''
-    obj.access_token    = s.access_token     || null  // needed for LINE deep link generation
-    obj.line_user_id    = s.line_user_id     || null  // shows linked/not-linked status in portal
   }
   return obj
 }
@@ -165,12 +166,21 @@ exports.handler = async (event) => {
 
     if (!profile) return { statusCode: 404, headers, body: JSON.stringify({ error: 'Profile not found' }) }
 
-    // Analysts may request a specific student via ?student_id= query param
+    // Analysts or multi-child parents may request a specific student via ?student_id=
     const queryStudentId = event.queryStringParameters && event.queryStringParameters.student_id
     let studentIdToFetch = profile.student_id
 
     if (queryStudentId && profile.role === 'analyst') {
       studentIdToFetch = queryStudentId
+    } else if (queryStudentId && profile.role === 'parent') {
+      // Verify this parent has this student linked in parent_students
+      const { data: link } = await supabase
+        .from('parent_students')
+        .select('student_id')
+        .eq('parent_user_id', user.id)
+        .eq('student_id', queryStudentId)
+        .single()
+      if (link) studentIdToFetch = queryStudentId
     }
 
     if (!studentIdToFetch) {

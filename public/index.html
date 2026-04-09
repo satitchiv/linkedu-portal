@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
@@ -604,9 +604,78 @@
     /* ── Empty state ───────────────────────────────────── */
     .empty { color: var(--muted2); font-size: 13px; padding: 32px 0; text-align: center; }
 
+    /* ── Claim overlay — full page takeover ─────────────── */
+    .claim-banner { position: fixed; inset: 0; z-index: 9999; background: linear-gradient(150deg, #f5f0e4 0%, #e9dfc8 100%); display: flex; flex-direction: column; overflow-y: auto; }
+    .claim-banner-header { padding: 20px 40px; border-bottom: 1px solid #ddd3be; flex-shrink: 0; }
+    .claim-banner-logo { font-family: 'EB Garamond', Georgia, serif; font-size: 14px; font-weight: 700; letter-spacing: 0.2em; color: #b69a40; text-transform: uppercase; }
+    .claim-banner-body { flex: 1; display: flex; align-items: center; justify-content: center; padding: 48px 40px; }
+    .claim-banner-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 72px; max-width: 860px; width: 100%; align-items: center; }
+    /* Left — branding */
+    .claim-banner-left { }
+    .claim-banner-label { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .claim-banner-label span:first-child { font-family: 'Inter', sans-serif; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #9a8060; font-weight: 500; }
+    .claim-beta-badge { background: #b69a40; color: #fff; font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 3px; font-family: 'Inter', sans-serif; letter-spacing: 0.05em; }
+    .claim-banner-title { font-family: 'EB Garamond', Georgia, serif; font-size: 38px; font-weight: 600; color: #2e2418; margin-bottom: 12px; line-height: 1.15; }
+    .claim-banner-subtitle { font-family: 'Inter', sans-serif; font-size: 14px; color: #7a6a52; line-height: 1.65; margin-bottom: 28px; }
+    .claim-banner-benefit { font-family: 'Inter', sans-serif; font-size: 13px; color: #6b5e4a; line-height: 1.9; padding-left: 16px; position: relative; }
+    .claim-banner-benefit::before { content: '·'; position: absolute; left: 2px; color: #b69a40; font-size: 18px; line-height: 1.4; }
+    .claim-banner-benefit strong { color: #3a3224; }
+    /* Right — form card */
+    .claim-banner-right { background: rgba(255,253,248,0.85); border: 1px solid #d8cdb5; border-radius: 16px; padding: 40px 36px; box-shadow: 0 8px 40px rgba(100,80,40,0.1); }
+    .claim-banner-inputs { display: flex; flex-direction: column; gap: 12px; }
+    .claim-banner-inputs input { width: 100%; padding: 14px 16px; border: 1px solid #cfc4aa; border-radius: 8px; background: #fff; font-family: 'Inter', sans-serif; font-size: 15px; color: #2e2418; outline: none; box-sizing: border-box; transition: border-color 0.15s; }
+    .claim-banner-inputs input:focus { border-color: #b69a40; }
+    .claim-banner-btn { width: 100%; padding: 15px; background: #b69a40; color: #fff; border: none; border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 4px; }
+    .claim-banner-btn:hover { background: #a68b3a; }
+    .claim-banner-dismiss { display: block; width: 100%; text-align: center; background: none; border: none; color: #a8967a; cursor: pointer; font-size: 13px; font-family: 'Inter', sans-serif; margin-top: 16px; padding: 6px; }
+    .claim-banner-dismiss:hover { color: #6b5e4a; }
+    .claim-banner-footnote { font-family: 'Inter', sans-serif; font-size: 11px; color: #b5a88e; margin-top: 14px; text-align: center; line-height: 1.6; }
+    .claim-banner-msg { font-size: 13px; margin-top: 10px; text-align: center; }
+
+    /* ── Child manager bar (JWT parents with 2+ children) ───────── */
+    #child-manager-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; padding: 10px 16px; margin: 0 0 18px 0; }
+    .cmb-label { color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; }
+    .cmb-current { color: #eee; font-size: 14px; font-weight: 500; margin-right: 6px; }
+    .cmb-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+    .cmb-switch-btn { background: #2a2a2a; border: 1px solid #3a3a3a; color: #eee; font-size: 13px; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+    .cmb-switch-btn:hover { border-color: var(--gold); color: var(--gold); }
+    .cmb-add-btn { background: transparent; border: 1px solid var(--gold); color: var(--gold); font-size: 13px; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+    .cmb-add-btn:hover { background: var(--gold); color: #111; }
+    @media (max-width: 600px) {
+      #child-manager-bar { flex-direction: column; align-items: flex-start; gap: 8px; }
+      .cmb-actions { margin-left: 0; }
+    }
+
+    /* ── Add child modal ────────────────────────────────────────── */
+    #add-child-modal { display: none; position: fixed; inset: 0; z-index: 9998; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; padding: 20px; }
+    .add-child-card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 12px; padding: 32px; max-width: 480px; width: 100%; }
+    .add-child-title { font-family: 'EB Garamond', Georgia, serif; font-size: 22px; font-weight: 600; color: #eee; margin-bottom: 8px; }
+    .add-child-subtitle { font-size: 13px; color: #888; margin-bottom: 20px; line-height: 1.6; }
+    .add-child-card input[type=text] { width: 100%; padding: 12px 14px; border: 1px solid #333; border-radius: 8px; background: #111; font-family: inherit; font-size: 14px; color: #eee; outline: none; box-sizing: border-box; }
+    .add-child-card input[type=text]:focus { border-color: var(--gold); }
+    .add-child-msg { font-size: 13px; margin-top: 10px; min-height: 18px; }
+    .add-child-btn { width: 100%; margin-top: 14px; padding: 13px; background: var(--gold); color: #fff; border: none; border-radius: 8px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .add-child-btn:hover { background: #a68b3a; }
+    .add-child-cancel { display: block; width: 100%; text-align: center; background: none; border: none; color: #555; cursor: pointer; font-size: 13px; font-family: inherit; margin-top: 12px; padding: 6px; }
+    .add-child-cancel:hover { color: #888; }
+    .add-child-section { margin-bottom: 4px; }
+    .add-child-section-label { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+    .add-child-divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; color: #444; font-size: 12px; }
+    .add-child-divider::before, .add-child-divider::after { content: ''; flex: 1; height: 1px; background: #2a2a2a; }
+    .add-child-btn-outline { background: transparent !important; border: 1px solid var(--gold) !important; color: var(--gold) !important; }
+    .add-child-btn-outline:hover { background: var(--gold) !important; color: #111 !important; }
+    @media (max-width: 700px) {
+      .claim-banner-header { padding: 18px 24px; }
+      .claim-banner-body { padding: 32px 24px 40px; align-items: flex-start; }
+      .claim-banner-inner { grid-template-columns: 1fr; gap: 28px; }
+      .claim-banner-title { font-size: 28px; }
+      .claim-banner-subtitle { margin-bottom: 0; }
+      .claim-banner-right { padding: 28px 24px; }
+    }
+
     /* ── Responsive ────────────────────────────────────── */
     @media (max-width: 640px) {
-      #main { padding: 20px 16px; }
+#main { padding: 20px 16px; }
       #header { padding: 0 16px; gap: 10px; }
       #btn-new-student { display: none !important; }
       .header-student { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1127,6 +1196,32 @@
       border-radius: 24px; font-size: 12px; font-weight: 700; letter-spacing: .05em;
       text-decoration: none; box-shadow: 0 4px 14px rgba(0,0,0,.2);
       display: flex; align-items: center; gap: 6px; }
+
+    /* ── LINE CTA card ──────────────────────────────────── */
+    .line-cta-card { background: linear-gradient(135deg, #1a1408 0%, #2c2418 100%); border-radius: 12px; padding: 28px 32px; margin-bottom: 28px; position: relative; overflow: hidden; border: 1px solid rgba(198,168,90,0.15); }
+    .line-cta-card::before { content: ''; position: absolute; top: -40px; right: -40px; width: 180px; height: 180px; background: radial-gradient(circle, rgba(198,168,90,0.12) 0%, transparent 70%); pointer-events: none; }
+    .line-cta-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(0,185,0,0.12); border: 1px solid rgba(0,185,0,0.25); border-radius: 20px; padding: 4px 12px 4px 8px; margin-bottom: 14px; }
+    .line-cta-badge-dot { width: 8px; height: 8px; border-radius: 50%; background: #00b900; animation: linePulse 2s infinite; }
+    @keyframes linePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .line-cta-badge-text { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; color: #00b900; letter-spacing: 0.05em; }
+    .line-cta-title { font-family: 'EB Garamond', Georgia, serif; font-size: 24px; font-weight: 600; color: #f0e8d4; margin-bottom: 8px; line-height: 1.3; }
+    .line-cta-subtitle { font-family: 'Inter', sans-serif; font-size: 13px; color: #8a7d6b; line-height: 1.6; margin-bottom: 20px; max-width: 480px; }
+    .line-cta-benefits { display: flex; gap: 24px; margin-bottom: 24px; flex-wrap: wrap; }
+    .line-cta-benefit { font-family: 'Inter', sans-serif; font-size: 12px; color: #c4a44a; display: flex; align-items: center; gap: 6px; }
+    .line-cta-benefit::before { content: '✓'; font-size: 11px; font-weight: 700; }
+    .line-cta-btn { display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #00b900 0%, #00a000 100%); color: #fff; border: none; border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; text-decoration: none; letter-spacing: 0.02em; }
+    .line-cta-btn:hover { box-shadow: 0 4px 16px rgba(0,185,0,0.25); }
+    .line-cta-connected { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; background: #161616; border-radius: 20px; font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+    .line-cta-connected-dot { width: 8px; height: 8px; border-radius: 50%; background: #00b900; flex-shrink: 0; }
+    .line-cta-connected-text { font-family: 'Inter', sans-serif; font-size: 12px; color: #00b900; font-weight: 600; }
+    @media (max-width: 640px) {
+      .line-cta-card { padding: 20px 20px; }
+      .line-cta-title { font-size: 20px; }
+      .line-cta-benefits { gap: 12px; }
+      .line-cta-benefit { font-size: 11px; }
+      .line-cta-btn { display: block; width: 100%; text-align: center; box-sizing: border-box; }
+    }
+
     @media (max-width: 768px) {
       .ov-status-board { grid-template-columns: 1fr 1fr; }
       .sa-body { grid-template-columns: 1fr; }
@@ -1615,16 +1710,60 @@
     <button class="tab-btn" id="tab-btn-tools" onclick="showTab('tools')">My Tools</button>
     <button class="tab-btn" id="tab-btn-line-chats" onclick="showTab('line-chats')" style="display:none">LINE Chats</button>
   </div>
-  <div id="claim-banner" style="display:none;margin:0 0 16px;padding:16px 20px;background:#161616;border-radius:8px;border:1px solid #2a2a2a">
-    <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">Save your access</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Create a password so you can sign in from any device without needing this link.</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <input id="claim-email" type="email" placeholder="Your email" style="padding:8px 12px;background:#111;border:1px solid #333;border-radius:5px;font-size:13px;color:var(--text);outline:none;font-family:inherit;min-width:0;flex:1" />
-      <input id="claim-pass" type="password" placeholder="Password (8+ characters)" style="padding:8px 12px;background:#111;border:1px solid #333;border-radius:5px;font-size:13px;color:var(--text);outline:none;font-family:inherit;min-width:0;flex:1" />
-      <button onclick="claimAccount()" style="padding:8px 16px;background:#1a1a1a;border:1px solid #333;border-radius:5px;font-size:13px;color:var(--text);cursor:pointer;white-space:nowrap">Save</button>
-      <button onclick="dismissClaimBanner()" style="padding:8px 10px;background:none;border:none;font-size:12px;color:var(--muted2);cursor:pointer">Not now</button>
+  <div class="claim-banner" id="claim-banner" style="display:none">
+    <div class="claim-banner-header">
+      <div class="claim-banner-logo">LINKEDU</div>
     </div>
-    <div id="claim-msg" style="font-size:12px;margin-top:8px"></div>
+    <div class="claim-banner-body">
+      <div class="claim-banner-inner">
+        <div class="claim-banner-left">
+          <div class="claim-banner-label">
+            <span>Parent Portal</span>
+            <span class="claim-beta-badge">BETA</span>
+          </div>
+          <div class="claim-banner-title">Create your personal login</div>
+          <div class="claim-banner-subtitle">Set up your email and password once — then sign in from any device, anytime.</div>
+          <div class="claim-banner-benefit"><strong>Any device</strong> — phone, tablet, or laptop</div>
+          <div class="claim-banner-benefit"><strong>Never lose access</strong> — no need to keep the original link</div>
+          <div class="claim-banner-benefit"><strong>Secure &amp; private</strong> — only you can see your children's data</div>
+        </div>
+        <div class="claim-banner-right">
+          <div class="claim-banner-inputs">
+            <input type="email" id="claim-email" placeholder="Your email address" />
+            <input type="password" id="claim-password" placeholder="Password (8+ characters)" />
+            <button class="claim-banner-btn" onclick="submitClaimAccount()">Create login</button>
+          </div>
+          <div class="claim-banner-msg" id="claim-msg"></div>
+          <button class="claim-banner-dismiss" onclick="dismissClaimBanner()">Not now — I'll do this later</button>
+          <div class="claim-banner-footnote">Your existing portal link continues to work after setup.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add child modal — JWT parents only -->
+  <div id="add-child-modal">
+    <div class="add-child-card">
+      <div class="add-child-title">Add another child</div>
+
+      <div class="add-child-section">
+        <div class="add-child-section-label">I have a portal link from Satit</div>
+        <input type="text" id="add-child-token" placeholder="Paste portal link or token" />
+        <div class="add-child-msg" id="add-child-msg"></div>
+        <button class="add-child-btn" onclick="submitAddChild()">Link child</button>
+      </div>
+
+      <div class="add-child-divider"><span>or</span></div>
+
+      <div class="add-child-section">
+        <div class="add-child-section-label">Add my child myself</div>
+        <input type="text" id="add-child-name" placeholder="Child's name (e.g. Nong Pooh)" />
+        <div class="add-child-msg" id="add-child-self-msg"></div>
+        <button class="add-child-btn add-child-btn-outline" onclick="submitAddChildSelf()">Add child</button>
+      </div>
+
+      <button class="add-child-cancel" onclick="closeAddChildModal()">Cancel</button>
+    </div>
   </div>
 
   <div id="main">
@@ -2425,6 +2564,7 @@ function renderOverview() {
   const html = `
     ${headerHtml}
     ${msgHtml}
+    ${renderLineConnectCard()}
     <div class="section-title" style="margin-bottom:18px;margin-top:24px">Right Now</div>
     ${zone1 || '<div class="empty">No upcoming deadlines.</div>'}
     <div class="section-title" style="margin-bottom:18px">Status Board</div>
@@ -2433,8 +2573,7 @@ function renderOverview() {
       <div class="ov-wn-hdr">What's Next — Top 3</div>
       ${wn3 || '<div style="padding:14px 20px;color:var(--muted);font-size:13px">No upcoming items</div>'}
     </div>
-    ${toolResultsHtml}
-    ${renderLineConnectCard()}`
+    ${toolResultsHtml}`
 
   $id('overview-content').innerHTML = html
 }
@@ -3458,6 +3597,9 @@ async function saveSection(id, fields) {
       const { data: { session } } = await sb.auth.getSession()
       if (!session) throw new Error('Not logged in')
       reqHeaders['Authorization'] = `Bearer ${session.access_token}`
+      // Include student_id so backend updates the currently-viewed child,
+      // not just the default child in user_profiles.student_id
+      payload = { ...fields, student_id: D.student.id }
     }
     const res = await fetch('/api/update-student', {
       method: 'PATCH',
@@ -3508,6 +3650,7 @@ async function saveNotesField(dbField, studentField, value) {
     const { data: { session } } = await sb.auth.getSession()
     if (!session) throw new Error('Not logged in')
     reqHeaders['Authorization'] = `Bearer ${session.access_token}`
+    payload = { ...payload, student_id: D.student.id }
   }
   const res = await fetch('/api/update-student', {
     method: 'PATCH',
@@ -3595,6 +3738,7 @@ async function saveIntakeSection() {
       const { data: { session } } = await sb.auth.getSession()
       if (!session) throw new Error('Not logged in')
       reqHeaders['Authorization'] = `Bearer ${session.access_token}`
+      payload.student_id = D.student.id
     }
     const res = await fetch('/api/update-student', {
       method: 'PATCH',
@@ -4016,9 +4160,9 @@ function renderProfile() {
             <span id="prof-line-msg" style="font-size:11px;color:var(--gold)"></span>
           </div>
           <div id="prof-line-link-wrap" style="display:none;margin-top:10px">
-            <div style="font-size:10px;color:#555;margin-bottom:6px">Copy this message and send to the parent via WhatsApp or email:</div>
-            <textarea id="prof-line-link" readonly style="width:100%;background:#161616;border:1px solid #2a2a2a;border-radius:6px;padding:10px 12px;font-size:11px;color:#ccc;font-family:'Courier New',monospace;box-sizing:border-box;outline:none;resize:none;line-height:1.6" rows="7"></textarea>
-            <button onclick="copyLineLink()" style="margin-top:6px;background:none;border:1px solid var(--gold);border-radius:6px;padding:5px 14px;font-size:11px;cursor:pointer;color:var(--gold)">Copy</button>
+            <div style="font-size:10px;color:#555;margin-bottom:6px">Send this link to the parent — the page walks them through setup step by step:</div>
+            <textarea id="prof-line-link" readonly style="width:100%;background:#161616;border:1px solid #2a2a2a;border-radius:6px;padding:10px 12px;font-size:12px;color:#ccc;font-family:'Courier New',monospace;box-sizing:border-box;outline:none;resize:none;line-height:1.6" rows="2"></textarea>
+            <button onclick="copyLineLink()" style="margin-top:6px;background:none;border:1px solid var(--gold);border-radius:6px;padding:5px 14px;font-size:11px;cursor:pointer;color:var(--gold)">Copy link</button>
           </div>
         </div>
       </div>
@@ -10671,7 +10815,7 @@ function renderStudentsList(students) {
       : `<span style="color:#333">—</span>`
     return `
     <tr id="sl-row-${sid}" onclick="openStudentFromList('${s.accessToken}')" style="cursor:pointer;border-bottom:1px solid rgba(0,0,0,0.07)" onmouseover="this.style.background='rgba(184,150,46,0.04)'" onmouseout="this.style.background=''">
-      <td style="padding:12px 0;font-size:13px;color:var(--text);font-weight:500">${s.name}</td>
+      <td style="padding:12px 0;font-size:13px;color:var(--text);font-weight:500">${s.createdByParent ? '<span style="display:inline-block;background:#b69a40;color:#111;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;letter-spacing:0.04em;margin-right:8px;vertical-align:middle">NEEDS SETUP</span>' : ''}${s.name}</td>
       <td style="padding:12px 16px;font-size:13px;color:var(--muted)">${s.parentName || '—'}</td>
       <td style="padding:12px 16px;font-size:12px;color:var(--muted);text-transform:capitalize">${stage}</td>
       <td style="padding:12px 16px;font-size:12px;color:var(--muted);text-transform:capitalize">${s.status || '—'}</td>
@@ -11002,32 +11146,28 @@ async function generateMagicLink() {
 async function checkClaimBanner() {
   const banner = $id('claim-banner')
   if (!banner) return
-  if (!isTokenView || isAnalystView) { banner.style.display = 'none'; return }
+  if (!isTokenView) { banner.style.display = 'none'; return }
   if (localStorage.getItem('portal_claimed_dismissed')) return
-
-  const { data: { session } } = await sb.auth.getSession()
-  if (session) return // Already has a password account
+  if (sessionStorage.getItem('portal_claimed_dismissed')) return
 
   const emailInput = $id('claim-email')
-  if (emailInput && D && D.student && D.student.parentEmail) {
-    emailInput.value = D.student.parentEmail
-  }
+  if (emailInput && D && D.student && D.student.parentEmail) emailInput.value = D.student.parentEmail
   banner.style.display = 'block'
 }
 
 function dismissClaimBanner() {
   const banner = $id('claim-banner')
   if (banner) banner.style.display = 'none'
-  localStorage.setItem('portal_claimed_dismissed', '1')
+  sessionStorage.setItem('portal_claimed_dismissed', '1')
 }
 
-async function claimAccount() {
-  const email    = ($id('claim-email').value || '').trim()
-  const password = ($id('claim-pass').value  || '').trim()
+async function submitClaimAccount() {
+  const email    = ($id('claim-email').value    || '').trim()
+  const password = ($id('claim-password').value || '').trim()
   const msg      = $id('claim-msg')
-  if (!email)             { msg.style.color = 'var(--red)'; msg.textContent = 'Email required'; return }
-  if (password.length < 8) { msg.style.color = 'var(--red)'; msg.textContent = 'Password must be 8+ characters'; return }
-  msg.style.color = 'var(--gold)'; msg.textContent = 'Creating account...'
+  if (!email)              { msg.style.color = '#c0392b'; msg.textContent = 'Email required'; return }
+  if (password.length < 8) { msg.style.color = '#c0392b'; msg.textContent = 'Password must be 8+ characters'; return }
+  msg.style.color = '#b69a40'; msg.textContent = 'Creating account...'
   try {
     const res  = await fetch('/api/claim-account', {
       method: 'POST',
@@ -11036,13 +11176,156 @@ async function claimAccount() {
     })
     const json = await res.json()
     if (!res.ok) throw new Error(json.error || 'Failed')
-    msg.style.color = 'var(--green)'
-    msg.textContent = '✓ Account created — you can now sign in with email and password from any device'
+
+    msg.style.color = '#2e7d32'
+    msg.textContent = '✓ Account created — you can now sign in from any device'
     localStorage.setItem('portal_claimed_dismissed', '1')
-    setTimeout(() => { const b = $id('claim-banner'); if (b) b.style.display = 'none' }, 3500)
+    setTimeout(() => { const b = $id('claim-banner'); if (b) b.style.display = 'none' }, 3000)
   } catch (err) {
-    msg.style.color = 'var(--red)'; msg.textContent = err.message
+    msg.style.color = '#c0392b'; msg.textContent = err.message
   }
+}
+
+// ── Child manager (JWT parents with multiple children) ────────────────────────
+let _myStudents = []
+
+async function initChildSwitcher(jwtToken) {
+  if (isTokenView || isAnalystView) return
+  try {
+    const res = await fetch('/api/my-students', { headers: { Authorization: 'Bearer ' + jwtToken } })
+    if (!res.ok) return
+    _myStudents = await res.json()
+    renderChildSwitcher()
+  } catch(e) { /* non-blocking */ }
+}
+
+function renderChildSwitcher() {
+  if (isTokenView || isAnalystView) return
+  const main = $id('main')
+  if (!main) return
+  // Remove any existing bar before re-rendering
+  const existing = $id('child-manager-bar')
+  if (existing) existing.remove()
+
+  const currentId = D && D.student && D.student.id
+  const currentName = (D && D.student && (D.student.preferredName || D.student.studentName)) || 'Student'
+  const others = _myStudents.filter(s => s.id !== currentId)
+
+  const bar = document.createElement('div')
+  bar.id = 'child-manager-bar'
+  bar.innerHTML = `
+    <span class="cmb-label">Viewing:</span>
+    <span class="cmb-current">${escHtml(currentName)}</span>
+    <div class="cmb-actions">
+      ${others.map(s => `
+        <button class="cmb-switch-btn" onclick="switchChild('${s.id}')">Switch to ${escHtml(s.preferredName || s.studentName)}</button>
+      `).join('')}
+      <button class="cmb-add-btn" onclick="openAddChildModal()">+ Add child</button>
+    </div>
+  `
+  main.insertAdjacentElement('afterbegin', bar)
+}
+
+function openAddChildModal() {
+  $id('add-child-token').value = ''
+  $id('add-child-msg').textContent = ''
+  $id('add-child-modal').style.display = 'flex'
+}
+
+function closeAddChildModal() {
+  $id('add-child-modal').style.display = 'none'
+}
+
+async function submitAddChild() {
+  const input = ($id('add-child-token').value || '').trim()
+  // Accept full portal URL (parent pastes the link Satit sent) or bare token
+  const childToken = (input.match(/[?&]token=([a-f0-9]+)/) || [])[1] || input
+  const msg = $id('add-child-msg')
+  if (!childToken) { msg.style.color = '#c0392b'; msg.textContent = 'Please paste the portal link or token'; return }
+  msg.style.color = '#b69a40'; msg.textContent = 'Linking...'
+  try {
+    const res = await fetch('/api/add-child-by-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + window._token },
+      body: JSON.stringify({ token: childToken }),
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Failed')
+    msg.style.color = '#2e7d32'
+    msg.textContent = '✓ ' + escHtml(json.student.preferredName || json.student.studentName) + ' linked successfully'
+    // Refresh child list and re-render bar
+    try {
+      const r2 = await fetch('/api/my-students', { headers: { Authorization: 'Bearer ' + window._token } })
+      if (r2.ok) _myStudents = await r2.json()
+    } catch(e) { /* non-blocking */ }
+    renderChildSwitcher()
+    setTimeout(closeAddChildModal, 1500)
+  } catch(err) {
+    msg.style.color = '#c0392b'; msg.textContent = err.message
+  }
+}
+
+async function submitAddChildSelf() {
+  const name = ($id('add-child-name').value || '').trim()
+  const msg  = $id('add-child-self-msg')
+  if (!name) { msg.style.color = '#c0392b'; msg.textContent = 'Please enter your child\'s name'; return }
+  msg.style.color = '#b69a40'; msg.textContent = 'Adding...'
+  try {
+    const res = await fetch('/api/add-child-self', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + window._token },
+      body: JSON.stringify({ preferredName: name }),
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Failed')
+    msg.style.color = '#2e7d32'
+    msg.textContent = '✓ ' + escHtml(json.student.preferredName || json.student.studentName) + ' added successfully'
+    try {
+      const r2 = await fetch('/api/my-students', { headers: { Authorization: 'Bearer ' + window._token } })
+      if (r2.ok) _myStudents = await r2.json()
+    } catch(e) { /* non-blocking */ }
+    renderChildSwitcher()
+    setTimeout(closeAddChildModal, 1500)
+  } catch(err) {
+    msg.style.color = '#c0392b'; msg.textContent = err.message
+  }
+}
+
+async function switchChild(studentId) {
+  if (!studentId || !window._token) return
+  try {
+    const res = await fetch('/api/student?student_id=' + studentId, {
+      headers: { Authorization: 'Bearer ' + window._token }
+    })
+    if (!res.ok) {
+      // Don't touch D — keep showing current child's data
+      const nameSpan = $id('header-name')
+      if (nameSpan) {
+        const prev = nameSpan.textContent
+        nameSpan.textContent = 'Could not switch — try again'
+        setTimeout(() => { nameSpan.textContent = prev }, 2500)
+      }
+      return
+    }
+    D = await res.json()
+    golfRounds = D.golfRounds || []
+
+    // Reset ALL lazy-load flags so tabs re-fetch for the new child
+    _commsLoaded    = false
+    _reportsLoaded  = false
+    _tennisLoaded   = false
+    _lineChatsLoaded = false
+
+    // Update header name
+    const nameSpan = $id('header-name')
+    if (nameSpan) nameSpan.textContent = D.student?.preferredName || D.student?.studentName || 'Portal'
+
+    // Re-render all tabs
+    renderAll()
+
+    // Rebuild child manager bar to reflect new active child
+    renderChildSwitcher()
+  } catch(e) { console.error('switchChild error:', e) }
 }
 
 // ── LINE connect card (parent-facing, overview tab) ───────────────────────────
@@ -11050,29 +11333,31 @@ async function claimAccount() {
 function renderLineConnectCard() {
   if (isAnalystView) return ''
   const student = (D && D.student) ? D.student : {}
+  const tok = _portalToken || student.access_token || ''
 
   if (student.line_user_id) {
-    return `<div style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:#161616;border-radius:20px;font-size:12px;color:var(--muted);margin-top:20px">
-      <span style="color:#00b900;font-size:10px">&#9679;</span> LINE · Connected
+    return `<div class="line-cta-connected">
+      <div class="line-cta-connected-dot"></div>
+      <span class="line-cta-connected-text">LINE Connected</span>
     </div>`
   }
 
-  const tokenCode = 'token:' + (_portalToken || student.access_token || '')
-  return `<div style="background:#161616;border:1px solid #2a2a2a;border-radius:8px;padding:20px 20px 16px;margin-top:24px">
-    <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">Connect LINE for instant updates</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:18px">Get real-time answers about your application directly in LINE.</div>
+  if (!tok) return ''
 
-    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted2);margin-bottom:8px">Step 1 — Add LINKEDU on LINE</div>
-    <a href="https://line.me/ti/p/@387htsyz" target="_blank" rel="noopener"
-       style="display:inline-block;padding:8px 18px;background:#00b900;color:#fff;border-radius:5px;font-size:13px;font-weight:600;text-decoration:none;margin-bottom:20px">Add on LINE →</a>
-
-    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted2);margin-bottom:8px">Step 2 — Send this code in the chat</div>
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-      <code style="background:#111;border:1px solid #333;border-radius:5px;padding:8px 14px;font-size:13px;color:var(--text);letter-spacing:.04em;font-family:monospace">${escHtml(tokenCode)}</code>
-      <button id="line-token-copy-btn" onclick="lineTokenCopy()"
-              style="padding:8px 14px;background:#1a1a1a;border:1px solid #333;border-radius:5px;font-size:12px;color:var(--muted);cursor:pointer">Copy</button>
+  const setupUrl = '/line-setup?token=' + encodeURIComponent(tok)
+  return `<div class="line-cta-card">
+    <div class="line-cta-badge">
+      <div class="line-cta-badge-dot"></div>
+      <span class="line-cta-badge-text">LINE Available</span>
     </div>
-    <div style="font-size:11px;color:var(--muted2)">Type this exactly as shown. You will receive a confirmation message once linked.</div>
+    <div class="line-cta-title">Your portal, now in your pocket</div>
+    <div class="line-cta-subtitle">Ask about deadlines, school fees, or application status — and get instant answers in LINE. Thai or English, anytime.</div>
+    <div class="line-cta-benefits">
+      <span class="line-cta-benefit">24/7 instant replies</span>
+      <span class="line-cta-benefit">Deadline reminders</span>
+      <span class="line-cta-benefit">Talk to your consultant</span>
+    </div>
+    <a class="line-cta-btn" href="${setupUrl}">Connect LINE — 2 minutes →</a>
   </div>`
 }
 
@@ -11105,9 +11390,8 @@ async function generateLineMsg() {
     const url = new URL(json.link)
     const token = url.searchParams.get('token')
     if (!token) throw new Error('Could not extract token')
-    const parentName = D.student.parentName || 'there'
-    const activationMsg = `Hi ${parentName},\n\nTo connect your LINE to the LINKEDU portal, please follow these 2 steps:\n\n1. Add LINKEDU on LINE:\nhttps://line.me/ti/p/@387htsyz\n\n2. In the LINE chat, send this code exactly as written:\ntoken:${token}\n\nYou will receive a confirmation message once linked.`
-    $id('prof-line-link').value = activationMsg
+    const setupUrl = window.location.origin + '/line-setup?token=' + encodeURIComponent(token)
+    $id('prof-line-link').value = setupUrl
     wrap.style.display = 'block'
     msg.textContent = ''
   } catch (err) {
@@ -11283,6 +11567,8 @@ sb.auth.onAuthStateChange(async (event, session) => {
       $id('loading').style.display = 'none'
       $id('app').style.display = 'flex'
       $id('app').classList.add('visible')
+      // Init child switcher — non-blocking, only shows if >1 child linked
+      initChildSwitcher(session.access_token)
 
     } catch (err) {
       console.error('Load error:', err)

@@ -25,6 +25,15 @@
 [functions.line-bot]
   timeout = 26
 
+[functions.add-child-by-token]
+  timeout = 10
+
+[functions.add-child-self]
+  timeout = 10
+
+[functions.my-students]
+  timeout = 10
+
 [[redirects]]
   from = "/playgolf"
   to   = "/analyst.html"
@@ -43,6 +52,11 @@
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/line-setup"
+  to   = "/line-setup.html"
   status = 200
 
 [[redirects]]

@@ -105,12 +105,18 @@ exports.handler = async event => {
       throw authErr
     }
 
-    // Link user to student
+    // Link user to student in user_profiles (backward compat — keep student_id scalar)
     await supabase.from('user_profiles').upsert({
       id: authData.user.id,
       role: 'parent',
       student_id: student.id,
     })
+
+    // Also insert into parent_students junction table
+    await supabase.from('parent_students').upsert({
+      parent_user_id: authData.user.id,
+      student_id: student.id,
+    }, { onConflict: 'parent_user_id,student_id' })
 
     // Send welcome email — non-blocking, never fails the response
     if (process.env.RESEND_API_KEY) {

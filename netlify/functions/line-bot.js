@@ -105,60 +105,74 @@ async function checkAndIncrementRateLimit(student) {
 }
 
 // ── Student context builder ────────────────────────────────────────────────────
-async function buildParentContext(studentId) {
+// Accepts a single studentId or an array of studentIds.
+async function buildParentContext(studentIdOrIds) {
+  const studentIds = Array.isArray(studentIdOrIds) ? studentIdOrIds : [studentIdOrIds]
   const today = bangkokDateStr()
-  const [studentRes, schoolsRes, timelineRes, recsRes] = await Promise.all([
-    supabase.from('students')
-      .select('id, student_name, preferred_name, target_entry_year, target_year_group, stage, parent_name, parent_phone')
-      .eq('id', studentId).single(),
 
-    supabase.from('student_schools')
-      .select('school_name, application_status, priority')
-      .eq('student_id', studentId)
-      .neq('application_status', 'abandoned')
-      .order('priority'),
+  // Fetch all students' data in parallel
+  const contexts = await Promise.all(studentIds.map(async (studentId) => {
+    const [studentRes, schoolsRes, timelineRes, recsRes] = await Promise.all([
+      supabase.from('students')
+        .select('id, student_name, preferred_name, target_entry_year, target_year_group, stage, parent_name, parent_phone')
+        .eq('id', studentId).single(),
 
-    supabase.from('school_timeline_items')
-      .select('title, item_type, date, notes')
-      .eq('student_id', studentId)
-      .gte('date', today)
-      .order('date')
-      .limit(5),
+      supabase.from('student_schools')
+        .select('school_name, application_status, priority')
+        .eq('student_id', studentId)
+        .neq('application_status', 'abandoned')
+        .order('priority'),
 
-    supabase.from('student_recommendations')
-      .select('school_name, score, tier')
-      .eq('student_id', studentId)
-      .eq('approved', true)
-      .order('score', { ascending: false }),
-  ])
+      supabase.from('school_timeline_items')
+        .select('title, item_type, date, notes')
+        .eq('student_id', studentId)
+        .gte('date', today)
+        .order('date')
+        .limit(5),
 
-  return {
-    student:          studentRes.data  || {},
-    schools:          schoolsRes.data  || [],
-    upcomingDeadlines: timelineRes.data || [],
-    recommendations:  recsRes.data     || [],
-  }
+      supabase.from('student_recommendations')
+        .select('school_name, score, tier')
+        .eq('student_id', studentId)
+        .eq('approved', true)
+        .order('score', { ascending: false }),
+    ])
+
+    return {
+      student:           studentRes.data  || {},
+      schools:           schoolsRes.data  || [],
+      upcomingDeadlines: timelineRes.data || [],
+      recommendations:   recsRes.data     || [],
+    }
+  }))
+
+  // Return single context object for backward compat, or array for multi-child
+  return studentIds.length === 1 ? contexts[0] : contexts
 }
 
-// ── Format context as text for Gemini system prompt ───────────────────────────
-function formatContext(ctx) {
-  const { student, schools, upcomingDeadlines, recommendations } = ctx
-  const name = student.preferred_name || student.student_name || 'the student'
+// ── Format context as text for the system prompt ──────────────────────────────
+// Accepts a single context object or an array (multi-child).
+function formatContext(ctxOrArray) {
+  const contexts = Array.isArray(ctxOrArray) ? ctxOrArray : [ctxOrArray]
 
-  const schoolLines = schools.length
-    ? schools.map(s => `  - ${s.school_name}: ${s.application_status}`).join('\n')
-    : '  (no schools added yet)'
+  const formatOne = (ctx, index) => {
+    const { student, schools, upcomingDeadlines, recommendations } = ctx
+    const name = student.preferred_name || student.student_name || 'the student'
 
-  const deadlineLines = upcomingDeadlines.length
-    ? upcomingDeadlines.map(d => `  - ${d.date}: ${d.title} — ${d.item_type}${d.notes ? ` (${d.notes})` : ''}`).join('\n')
-    : '  (no upcoming deadlines)'
+    const schoolLines = schools.length
+      ? schools.map(s => `  - ${s.school_name}: ${s.application_status}`).join('\n')
+      : '  (no schools added yet)'
 
-  const recLines = recommendations.length
-    ? recommendations.map(r => `  - ${r.school_name} (tier: ${r.tier || '-'})`).join('\n')
-    : '  (no recommendations yet)'
+    const deadlineLines = upcomingDeadlines.length
+      ? upcomingDeadlines.map(d => `  - ${d.date}: ${d.title} — ${d.item_type}${d.notes ? ` (${d.notes})` : ''}`).join('\n')
+      : '  (no upcoming deadlines)'
 
-  return `
-Student: ${name}
+    const recLines = recommendations.length
+      ? recommendations.map(r => `  - ${r.school_name} (tier: ${r.tier || '-'})`).join('\n')
+      : '  (no recommendations yet)'
+
+    const header = contexts.length > 1 ? `CHILD ${index + 1} — ${name}` : `Student: ${name}`
+
+    return `${header}
 Target entry: ${student.target_year_group || '?'} in ${student.target_entry_year || '?'}
 
 Schools in pipeline:
@@ -168,8 +182,10 @@ Upcoming deadlines:
 ${deadlineLines}
 
 Recommended schools:
-${recLines}
-`.trim()
+${recLines}`
+  }
+
+  return contexts.map((ctx, i) => formatOne(ctx, i)).join('\n\n---\n\n')
 }
 
 // ── Claude Haiku API call ─────────────────────────────────────────────────────
@@ -213,10 +229,18 @@ function callClaude(systemPrompt, userMessage) {
 
 // ── Process message through Claude Haiku ─────────────────────────────────────
 async function processWithClaude(replyToken, userMessage, ctx) {
-  const studentName = ctx.student.preferred_name || ctx.student.student_name || 'the student'
+  // ctx may be a single context object or an array (multi-child)
+  const contexts = Array.isArray(ctx) ? ctx : [ctx]
+  const primaryCtx = contexts[0]
+  const parentName = primaryCtx.student.parent_name || 'the parent'
+  const isMultiChild = contexts.length > 1
   const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
-  const systemPrompt = `You are LINKEDU's assistant, chatting with the parent of ${studentName} on LINE.
+  const childrenDesc = isMultiChild
+    ? `the parent of ${contexts.length} children`
+    : `the parent of ${primaryCtx.student.preferred_name || primaryCtx.student.student_name || 'the student'}`
+
+  const systemPrompt = `You are LINKEDU's assistant, chatting with ${childrenDesc} on LINE.
 Today: ${today}
 
 Rules:
@@ -226,9 +250,9 @@ Rules:
 - No fees unless asked.
 - Don't end every reply with a question.
 - Match parent's language. Thai → Thai. English → English. Never mix.
-- Warm and casual. Sound like a person, not a brochure.
+- Warm and casual. Sound like a person, not a brochure.${isMultiChild ? '\n- If the parent asks about a specific child, answer about that child only. Otherwise mention all children by name.' : ''}
 
-Student data:
+${isMultiChild ? 'Children\'s data:' : 'Student data:'}
 ${formatContext(ctx)}`
 
   try {
@@ -240,9 +264,9 @@ ${formatContext(ctx)}`
     // Haiku 4.5 pricing: $1.00/MTok input, $5.00/MTok output
     const costUsd = (inputTokens * 1.00 + outputTokens * 5.00) / 1_000_000
     supabase.from('line_chat_history').insert({
-      student_id:     ctx.student.id,
-      student_name:   ctx.student.preferred_name || ctx.student.student_name || '',
-      line_user_id:   ctx.student.line_user_id || '',
+      student_id:     primaryCtx.student.id,
+      student_name:   primaryCtx.student.preferred_name || primaryCtx.student.student_name || '',
+      line_user_id:   primaryCtx.student.line_user_id || '',
       parent_message: userMessage,
       bot_reply:      text || '',
       input_tokens:   inputTokens,
@@ -480,11 +504,15 @@ async function handleEvent(ev) {
   }
 
   // ── Whitelist check ───────────────────────────────────────────────────────
-  const { data: student } = await supabase
+  // Use limit(1) instead of single() — a parent family may share line_user_id
+  // across multiple children. We pick any one child, then the 3-hop lookup finds siblings.
+  const { data: students } = await supabase
     .from('students')
     .select('id, student_name, preferred_name, parent_name, parent_phone, target_entry_year, target_year_group, stage, line_user_id, line_daily_count, line_daily_reset')
     .eq('line_user_id', lineUserId)
-    .single()
+    .limit(1)
+
+  const student = students && students[0]
 
   if (!student) {
     // Stranger — complete silence, no reply, no cost
@@ -501,7 +529,29 @@ async function handleEvent(ev) {
     return
   }
 
-  // ── Build context + call Gemini ───────────────────────────────────────────
-  const ctx = await buildParentContext(student.id)
+  // ── Multi-child lookup (3-hop via parent_students) ───────────────────────
+  // line_user_id lives on students, not parent_students. Must go:
+  //   students.id → parent_students.parent_user_id → all parent_students rows
+  let studentIds = [student.id]
+
+  const { data: parentLink } = await supabase
+    .from('parent_students')
+    .select('parent_user_id')
+    .eq('student_id', student.id)
+    .single()
+
+  if (parentLink) {
+    const { data: siblingLinks } = await supabase
+      .from('parent_students')
+      .select('student_id')
+      .eq('parent_user_id', parentLink.parent_user_id)
+    if (siblingLinks && siblingLinks.length > 1) {
+      studentIds = siblingLinks.map(r => r.student_id)
+    }
+  }
+  // If parentLink is null (LINE set up before account claim), fall back to single-child context
+
+  // ── Build context + call Claude ───────────────────────────────────────────
+  const ctx = await buildParentContext(studentIds)
   await processWithClaude(replyToken, text, ctx)
 }
