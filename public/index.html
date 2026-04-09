@@ -8857,7 +8857,6 @@ function renderFreePreviewTabs_DELETED() { return // removed — free users see 
 
 function renderAll() {
   _lineChatsLoaded = false
-  checkClaimBanner()
   renderOverview()
   renderJourney()
   renderSchools()
@@ -10307,6 +10306,7 @@ if (isTokenView) {
             $id('auth-screen').style.display = 'none'
             $id('app').style.display = 'flex'
             $id('app').classList.add('visible')
+            checkClaimBanner()
           }
           // isAnalyst && isParentView: ignore analyst session, show auth-screen
         } catch (e) { /* network error — show auth-screen */ }
@@ -11151,8 +11151,7 @@ async function checkClaimBanner() {
   const banner = $id('claim-banner')
   if (!banner) return
   if (!isTokenView) { banner.style.display = 'none'; return }
-  const app = $id('app')
-  if (!app || app.style.display === 'none' || app.style.display === '') return
+  if (isAnalystView) { banner.style.display = 'none'; return }
   if (localStorage.getItem('portal_claimed_dismissed')) return
   if (sessionStorage.getItem('portal_claimed_dismissed')) return
 
@@ -11666,6 +11665,7 @@ function continueWithoutSignIn() {
   $id('app').style.display = 'flex'
   $id('app').classList.add('visible')
   renderAll()
+  checkClaimBanner()
 }
 
 // Handle sign-in session on page load / auth state change (token view)
@@ -11684,6 +11684,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
       $id('app').classList.add('visible')
       await initChildSwitcher(session.access_token)
       renderAll()
+      checkClaimBanner()
       return
     }
   } catch (e) { return }
