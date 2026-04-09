@@ -641,6 +641,8 @@
     .cmb-switch-btn:hover { border-color: var(--gold); color: var(--gold); }
     .cmb-add-btn { background: transparent; border: 1px solid var(--gold); color: var(--gold); font-size: 13px; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-family: inherit; white-space: nowrap; }
     .cmb-add-btn:hover { background: var(--gold); color: #111; }
+    .cmb-remove-btn { background: transparent; border: 1px solid #3a3a3a; color: #666; font-size: 12px; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+    .cmb-remove-btn:hover { border-color: #c0392b; color: #c0392b; }
     @media (max-width: 600px) {
       #child-manager-bar { flex-direction: column; align-items: flex-start; gap: 8px; }
       .cmb-actions { margin-left: 0; }
@@ -11184,6 +11186,19 @@ async function initChildSwitcher(jwtToken) {
     const res = await fetch('/api/my-students', { headers: { Authorization: 'Bearer ' + jwtToken } })
     if (!res.ok) return
     _myStudents = await res.json()
+    // Always ensure the currently loaded student is in the list —
+    // guards against user_profiles.student_id pointing to a student
+    // not yet in parent_students (legacy accounts or test data).
+    if (D && D.student && D.student.id && !_myStudents.find(s => s.id === D.student.id)) {
+      _myStudents.unshift({
+        id:            D.student.id,
+        studentName:   D.student.studentName   || '',
+        preferredName: D.student.preferredName || '',
+        photoUrl:      null,
+        stage:         D.student.stage  || '',
+        status:        D.student.status || 'active',
+      })
+    }
     renderChildSwitcher()
   } catch(e) { /* non-blocking */ }
 }
@@ -11210,9 +11225,33 @@ function renderChildSwitcher() {
         <button class="cmb-switch-btn" onclick="switchChild('${s.id}')">Switch to ${escHtml(s.preferredName || s.studentName)}</button>
       `).join('')}
       <button class="cmb-add-btn" onclick="openAddChildModal()">+ Add child</button>
+      ${_myStudents.length > 1 ? `<button class="cmb-remove-btn" onclick="removeChildFromAccount('${currentId}','${escHtml(currentName)}')">Remove ${escHtml(currentName)}</button>` : ''}
     </div>
   `
   main.insertAdjacentElement('afterbegin', bar)
+}
+
+async function removeChildFromAccount(studentId, studentName) {
+  if (!confirm('Remove ' + studentName + ' from your account? This only unlinks them — it does not delete any data.')) return
+  try {
+    const res = await fetch('/api/remove-child', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + window._token },
+      body: JSON.stringify({ student_id: studentId }),
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Failed')
+    // Refresh and switch to first remaining child
+    const r2 = await fetch('/api/my-students', { headers: { Authorization: 'Bearer ' + window._token } })
+    if (r2.ok) _myStudents = await r2.json()
+    if (_myStudents.length > 0) {
+      await switchChild(_myStudents[0].id)
+    } else {
+      renderChildSwitcher()
+    }
+  } catch(err) {
+    alert('Could not remove: ' + err.message)
+  }
 }
 
 function openAddChildModal() {
