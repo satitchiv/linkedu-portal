@@ -3614,11 +3614,12 @@ async function saveSection(id, fields) {
       targetEntryYear: fields.target_entry_year
     } : { primarySport: fields.primary_sport })
     cancelSection(id)
-    msgEl.style.display = 'inline'
-    setTimeout(() => { msgEl.style.display = 'none' }, 3000)
     // Update cache and re-render completion bar
     try { localStorage.setItem('portal_cache', JSON.stringify({ D, ts: Date.now() })) } catch(e) {}
     renderProfile()
+    // Re-query after renderProfile() recreates the DOM, then show confirmation
+    const freshMsg = document.getElementById('prof-msg-' + id)
+    if (freshMsg) { freshMsg.style.display = 'inline'; setTimeout(() => { freshMsg.style.display = 'none' }, 3000) }
   } catch(err) {
     btn.textContent = 'Error — try again'
     btn.style.color = 'var(--red)'
@@ -10296,7 +10297,7 @@ if (isTokenView) {
             }
           } catch (e) { /* network error — show overlay */ }
         }
-        if (!isAnalystView && !isTokenView) {
+        if (!isAnalystView && !isParentView) {
           const overlay = $id('analyst-login-overlay')
           if (overlay) overlay.style.display = 'flex'
         }
