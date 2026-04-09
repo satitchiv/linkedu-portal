@@ -127,11 +127,19 @@ exports.handler = async (event) => {
       const { s, academicsRes, schoolsRes, timelineItems, milestonesRes, documentsRes, golfRes, recsRes, certificationsRes, extractionsRes, campRecsRes, campAppsWithTl } =
         await fetchStudentData(student.id)
 
+      const { count: parentCount } = await supabase
+        .from('parent_students').select('*', { count: 'exact', head: true })
+        .eq('student_id', student.id)
+      const parentLinked = (parentCount || 0) > 0
+
+      const studentObj = buildStudentObj(s, true)
+      studentObj.parentLinked = parentLinked
+
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify({
-          student: buildStudentObj(s, true),   // token view — parent access, strip analyst-only fields
+          student: studentObj,   // token view — parent access, strip analyst-only fields
           academics: (academicsRes.data || []).map(a => ({
             id: a.id, subject: a.subject, term: a.term, date: a.date,
             grade: a.grade, score: a.score, maxScore: a.max_score,
