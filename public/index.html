@@ -1625,9 +1625,6 @@
         <div style="margin-top:14px;text-align:center;font-size:12px;color:var(--muted)">Already have an account? <span onclick="showSignIn()" style="color:var(--gold);cursor:pointer;text-decoration:underline">Sign in</span></div>
       </div>
     </div>
-    <div id="token-continue-btn" style="display:none;margin-top:20px;text-align:center">
-      <button onclick="continueWithoutSignIn()" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;font-family:inherit;text-decoration:underline">Continue without signing in</button>
-    </div>
     <div id="auth-sent-wrap" style="display:none; text-align:center; padding: 12px 0;">
       <div style="font-family:'Playfair Display',serif; font-size:16px; color:#1a1a1a; margin-bottom:10px;">Check your email</div>
       <div style="font-size:13px; color:#666; line-height:1.7;">We've sent a secure login link to<br><strong id="auth-sent-email" style="color:#1a1a1a;"></strong><br><br>Click the link in the email to sign in.<br>It expires in 1 hour.</div>
@@ -10275,20 +10272,20 @@ if (isTokenView) {
       renderToolsTab(D.toolResults || [])
       $id('loading').classList.remove('show')
       $id('loading').style.display = 'none'
-      // Show "Continue without signing in" now that data is ready
-      const contBtn = $id('token-continue-btn')
-      if (contBtn) contBtn.style.display = 'block'
-      // Check for existing analyst/parent session (e.g. after page reload)
+      // Show portal immediately — token IS the authentication
+      $id('auth-screen').style.display = 'none'
+      $id('app').style.display = 'flex'
+      $id('app').classList.add('visible')
+      // Silently check for existing session — applies features without blocking
       const { data: { session } } = await sb.auth.getSession()
       if (session) {
         try {
           const _acr = await fetch('/api/check-analyst', { headers: { 'Authorization': 'Bearer ' + session.access_token } })
           const { isAnalyst } = await _acr.json()
           if (isAnalyst && !isParentView) {
-            // Analyst session — only apply if NOT in parent-experience URL
+            // Analyst session — apply analyst features silently
             window._token = session.access_token
             isAnalystView = true
-            // Reload D with analyst-level data to get consultant_notes and other analyst fields
             if (D && D.student && D.student.id) {
               try {
                 const _sr = await fetch(`/api/student?student_id=${D.student.id}`, { headers: { Authorization: 'Bearer ' + session.access_token } })
@@ -10296,24 +10293,14 @@ if (isTokenView) {
               } catch(e) {}
             }
             renderAll()
-            $id('auth-screen').style.display = 'none'
-            $id('app').style.display = 'flex'
-            $id('app').classList.add('visible')
           } else if (!isAnalyst) {
-            // Parent has an existing session — enable child manager bar silently
+            // Parent has an existing session — enable child switcher silently
             window._token = session.access_token
             await initChildSwitcher(session.access_token)
-            $id('auth-screen').style.display = 'none'
-            $id('app').style.display = 'flex'
-            $id('app').classList.add('visible')
-            checkClaimBanner()
           }
-          // isAnalyst && isParentView: ignore analyst session, show auth-screen
-        } catch (e) { /* network error — show auth-screen */ }
+        } catch (e) { /* network error — continue read-only */ }
       }
-      if (!isAnalystView) {
-        $id('auth-screen').style.display = 'flex'
-      }
+      checkClaimBanner()
     } catch (err) {
       $id('loading').style.display = 'none'
       $id('auth-screen').style.display = 'flex'
@@ -11661,14 +11648,6 @@ sb.auth.onAuthStateChange(async (event, session) => {
 </script>
 
 <script>
-function continueWithoutSignIn() {
-  $id('auth-screen').style.display = 'none'
-  $id('app').style.display = 'flex'
-  $id('app').classList.add('visible')
-  renderAll()
-  checkClaimBanner()
-}
-
 // Handle sign-in session on page load / auth state change (token view)
 sb.auth.onAuthStateChange(async (event, session) => {
   if (!isTokenView) return
@@ -11678,22 +11657,15 @@ sb.auth.onAuthStateChange(async (event, session) => {
     const _acr = await fetch('/api/check-analyst', { headers: { 'Authorization': 'Bearer ' + session.access_token } })
     const { isAnalyst } = await _acr.json()
     if (!isAnalyst) {
-      // Parent signed in at token URL — enable child manager bar
+      // Parent signed in — enable child switcher silently
       window._token = session.access_token
-      $id('auth-screen').style.display = 'none'
-      $id('app').style.display = 'flex'
-      $id('app').classList.add('visible')
       await initChildSwitcher(session.access_token)
       renderAll()
-      checkClaimBanner()
       return
     }
   } catch (e) { return }
   window._token = session.access_token
   isAnalystView = true
-  $id('auth-screen').style.display = 'none'
-  $id('app').style.display = 'flex'
-  $id('app').classList.add('visible')
   if ($id('btn-new-student')) $id('btn-new-student').style.display = 'inline-block'
   if ($id('btn-all-students')) $id('btn-all-students').style.display = 'inline-block'
   if (!D) return
