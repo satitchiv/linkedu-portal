@@ -10313,7 +10313,11 @@ if (isTokenView) {
             window._token = session.access_token
             await initChildSwitcher(session.access_token)
           }
-          // isAnalyst && isParentView: session not applied — sign-in button stays visible
+          // isAnalyst && isParentView: session not applied — show sign-in button and Add child bar
+          if (isAnalyst && isParentView) {
+            if ($id('btn-parent-signin')) $id('btn-parent-signin').style.display = 'inline-block'
+            renderChildSwitcher()
+          }
         } catch (e) { /* network error — continue read-only */ }
       } else {
         // No session — show sign-in button and minimal Add child bar
@@ -11703,7 +11707,11 @@ sb.auth.onAuthStateChange(async (event, session) => {
     }
   } catch (e) { return }
   // ?view=parent URLs always show parent experience — never apply analyst view
-  if (isParentView) return
+  if (isParentView) {
+    if ($id('btn-parent-signin')) $id('btn-parent-signin').style.display = 'inline-block'
+    renderChildSwitcher()
+    return
+  }
   // Analyst session applied — hide sign-in button
   if ($id('btn-parent-signin')) $id('btn-parent-signin').style.display = 'none'
   window._token = session.access_token
