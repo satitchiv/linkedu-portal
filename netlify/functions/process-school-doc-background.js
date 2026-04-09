@@ -1,12 +1,18 @@
-// POST /api/process-school-doc
-// Analyst-only. Accepts a base64-encoded PDF + optional student context.
-// Calls Gemini 2.5 Flash to extract a flat list of routable items.
-// Returns extracted JSON for analyst review — does NOT write to DB.
+// POST /api/process-school-doc-background
+// Analyst-only. Accepts pdfBase64 + jobId (client-generated UUID) + optional student context.
+// Runs as a Netlify background function — Netlify returns 202 immediately, function continues.
+// Stores result in extraction_jobs for polling via /api/get-extraction-job.
 
 const { GoogleGenerativeAI } = require('@google/generative-ai')
+const { createClient } = require('@supabase/supabase-js')
 const { isAuthorizedAnalyst } = require('./utils/auth')
 const fs   = require('fs')
 const path = require('path')
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+)
 
 function getGeminiKey() {
   const envKey = process.env.GEMINI_API_KEY
@@ -31,14 +37,18 @@ exports.handler = async (event) => {
     return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) }
   }
 
+  if (!(await isAuthorizedAnalyst(event))) {
+    return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) }
+  }
+
+  let jobId
   try {
-    if (!(await isAuthorizedAnalyst(event))) {
-      return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) }
-    }
-
     const body = JSON.parse(event.body || '{}')
-    const { pdfBase64, fileName, studentName, studentSchools } = body
+    const { pdfBase64, jobId: clientJobId, fileName, studentName, studentSchools } = body
 
+    if (!clientJobId) {
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'jobId is required' }) }
+    }
     if (!pdfBase64) {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'pdfBase64 is required' }) }
     }
@@ -46,9 +56,19 @@ exports.handler = async (event) => {
       return { statusCode: 413, headers, body: JSON.stringify({ error: 'File too large. Keep documents under 4.5MB.' }) }
     }
 
+    jobId = clientJobId
+
+    // Create job record (upsert in case polling checks before we insert)
+    await supabase.from('extraction_jobs').upsert({
+      id: jobId,
+      status: 'processing',
+      file_name: fileName || 'document.pdf',
+      updated_at: new Date().toISOString(),
+    })
+
     const geminiKey = getGeminiKey()
     const genAI = new GoogleGenerativeAI(geminiKey)
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
     const studentCtx = studentName ? `Student context: ${studentName}` : 'No specific student context provided.'
     const schoolsCtx = studentSchools && studentSchools.length
@@ -66,19 +86,18 @@ timeline=dated school events (one item per date)
 deadline=application/registration cutoffs
 profile_basic=student details stated in doc (name/dob/nationality/school/year); meta.field=DB key
 profile_dob=date of birth only
-profile_academic=grades/scores (one per subject)
+profile_academic=subject-level grade summary only (one item per subject — NOT individual criteria/checklist items); for each: meta.grade=letter grade if any, meta.score=numeric value if any, item.notes=any descriptive context (e.g. "93rd percentile", "Pass", "national average 220"); standardised test scores (MAP/NWEA/IELTS etc) each count as one subject
 profile_cert=IELTS/TOEFL/certificates
 school_info=info shared across all students (visa/uniform/boarding/insurance/policies)
 etc=anything else
 
-Rules: dates=YYYY-MM-DD, never guess dates, one item per timeline event, extract both school_info and student-specific items, return raw JSON only.`
+Rules: dates=YYYY-MM-DD, never guess dates, one item per timeline event, extract both school_info and student-specific items, for profile_basic extract student name/school/year group if explicitly stated in document, for profile_academic group by subject and ignore individual assessment criteria rows (single letter marks on a checklist), return raw JSON only.`
 
     const result = await model.generateContent([
       { inlineData: { mimeType: 'application/pdf', data: pdfBase64 } },
       { text: prompt }
     ])
 
-    // Check for blocked/empty response before calling .text()
     const candidate = result.response.candidates?.[0]
     if (!candidate) {
       const blockReason = result.response.promptFeedback?.blockReason || 'unknown'
@@ -107,21 +126,25 @@ Rules: dates=YYYY-MM-DD, never guess dates, one item per timeline event, extract
       }
     }
 
-    // Ensure items is always an array
     if (!Array.isArray(extracted.items)) extracted.items = []
 
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({ ok: true, extracted, fileName: fileName || 'document.pdf' })
-    }
+    await supabase.from('extraction_jobs').update({
+      status: 'done',
+      result: { extracted, fileName: fileName || 'document.pdf' },
+      updated_at: new Date().toISOString(),
+    }).eq('id', jobId)
+
+    return { statusCode: 202, headers, body: JSON.stringify({ ok: true }) }
 
   } catch (err) {
-    console.error('process-school-doc error:', err)
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({ error: 'Server error', detail: err.message })
+    console.error('process-school-doc-background error:', err)
+    if (jobId) {
+      await supabase.from('extraction_jobs').update({
+        status: 'error',
+        error_msg: err.message,
+        updated_at: new Date().toISOString(),
+      }).eq('id', jobId).catch(() => {})
     }
+    return { statusCode: 500, headers, body: JSON.stringify({ error: 'Server error', detail: err.message }) }
   }
 }

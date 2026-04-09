@@ -1,7 +1,9 @@
-// POST /api/reset-parent-password
-// Analyst-only. Sends a password reset email to the parent linked to a student.
+// POST /api/clear-parent-email
+// Analyst-only. Removes the real email from the parent auth account linked to a student
+// by replacing it with a placeholder. The account still exists (parent_students link intact)
+// but email/password sign-in is no longer possible until a new email is set.
 // Body: { student_id }
-// Returns: { ok, email } — the email the reset was sent to.
+// Returns: { ok }
 
 const { createClient } = require('@supabase/supabase-js')
 const { isAuthorizedAnalyst } = require('./utils/auth')
@@ -41,26 +43,22 @@ exports.handler = async (event) => {
     if (!link)
       return { statusCode: 404, headers, body: JSON.stringify({ error: 'No parent account linked to this student' }) }
 
-    // Get parent email from auth.users
-    const { data: { user }, error: userErr } = await supabase.auth.admin.getUserById(link.parent_user_id)
-    if (userErr || !user)
-      return { statusCode: 404, headers, body: JSON.stringify({ error: 'Parent account not found' }) }
-
-    // Send password reset email
-    const { error: resetErr } = await supabase.auth.resetPasswordForEmail(user.email, {
-      redirectTo: process.env.URL || 'https://linkedu-parent-portal.netlify.app',
+    // Replace email with a placeholder so no real email is tied to the account
+    const placeholder = `unlinked_${link.parent_user_id.slice(0, 8)}@noemail.invalid`
+    const { error: updateErr } = await supabase.auth.admin.updateUserById(link.parent_user_id, {
+      email: placeholder,
     })
 
-    if (resetErr)
-      return { statusCode: 500, headers, body: JSON.stringify({ error: resetErr.message }) }
+    if (updateErr)
+      return { statusCode: 500, headers, body: JSON.stringify({ error: updateErr.message }) }
 
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ ok: true, email: user.email }),
+      body: JSON.stringify({ ok: true }),
     }
   } catch (err) {
-    console.error('reset-parent-password error:', err)
+    console.error('clear-parent-email error:', err)
     return { statusCode: 500, headers, body: JSON.stringify({ error: 'Server error', detail: err.message }) }
   }
 }

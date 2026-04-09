@@ -3867,7 +3867,7 @@ function renderProfile() {
     <div class="prof-edit-field"><label>Current School</label><input id="pe-school" value="${p.currentSchool||''}" /></div>
     <div class="prof-edit-field"><label>Year Group</label>
       <select id="pe-yg">
-        ${['Year 7','Year 8','Year 9','Year 10','Year 11','Year 12','Year 13','Other'].map(y=>`<option ${p.currentYearGroup===y?'selected':''}>${y}</option>`).join('')}
+        ${['Year 1','Year 2','Year 3','Year 4','Year 5','Year 6','Year 7','Year 8','Year 9','Year 10','Year 11','Year 12','Year 13','Other'].map(y=>`<option ${p.currentYearGroup===y?'selected':''}>${y}</option>`).join('')}
       </select></div>
     <div class="prof-edit-field"><label>Curriculum</label>
       <select id="pe-cur">
@@ -3932,16 +3932,21 @@ function renderProfile() {
 
   // ── Section 5: Academic Record (read only) ────────────────────────────────
   const gradeRows = acads.length
-    ? acads.map(a => `<tr>
+    ? acads.map(a => {
+        const scoreNum = a.score !== null && a.score !== undefined
+          ? (a.maxScore ? `${a.score}/${a.maxScore}` : `${a.score}`)
+          : null
+        const scoreDetail = [scoreNum, a.notes].filter(Boolean).join(' · ')
+        return `<tr>
         <td>${a.subject||'—'}</td><td>${a.term||'—'}</td>
         <td>${a.assessmentType||'—'}</td>
         <td>${a.grade ? statusBadge(a.grade) : '—'}</td>
-        <td>${a.score !== null && a.maxScore ? `${a.score}/${a.maxScore}` : a.score !== null ? a.score : '—'}</td>
+        <td>${scoreDetail || '—'}</td>
         <td>${fmtDate(a.date)}</td>
-      </tr>`).join('')
+      </tr>`}).join('')
     : `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">No academic records yet — your consultant will add these.</td></tr>`
   const s5read = `<div class="card" style="padding:0;overflow:hidden;margin-bottom:0">
-    <div style="overflow-x:auto"><table><thead><tr><th>Subject</th><th>Term</th><th>Type</th><th>Grade</th><th>Score</th><th>Date</th></tr></thead>
+    <div style="overflow-x:auto"><table><thead><tr><th>Subject</th><th>Term</th><th>Type</th><th>Grade</th><th>Score / Detail</th><th>Date</th></tr></thead>
     <tbody>${gradeRows}</tbody></table></div>
   </div>
   ${notesBox('academic_notes', 'academicNotes', p.academicNotes, 'notes-academic')}`
@@ -4119,6 +4124,7 @@ function renderProfile() {
     ${isAnalystView ? `
     <div style="margin-bottom:16px;border:1px solid #2a2a2a;border-radius:10px;background:#0f0f0f;padding:18px 20px">
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);margin-bottom:14px">Parent Access</div>
+      <div id="prof-parent-acct-status" style="margin-bottom:10px;font-size:12px;color:#888"></div>
       <div style="display:flex;flex-direction:column;gap:12px">
         <div>
           <div style="font-size:11px;color:#555;margin-bottom:6px">Token link — no login required, never expires</div>
@@ -4151,15 +4157,21 @@ function renderProfile() {
           </div>
         </div>
         <div>
-          <div style="font-size:11px;color:#555;margin-bottom:6px">Password reset — if parent forgets, generate new credentials to share</div>
+          <div style="font-size:11px;color:#555;margin-bottom:6px">Password reset — sends a reset link to the parent's email</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-            <button onclick="resetParentPassword()" style="background:#1a1a1a;color:#888;border:1px solid #2a2a2a;border-radius:6px;padding:7px 14px;font-size:12px;cursor:pointer">Reset Password</button>
+            <button onclick="resetParentPassword()" style="background:#1a1a1a;color:#888;border:1px solid #2a2a2a;border-radius:6px;padding:7px 14px;font-size:12px;cursor:pointer">Send Reset Email</button>
             <span id="prof-reset-msg" style="font-size:11px;color:var(--gold)"></span>
           </div>
           <div id="prof-reset-result" style="display:none;margin-top:10px;padding:12px 14px;background:#161616;border-radius:6px;border-left:3px solid #555">
-            <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#888;margin-bottom:8px">New credentials — share with parent</div>
+            <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#888;margin-bottom:8px">Reset email sent</div>
             <div id="prof-reset-result-email" style="font-size:13px;color:#eee;margin-bottom:4px"></div>
-            <div id="prof-reset-result-pass" style="font-size:13px;color:#eee;font-family:'Courier New',monospace"></div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:#555;margin-bottom:6px">Clear email — removes the email address from this account so a new one can be set</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <button onclick="clearParentEmail()" style="background:#1a1a1a;color:#888;border:1px solid #2a2a2a;border-radius:6px;padding:7px 14px;font-size:12px;cursor:pointer">Clear Email</button>
+            <span id="prof-clear-email-msg" style="font-size:11px;color:var(--gold)"></span>
           </div>
         </div>
         <div style="padding-top:12px;border-top:1px solid #1e1e1e">
@@ -8888,7 +8900,7 @@ function renderAll() {
   renderTutoringRecs()
   renderGolf()
   applyTabVisibility()
-  if (isAnalystView) renderAnalystFamilyBar()
+  if (isAnalystView) { renderAnalystFamilyBar(); loadParentAccountStatus() }
 }
 
 function applyTabVisibility() {
@@ -10334,6 +10346,614 @@ function renderReportCards(schools) {
   }).join('')}</div>`
 }
 
+// ── School Docs Tab (analyst-only) ────────────────────────────────────────────
+
+function renderSchoolDocsTab() {
+  _schoolDocsLoaded = true
+  const el = $id('school-docs-content')
+  if (!el) return
+  const studentDisplay = (D && D.student) ? (D.student.preferredName || D.student.studentName || '') : ''
+  el.innerHTML = `
+  <div style="max-width:820px;margin:0 auto;padding:28px 20px">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:4px">School Docs</div>
+    <div style="font-size:13px;color:#555;margin-bottom:${studentDisplay ? '12px' : '24px'}">Upload any school or student PDF. The system extracts each item and routes it to the right section automatically.</div>
+    ${studentDisplay ? `<div style="font-size:12px;color:#888;margin-bottom:20px">Student: <span style="color:#ccc">${escHtml(studentDisplay)}</span></div>` : ''}
+
+    <div style="margin-bottom:20px">
+      <input type="file" id="sd-file-input" accept=".pdf" multiple style="display:none" onchange="sdOnFilesSelected()" />
+      <button onclick="document.getElementById('sd-file-input').click()"
+        style="background:#1a1a1a;color:#ccc;border:1px solid #2a2a2a;border-radius:6px;padding:9px 18px;font-size:13px;cursor:pointer">
+        + Add PDFs
+      </button>
+    </div>
+
+    <div id="sd-file-list" style="margin-bottom:16px"></div>
+
+    <div id="sd-action-bar" style="display:none;gap:10px;margin-bottom:24px">
+      <button id="sd-extract-btn" onclick="sdExtractAll()"
+        style="background:none;border:1px solid #B8962E;border-radius:6px;padding:9px 20px;font-size:13px;cursor:pointer;color:#B8962E;font-weight:600">
+        Extract All
+      </button>
+    </div>
+
+    <div id="sd-routing-preview" style="display:none">
+      <div id="sd-routing-sections"></div>
+      <div style="display:flex;gap:10px;margin-top:24px;align-items:center;flex-wrap:wrap">
+        <button id="sd-save-btn" onclick="sdSaveAll()"
+          style="background:var(--gold);color:#111;border:none;border-radius:6px;padding:10px 24px;font-size:13px;font-weight:700;cursor:pointer">
+          Save Selected
+        </button>
+        <button id="sd-select-all-btn" onclick="sdToggleSelectAll()"
+          style="background:none;border:1px solid #2a2a2a;border-radius:6px;padding:10px 16px;font-size:13px;cursor:pointer;color:#aaa">
+          Select All
+        </button>
+        <button onclick="sdReset()"
+          style="background:none;border:1px solid #2a2a2a;border-radius:6px;padding:10px 16px;font-size:13px;cursor:pointer;color:#555">
+          Start Over
+        </button>
+      </div>
+    </div>
+
+    <div id="sd-status-msg" style="font-size:13px;color:#555;margin-top:12px"></div>
+  </div>`
+}
+
+async function sdLoadSchoolNames() {
+  const sel = $id('sd-school-select')
+  if (!sel) return
+  try {
+    const res = await fetch('/api/school-names', { headers: sdAuthHeaders() })
+    const json = await res.json()
+    const names = json.names || []
+    sel.innerHTML =
+      `<option value="">-- Select a school --</option>` +
+      names.map(n => `<option value="${escHtml(n)}">${escHtml(n)}</option>`).join('') +
+      `<option value="__other__">Other (type manually)</option>`
+    sel.style.color = '#eee'
+  } catch (e) {
+    sel.innerHTML = `<option value="">Failed to load — refresh tab</option>`
+  }
+}
+
+function sdOnSchoolChange() {
+  const sel = $id('sd-school-select')
+  const otherWrap = $id('sd-other-wrap')
+  if (!sel || !otherWrap) return
+  otherWrap.style.display = sel.value === '__other__' ? '' : 'none'
+  sdClearPreview()
+}
+
+function sdGetSchoolName() {
+  const sel = $id('sd-school-select')
+  if (!sel) return ''
+  if (sel.value === '__other__') {
+    return (($id('sd-school-other') || {}).value || '').trim()
+  }
+  return sel.value
+}
+
+function sdOnFilesSelected() {
+  const input = $id('sd-file-input')
+  if (!input || !input.files || !input.files.length) return
+  const listEl = $id('sd-file-list')
+  listEl.innerHTML = ''
+  Array.from(input.files).forEach(file => {
+    const safeId = 'sd-row-' + file.name.replace(/[^a-z0-9]/gi, '_')
+    const row = document.createElement('div')
+    row.id = safeId
+    row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid #1a1a1a;border-radius:6px;margin-bottom:8px;background:#161616'
+    row.innerHTML = `
+      <div style="flex:1;font-size:13px;color:#ccc">${escHtml(file.name)}</div>
+      <div style="font-size:11px;color:#555">${(file.size / 1024).toFixed(0)} KB</div>
+      <div class="sd-file-status" style="font-size:11px;color:#555;min-width:70px;text-align:right">Pending</div>`
+    listEl.appendChild(row)
+  })
+  const bar = $id('sd-action-bar')
+  if (bar) { bar.style.display = 'flex'; }
+  sdClearPreview()
+}
+
+function sdClearPreview() {
+  const rp = $id('sd-routing-preview')
+  if (rp) rp.style.display = 'none'
+  window._sdResults = []
+  window._sdAllItems = []
+}
+
+function sdToggleSelectAll() {
+  const checkboxes = document.querySelectorAll('input[data-sd-idx]')
+  const allChecked = Array.from(checkboxes).every(cb => cb.checked)
+  checkboxes.forEach(cb => { cb.checked = !allChecked })
+  const btn = $id('sd-select-all-btn')
+  if (btn) btn.textContent = allChecked ? 'Select All' : 'Deselect All'
+}
+
+async function sdReadFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const b64 = reader.result.split(',')[1]
+      resolve(b64)
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
+function sdAuthHeaders() {
+  const h = { 'Content-Type': 'application/json' }
+  if (window._adminSecret) h['X-Admin-Secret'] = window._adminSecret
+  else if (window._token)  h['Authorization']   = 'Bearer ' + window._token
+  return h
+}
+
+// Build { "School Name": "student-school-uuid" } from D.schools + detected school names
+function sdBuildSchoolMappings(detectedNames) {
+  const mappings = {}
+  const dSchools = (D && D.schools) ? D.schools : []
+  for (const name of (detectedNames || [])) {
+    if (!name) continue
+    const nl = name.toLowerCase()
+    // Try exact match first, then substring
+    const match = dSchools.find(s => s.school_name.toLowerCase() === nl)
+      || dSchools.find(s => s.school_name.toLowerCase().includes(nl) || nl.includes(s.school_name.toLowerCase()))
+    if (match) mappings[name] = match.id
+  }
+  return mappings
+}
+
+// Is this item mentioning a different student than the current one?
+function sdIsCrossStudent(item) {
+  if (!item.studentMentioned) return false
+  const mentioned = item.studentMentioned.toLowerCase().trim()
+  const student = D && D.student
+  if (!student) return false
+  const name1 = (student.studentName || '').toLowerCase().trim()
+  const name2 = (student.preferredName || '').toLowerCase().trim()
+  // Consider a match if mentioned name contains or is contained by student name
+  const matches = (a, b) => a && b && (a.includes(b) || b.includes(a))
+  return !matches(mentioned, name1) && !matches(mentioned, name2)
+}
+
+// Render a single routable item row with a checkbox
+// currentValue: existing student field value (profile_basic only) — shows overwrite warning
+const SD_DEST_OPTIONS = [
+  { value: 'timeline',         label: 'Timeline Event' },
+  { value: 'deadline',         label: 'Deadline' },
+  { value: 'profile_basic',    label: 'Student Info' },
+  { value: 'profile_academic', label: 'Academic Record' },
+  { value: 'profile_cert',     label: 'Certificate' },
+  { value: 'profile_dob',      label: 'Date of Birth' },
+  { value: 'school_info',      label: 'School Info' },
+  { value: 'etc',              label: 'Skip' },
+]
+
+function sdOnDestChange(idx) {
+  const sel  = document.querySelector(`[data-sd-dest-idx="${idx}"]`)
+  const dateRow = document.querySelector(`[data-sd-datefield-idx="${idx}"]`)
+  if (!sel || !dateRow) return
+  const isTimeline = sel.value === 'timeline' || sel.value === 'deadline'
+  dateRow.style.display = isTimeline ? 'flex' : 'none'
+  // Uncheck missingDate warning if user set a destination that doesn't need a date
+  const cb = document.querySelector(`input[data-sd-idx="${idx}"]`)
+  if (cb && !isTimeline) cb.checked = true
+}
+
+function sdRenderItemRow(item, idx, crossStudent, currentValue) {
+  const wouldOverwrite = !!currentValue
+  const isTimelineDest = item.destination === 'timeline' || item.destination === 'deadline'
+  const missingDate = isTimelineDest && !item.value
+  const defaultChecked = !crossStudent && item.destination !== 'etc' && !wouldOverwrite && !missingDate
+  const notesDisplay = item.notes ? `<span style="color:#555;font-size:11px;margin-left:6px">${escHtml(item.notes.slice(0, 80))}${item.notes.length > 80 ? '...' : ''}</span>` : ''
+  const borderStyle = crossStudent ? 'border-left:3px solid #c44;' : missingDate ? 'border-left:3px solid #c44;' : wouldOverwrite ? 'border-left:3px solid #B8962E;' : ''
+
+  let warnHtml = ''
+  if (crossStudent) {
+    warnHtml = `<div style="font-size:11px;color:#c44;margin-top:2px">Mentions "${escHtml(item.studentMentioned)}" — may not belong to ${escHtml((D && D.student && (D.student.preferredName || D.student.studentName)) || 'this student')}</div>`
+  } else if (missingDate) {
+    warnHtml = `<div style="font-size:11px;color:#c44;margin-top:2px">No date found — set one below to enable saving</div>`
+  } else if (wouldOverwrite) {
+    warnHtml = `<div style="font-size:11px;color:#B8962E;margin-top:2px">Currently: <span style="color:#aaa">${escHtml(String(currentValue))}</span> — tick to overwrite</div>`
+  }
+
+  const destSelect = `<select data-sd-dest-idx="${idx}" onchange="sdOnDestChange(${idx})"
+    style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;color:#888;font-size:11px;padding:2px 6px;cursor:pointer">
+    ${SD_DEST_OPTIONS.map(o => `<option value="${o.value}"${item.destination === o.value ? ' selected' : ''}>${o.label}</option>`).join('')}
+  </select>`
+
+  // Date field — shown for timeline/deadline, hidden for others
+  const dateVal = isTimelineDest && item.value ? item.value : ''
+  const dateField = `<div data-sd-datefield-idx="${idx}"
+    style="display:${isTimelineDest ? 'flex' : 'none'};align-items:center;gap:6px;margin-top:6px">
+    <span style="font-size:11px;color:#555;flex-shrink:0">Date:</span>
+    <input type="date" data-sd-date-idx="${idx}" value="${escHtml(dateVal)}"
+      style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;color:#aaa;font-size:11px;padding:3px 6px;width:140px"
+      oninput="(function(el){var cb=document.querySelector('input[data-sd-idx=${idx}]');if(cb&&el.value)cb.checked=true})(this)" />
+  </div>`
+
+  return `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 12px;${borderStyle}border-radius:4px;margin-bottom:4px;background:#161616">
+    <input type="checkbox" data-sd-idx="${idx}" ${defaultChecked ? 'checked' : ''} style="margin-top:3px;accent-color:#B8962E;flex-shrink:0" />
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:13px;color:${crossStudent ? '#c88' : '#ddd'}">${escHtml(item.title)}</span>
+        ${item.value && !isTimelineDest ? `<span style="font-size:12px;color:#777">${escHtml(item.value)}</span>` : ''}
+        ${notesDisplay}
+        ${destSelect}
+      </div>
+      ${warnHtml}
+      ${dateField}
+    </div>
+  </div>`
+}
+
+// Render the grouped routing preview after all extractions
+function sdRenderRoutingPreview() {
+  const allItems = window._sdAllItems || []
+  if (!allItems.length) return
+
+  const groups = {
+    cross:           [],
+    timeline:        [],
+    deadline:        [],
+    profile_basic:   [],
+    profile_dob:     [],
+    profile_academic:[],
+    profile_cert:    [],
+    school_info:     [],
+    etc:             [],
+  }
+
+  allItems.forEach((item, idx) => {
+    const isCross = sdIsCrossStudent(item)
+    if (isCross) {
+      groups.cross.push({ item, idx })
+      return // Cross-student items only appear in the cross section, not their destination
+    }
+    const dest = item.destination || 'etc'
+    if (dest === 'timeline')           groups.timeline.push({ item, idx })
+    else if (dest === 'deadline')      groups.deadline.push({ item, idx })
+    else if (dest === 'profile_basic') groups.profile_basic.push({ item, idx })
+    else if (dest === 'profile_dob')   groups.profile_dob.push({ item, idx })
+    else if (dest === 'profile_academic') groups.profile_academic.push({ item, idx })
+    else if (dest === 'profile_cert')  groups.profile_cert.push({ item, idx })
+    else if (dest === 'school_info')   groups.school_info.push({ item, idx })
+    else                               groups.etc.push({ item, idx })
+  })
+
+  const dSchools = (D && D.schools) ? D.schools : []
+  const multiSchool = dSchools.length > 1
+
+  // Collect detected school names from results
+  const detectedSchools = [...new Set((window._sdResults || []).filter(r => r.ok && r.extracted.schoolDetected).map(r => r.extracted.schoolDetected))]
+  const schoolMappings = sdBuildSchoolMappings(detectedSchools)
+  const detectedSchool = detectedSchools[0] || null
+
+  // School selector for timeline items (only if multiple schools)
+  let schoolSelectorHtml = ''
+  if (multiSchool && (groups.timeline.length > 0 || groups.deadline.length > 0)) {
+    // Pre-select the matched school if possible
+    const matchedId = detectedSchool ? schoolMappings[detectedSchool] : null
+    schoolSelectorHtml = `<div style="margin-bottom:12px;display:flex;align-items:center;gap:10px">
+      <label style="font-size:11px;color:#555;text-transform:uppercase;letter-spacing:.08em">Assign to school:</label>
+      <select id="sd-timeline-school" style="padding:6px 10px;border:1px solid #2a2a2a;border-radius:6px;background:#161616;color:#eee;font-size:13px;outline:none">
+        ${dSchools.map(s => `<option value="${escHtml(s.id)}" ${s.id === matchedId ? 'selected' : ''}>${escHtml(s.school_name)}</option>`).join('')}
+      </select>
+    </div>`
+  }
+
+  function sectionHtml(label, entries, extraTop) {
+    if (!entries.length) return ''
+    return `<div style="margin-bottom:20px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#555;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #1e1e1e">${label} (${entries.length})</div>
+      ${extraTop || ''}
+      ${entries.map(({ item, idx }) => sdRenderItemRow(item, idx, false)).join('')}
+    </div>`
+  }
+
+  let html = ''
+
+  // Cross-student section (always first)
+  if (groups.cross.length) {
+    html += `<div style="margin-bottom:20px;padding:12px 16px;border:1px solid #522;border-radius:6px;background:#1a1111">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#c44;margin-bottom:8px">Possible Cross-Student Items (${groups.cross.length})</div>
+      <div style="font-size:12px;color:#855;margin-bottom:10px">These items mention a name that may not match ${escHtml((D && D.student && (D.student.preferredName || D.student.studentName)) || 'this student')}. Unchecked by default.</div>
+      ${groups.cross.map(({ item, idx }) => sdRenderItemRow(item, idx, true)).join('')}
+    </div>`
+  }
+
+  // Map profile_basic items to current student field values for overwrite warnings
+  const _studentFieldMap = {
+    student_name:       (D && D.student && D.student.studentName)    || null,
+    preferred_name:     (D && D.student && D.student.preferredName)  || null,
+    dob:                (D && D.student && D.student.dob)            || null,
+    nationality:        (D && D.student && D.student.nationality)    || null,
+    current_school:     (D && D.student && D.student.currentSchool)  || null,
+    current_year_group: (D && D.student && D.student.currentYearGroup) || null,
+  }
+
+  html += sectionHtml('Timeline Events', groups.timeline, schoolSelectorHtml)
+  html += sectionHtml('Deadlines', groups.deadline, multiSchool && groups.timeline.length === 0 ? schoolSelectorHtml : '')
+
+  // Student Info — custom render with current value lookup
+  if (groups.profile_basic.length) {
+    html += `<div style="margin-bottom:20px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#555;margin-bottom:4px;padding-bottom:6px;border-bottom:1px solid #1e1e1e">Student Info (${groups.profile_basic.length})</div>
+      <div style="font-size:11px;color:#555;margin-bottom:8px">Gold border = field already has a value. Unticked by default — tick to overwrite.</div>
+      ${groups.profile_basic.map(({ item, idx }) => {
+        const field = item.meta && item.meta.field
+        const currentVal = field ? _studentFieldMap[field] : null
+        return sdRenderItemRow(item, idx, false, currentVal)
+      }).join('')}
+    </div>`
+  }
+
+  html += sectionHtml('Profile Updates', [...groups.profile_dob, ...groups.profile_academic, ...groups.profile_cert])
+
+  // School info section with school context note
+  if (groups.school_info.length) {
+    const schoolLabel = detectedSchool ? ` — ${escHtml(detectedSchool)}` : ''
+    html += `<div style="margin-bottom:20px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#555;margin-bottom:4px;padding-bottom:6px;border-bottom:1px solid #1e1e1e">School Info${schoolLabel} (${groups.school_info.length})</div>
+      <div style="font-size:11px;color:#555;margin-bottom:8px">Shared across all students at this school.</div>
+      ${groups.school_info.map(({ item, idx }) => sdRenderItemRow(item, idx, false)).join('')}
+    </div>`
+  }
+
+  if (groups.etc.length) {
+    html += `<div style="margin-bottom:20px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#555;margin-bottom:4px;padding-bottom:6px;border-bottom:1px solid #1e1e1e">Review Manually (${groups.etc.length})</div>
+      <div style="font-size:11px;color:#555;margin-bottom:8px">Could not be automatically categorised. Unchecked by default.</div>
+      ${groups.etc.map(({ item, idx }) => sdRenderItemRow(item, idx, false)).join('')}
+    </div>`
+  }
+
+  const sectionsEl = $id('sd-routing-sections')
+  if (sectionsEl) sectionsEl.innerHTML = html
+  const rp = $id('sd-routing-preview')
+  if (rp) rp.style.display = ''
+}
+
+// Poll a background extraction job until done or error (max 5 min)
+async function sdPollJob(jobId, onTick) {
+  const MAX_POLLS = 150  // 150 × 2s = 5 min
+  for (let i = 0; i < MAX_POLLS; i++) {
+    await new Promise(r => setTimeout(r, 2000))
+    const res = await fetch(`/api/get-extraction-job?jobId=${encodeURIComponent(jobId)}`, {
+      headers: sdAuthHeaders(),
+    })
+    if (!res.ok) throw new Error(`Poll error (${res.status})`)
+    const json = await res.json()
+    const job = json.job || {}
+    if (onTick) onTick(i + 1, job.status)
+    if (job.status === 'done') return job
+    if (job.status === 'error') throw new Error(job.error_msg || 'Extraction failed')
+  }
+  throw new Error('Extraction timed out after 5 minutes')
+}
+
+async function sdExtractAll() {
+  const input = $id('sd-file-input')
+  const files = input && input.files ? Array.from(input.files) : []
+  if (!files.length) {
+    const sm = $id('sd-status-msg')
+    if (sm) sm.textContent = 'No files selected.'
+    return
+  }
+
+  const btn = $id('sd-extract-btn')
+  if (btn) { btn.disabled = true; btn.textContent = 'Extracting...' }
+  const sm = $id('sd-status-msg')
+  if (sm) sm.textContent = ''
+  window._sdResults = []
+  window._sdAllItems = []
+
+  const studentName    = (D && D.student) ? (D.student.studentName || '') : ''
+  const studentSchools = (D && D.schools) ? D.schools.map(s => s.school_name) : []
+
+  for (const file of files) {
+    const safeId = 'sd-row-' + file.name.replace(/[^a-z0-9]/gi, '_')
+    const statusEl = document.querySelector('#' + safeId + ' .sd-file-status')
+
+    if (file.size > 4_500_000) {
+      if (statusEl) { statusEl.textContent = 'Too large (max 4.5MB)'; statusEl.style.color = '#c44' }
+      window._sdResults.push({ file: file.name, ok: false, error: 'File too large' })
+      continue
+    }
+
+    if (statusEl) { statusEl.textContent = 'Uploading...'; statusEl.style.color = '#B8962E' }
+    try {
+      // Generate a client-side job ID
+      const jobId = crypto.randomUUID()
+      const base64 = await sdReadFile(file)
+
+      // Submit to background function — returns 202 immediately (or runs sync in local dev)
+      const res = await fetch('/api/process-school-doc-background', {
+        method: 'POST',
+        headers: sdAuthHeaders(),
+        body: JSON.stringify({ jobId, pdfBase64: base64, fileName: file.name, studentName, studentSchools })
+      })
+
+      // 202 = background function accepted (body is empty — result arrives via polling)
+      if (res.status !== 202 && res.status !== 200) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error((errJson.detail || errJson.error) || `Submit error (${res.status})`)
+      }
+
+      // Poll until done
+      if (statusEl) { statusEl.textContent = 'Processing...'; statusEl.style.color = '#B8962E' }
+      let elapsed = 0
+      const job = await sdPollJob(jobId, (tick, status) => {
+        elapsed = tick * 2
+        if (statusEl) {
+          statusEl.textContent = `Processing... (${elapsed}s)`
+          statusEl.style.color = '#B8962E'
+        }
+      })
+
+      const extracted = job.result?.extracted || {}
+      const items = Array.isArray(extracted.items) ? extracted.items : []
+      window._sdResults.push({ file: file.name, ok: true, extracted })
+      window._sdAllItems.push(...items)
+      if (statusEl) { statusEl.textContent = `Extracted (${items.length} items)`; statusEl.style.color = '#4a4' }
+
+    } catch (err) {
+      window._sdResults.push({ file: file.name, ok: false, error: err.message })
+      const shortErr = err.message.length > 60 ? err.message.slice(0, 60) + '...' : err.message
+      if (statusEl) { statusEl.textContent = shortErr; statusEl.style.color = '#c44' }
+    }
+  }
+
+  if (btn) { btn.disabled = false; btn.textContent = 'Re-extract All' }
+
+  const successCount = window._sdResults.filter(r => r.ok).length
+  if (successCount > 0 && window._sdAllItems.length > 0) {
+    sdRenderRoutingPreview()
+  } else if (successCount > 0) {
+    const sm = $id('sd-status-msg')
+    if (sm) { sm.style.color = '#555'; sm.textContent = 'Extraction complete but no items were found. Try a different document.' }
+  } else {
+    const sm = $id('sd-status-msg')
+    if (sm) { sm.style.color = '#c44'; sm.textContent = 'All extractions failed. Check the console for details.' }
+  }
+}
+
+async function sdSaveAll() {
+  const btn = $id('sd-save-btn')
+  const statusEl = $id('sd-status-msg')
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving...' }
+  if (statusEl) statusEl.textContent = ''
+
+  const studentId = D && D.student && D.student.id
+  if (!studentId) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Save Selected' }
+    if (statusEl) { statusEl.style.color = '#c44'; statusEl.textContent = 'No student loaded. Cannot save.' }
+    return
+  }
+
+  // Collect checked items, applying any destination/date overrides from the UI
+  const checkedItems = []
+  document.querySelectorAll('input[data-sd-idx]:checked').forEach(cb => {
+    const idx  = parseInt(cb.dataset.sdIdx, 10)
+    const base = (window._sdAllItems || [])[idx]
+    if (!base) return
+    const item = { ...base }
+    // Apply destination override
+    const destEl = document.querySelector(`[data-sd-dest-idx="${idx}"]`)
+    if (destEl) item.destination = destEl.value
+    // Apply date override for timeline/deadline
+    const dateEl = document.querySelector(`[data-sd-date-idx="${idx}"]`)
+    if (dateEl && dateEl.value) item.value = dateEl.value
+    checkedItems.push(item)
+  })
+
+  if (!checkedItems.length) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Save Selected' }
+    if (statusEl) { statusEl.style.color = '#555'; statusEl.textContent = 'No items selected.' }
+    return
+  }
+
+  // Build school mappings from D.schools
+  const detectedSchools = [...new Set((window._sdResults || []).filter(r => r.ok && r.extracted.schoolDetected).map(r => r.extracted.schoolDetected))]
+  const schoolMappings  = sdBuildSchoolMappings(detectedSchools)
+  const detectedSchool  = detectedSchools[0] || null
+
+  // If timeline school override selected (multi-school case), add it to mappings
+  const tlSchoolSel = $id('sd-timeline-school')
+  if (tlSchoolSel && tlSchoolSel.value) {
+    const dSchools = (D && D.schools) ? D.schools : []
+    const matched  = dSchools.find(s => s.id === tlSchoolSel.value)
+    if (matched) {
+      // Override: map detected school name to the analyst's chosen student_school_id
+      for (const name of detectedSchools) {
+        schoolMappings[name] = matched.id
+      }
+      // Ensure there's always at least one UUID entry so save-smart-doc fallback works
+      if (!detectedSchools.length) {
+        schoolMappings[matched.school_name] = matched.id
+      }
+    }
+  }
+
+  try {
+    const res = await fetch('/api/save-smart-doc', {
+      method: 'POST',
+      headers: sdAuthHeaders(),
+      body: JSON.stringify({
+        items:        checkedItems,
+        studentId,
+        schoolMappings,
+        schoolName:   detectedSchool,
+      })
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Save failed')
+
+    if (btn) { btn.disabled = false; btn.textContent = 'Save Selected' }
+
+    // Build status message
+    const s = json.saved || {}
+    const parts = []
+    if (s.timeline)          parts.push(`${s.timeline} timeline event${s.timeline !== 1 ? 's' : ''}`)
+    if (s.deadline)          parts.push(`${s.deadline} deadline${s.deadline !== 1 ? 's' : ''}`)
+    if (s.profile_basic)     parts.push(`${s.profile_basic} student info field${s.profile_basic !== 1 ? 's' : ''}`)
+    if (s.profile_dob)       parts.push('date of birth')
+    if (s.profile_academic)  parts.push(`${s.profile_academic} grade${s.profile_academic !== 1 ? 's' : ''}`)
+    if (s.profile_cert)      parts.push(`${s.profile_cert} cert${s.profile_cert !== 1 ? 's' : ''}`)
+    if (s.school_info)       parts.push(`${s.school_info} school info item${s.school_info !== 1 ? 's' : ''}`)
+
+    const sk = json.skipped || {}
+    const skipParts = []
+    if (sk.timeline)          skipParts.push(`${sk.timeline} duplicate timeline item${sk.timeline !== 1 ? 's' : ''} skipped`)
+    if (sk.profile_academic)  skipParts.push(`${sk.profile_academic} duplicate grade${sk.profile_academic !== 1 ? 's' : ''} skipped`)
+    if (sk.profile_cert)      skipParts.push(`${sk.profile_cert} duplicate cert${sk.profile_cert !== 1 ? 's' : ''} skipped`)
+    if (sk.profile_dob && sk.profile_dob.reason) {
+      skipParts.push(`DOB: ${sk.profile_dob.reason.toLowerCase()}${sk.profile_dob.existingValue ? ' (' + sk.profile_dob.existingValue + ')' : ''}`)
+    }
+    if (sk.school_info && sk.school_info.reason) skipParts.push(`school info: ${sk.school_info.reason}`)
+
+    let msg = parts.length ? `Saved: ${parts.join(', ')}.` : 'Nothing was saved.'
+    if (skipParts.length) msg += ` Note: ${skipParts.join('; ')}.`
+    if (json.errors && json.errors.length) msg += ` ${json.errors.length} error${json.errors.length !== 1 ? 's' : ''} — check console.`
+
+    if (statusEl) {
+      statusEl.style.color = parts.length ? '#4a4' : '#555'
+      statusEl.textContent = msg
+    }
+
+    // Invalidate caches so Journey/Applying tabs refresh on next visit
+    if (parts.length) {
+      _reportsLoaded = false
+      // Re-fetch student data so Journey/Applying tabs show new items immediately
+      try {
+        const refreshHeaders = {}
+        if (window._token) refreshHeaders['Authorization'] = 'Bearer ' + window._token
+        else if (typeof _portalToken !== 'undefined' && _portalToken) refreshHeaders['X-Access-Token'] = _portalToken
+        if (Object.keys(refreshHeaders).length) {
+          const fresh = await fetch('/api/student', { headers: refreshHeaders }).then(r => r.ok ? r.json() : null)
+          if (fresh && fresh.student && D) {
+            D.schools        = fresh.schools        || D.schools
+            D.academics      = fresh.academics      || D.academics
+            D.certifications = fresh.certifications || D.certifications
+          }
+        }
+      } catch (e) { /* non-fatal */ }
+    }
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Save Selected' }
+    if (statusEl) { statusEl.style.color = '#c44'; statusEl.textContent = 'Save failed: ' + err.message }
+    console.error('sdSaveAll error:', err)
+  }
+}
+
+function sdReset() {
+  _schoolDocsLoaded = false
+  window._sdResults = []
+  window._sdAllItems = []
+  renderSchoolDocsTab()
+}
+
+// ── School Reports note editors ───────────────────────────────────────────────
+
 function wireReportNoteEditors() {
   document.querySelectorAll('[data-note-rec]').forEach(el => {
     el.addEventListener('blur', async function() {
@@ -11358,6 +11978,27 @@ function renderChildSwitcher() {
   main.insertAdjacentElement('afterbegin', bar)
 }
 
+async function loadParentAccountStatus() {
+  if (!isAnalystView) return
+  const el = $id('prof-parent-acct-status')
+  if (!el) return
+  const studentId = D && D.student && D.student.id
+  if (!studentId) { el.innerHTML = ''; return }
+  try {
+    const res = await fetch('/api/get-parent-account?student_id=' + studentId, {
+      headers: { Authorization: 'Bearer ' + window._token }
+    })
+    if (!res.ok) { el.innerHTML = ''; return }
+    const data = await res.json()
+    if (!data.hasAccount) {
+      el.innerHTML = '<span style="color:#555">No account created yet</span>'
+    } else {
+      const signInText = data.lastSignIn ? fmtDate(data.lastSignIn) : 'Never'
+      el.innerHTML = `Account: <span style="color:#eee">${escHtml(data.email)}</span><span style="color:#555;margin-left:10px">· Last sign-in: ${signInText}</span>`
+    }
+  } catch(e) { el.innerHTML = '' }
+}
+
 async function renderAnalystFamilyBar() {
   if (!isAnalystView) return
   if (!D || !D.student || !D.student.id || !window._token) return
@@ -11677,7 +12318,7 @@ async function resetParentPassword() {
   const msg    = $id('prof-reset-msg')
   const result = $id('prof-reset-result')
   if (!D.student?.id) { msg.style.color = 'var(--red)'; msg.textContent = 'No student loaded'; return }
-  msg.style.color = 'var(--gold)'; msg.textContent = 'Generating…'
+  msg.style.color = 'var(--gold)'; msg.textContent = 'Sending…'
   if (result) result.style.display = 'none'
   try {
     const res = await fetch('/api/reset-parent-password', {
@@ -11688,9 +12329,28 @@ async function resetParentPassword() {
     const json = await res.json()
     if (!res.ok) throw new Error(json.error)
     msg.textContent = ''
-    $id('prof-reset-result-email').textContent = 'Email: ' + json.email
-    $id('prof-reset-result-pass').textContent = 'New password: ' + json.new_password
+    $id('prof-reset-result-email').textContent = 'Sent to: ' + json.email
     if (result) result.style.display = 'block'
+  } catch (err) {
+    msg.style.color = 'var(--red)'; msg.textContent = err.message
+  }
+}
+
+async function clearParentEmail() {
+  const msg = $id('prof-clear-email-msg')
+  if (!D.student?.id) { msg.style.color = 'var(--red)'; msg.textContent = 'No student loaded'; return }
+  if (!confirm('Remove the email address from this parent account? They will no longer be able to sign in until a new email is set.')) return
+  msg.style.color = 'var(--gold)'; msg.textContent = 'Clearing…'
+  try {
+    const res = await fetch('/api/clear-parent-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (window._token || '') },
+      body: JSON.stringify({ student_id: D.student.id })
+    })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error)
+    msg.style.color = '#4a4'; msg.textContent = 'Email cleared'
+    loadParentAccountStatus()
   } catch (err) {
     msg.style.color = 'var(--red)'; msg.textContent = err.message
   }

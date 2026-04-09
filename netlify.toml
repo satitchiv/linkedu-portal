@@ -26,9 +26,27 @@
   timeout = 26
 
 [functions.process-school-doc]
-  timeout = 26
+  timeout = 90
+
+[functions.process-school-doc-background]
+  timeout = 900
+
+[functions.get-extraction-job]
+  timeout = 10
+
+[functions.get-parent-account]
+  timeout = 10
+
+[functions.reset-parent-password]
+  timeout = 10
+
+[functions.clear-parent-email]
+  timeout = 10
 
 [functions.save-school-doc]
+  timeout = 26
+
+[functions.save-smart-doc]
   timeout = 26
 
 [functions.add-child-by-token]
