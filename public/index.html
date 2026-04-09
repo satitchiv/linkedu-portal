@@ -1563,6 +1563,7 @@
   <div class="auth-card">
     <div class="auth-logo">LINKEDU</div>
     <div class="auth-subtitle">Parent Portal</div>
+    <div class="auth-error" id="auth-error" style="display:none;margin-top:12px"></div>
     <div id="auth-form-wrap">
       <h2 id="auth-form-title">Sign in to your portal</h2>
       <!-- Dev login (localhost only — hidden on production) -->
@@ -1693,6 +1694,7 @@
     <button class="header-lang" id="lang-btn" onclick="toggleLang()" title="Switch language">EN | ภาษาไทย</button>
     <button id="btn-all-students" class="header-signout" onclick="showStudentsList()" style="display:none">All Students</button>
     <button id="btn-new-student" class="header-signout" onclick="showNewStudentPanel()" style="display:none;background:var(--gold);color:#111;border-color:var(--gold)">+ New Student</button>
+    <button id="btn-parent-signin" class="header-signout" onclick="showParentSignIn()" style="display:none">Sign in</button>
     <button class="header-signout" onclick="signOut()">Sign out</button>
   </div>
   <div id="tabnav">
@@ -2157,6 +2159,13 @@ function showForgotPassword() {
   // Pre-fill email from whichever input was last used
   const known = ($id('pw-email')?.value || $id('dev-email')?.value || $id('auth-email')?.value || '').trim()
   if (known) $id('fp-email').value = known
+}
+
+// Shows sign-in form from the token view (returning parent, or analyst testing)
+function showParentSignIn() {
+  $id('app').style.display = 'none'
+  $id('auth-screen').style.display = 'flex'
+  showSignIn()
 }
 
 function showSignIn() {
@@ -10279,6 +10288,7 @@ if (isTokenView) {
       // Silently check for existing session — applies features without blocking
       const { data: { session } } = await sb.auth.getSession()
       if (session) {
+        if ($id('btn-parent-signin')) $id('btn-parent-signin').style.display = 'none'
         try {
           const _acr = await fetch('/api/check-analyst', { headers: { 'Authorization': 'Bearer ' + session.access_token } })
           const { isAnalyst } = await _acr.json()
@@ -10299,6 +10309,9 @@ if (isTokenView) {
             await initChildSwitcher(session.access_token)
           }
         } catch (e) { /* network error — continue read-only */ }
+      } else {
+        // No session — show sign-in button so returning parents can access child switcher
+        if ($id('btn-parent-signin')) $id('btn-parent-signin').style.display = 'inline-block'
       }
       checkClaimBanner()
     } catch (err) {
@@ -11654,12 +11667,17 @@ sb.auth.onAuthStateChange(async (event, session) => {
 sb.auth.onAuthStateChange(async (event, session) => {
   if (!isTokenView) return
   if (!session) return
+  // Any valid session — hide the sign-in button
+  if ($id('btn-parent-signin')) $id('btn-parent-signin').style.display = 'none'
   // Verify analyst role via backend (bypasses broken RLS on user_profiles)
   try {
     const _acr = await fetch('/api/check-analyst', { headers: { 'Authorization': 'Bearer ' + session.access_token } })
     const { isAnalyst } = await _acr.json()
     if (!isAnalyst) {
-      // Parent signed in — enable child switcher silently
+      // Parent signed in — hide auth-screen if it was shown, show app, enable child switcher
+      $id('auth-screen').style.display = 'none'
+      $id('app').style.display = 'flex'
+      $id('app').classList.add('visible')
       window._token = session.access_token
       await initChildSwitcher(session.access_token)
       renderAll()
