@@ -10033,7 +10033,7 @@ async function loadSchoolReports(forceRefresh) {
 
   try {
     const headers = {}
-    if (window._portalToken) headers['X-Access-Token'] = window._portalToken
+    if (_portalToken) headers['X-Access-Token'] = _portalToken
     else if (window._token) headers['Authorization'] = 'Bearer ' + window._token
     const qs = (D && D.student && D.student.id && isAnalystView) ? '?student_id=' + D.student.id : ''
     const res = await fetch('/api/get-school-reports' + qs, { headers })
