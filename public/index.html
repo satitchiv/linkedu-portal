@@ -1625,6 +1625,9 @@
         <div style="margin-top:14px;text-align:center;font-size:12px;color:var(--muted)">Already have an account? <span onclick="showSignIn()" style="color:var(--gold);cursor:pointer;text-decoration:underline">Sign in</span></div>
       </div>
     </div>
+    <div id="token-continue-btn" style="display:none;margin-top:20px;text-align:center">
+      <button onclick="continueWithoutSignIn()" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;font-family:inherit;text-decoration:underline">Continue without signing in</button>
+    </div>
     <div id="auth-sent-wrap" style="display:none; text-align:center; padding: 12px 0;">
       <div style="font-family:'Playfair Display',serif; font-size:16px; color:#1a1a1a; margin-bottom:10px;">Check your email</div>
       <div style="font-size:13px; color:#666; line-height:1.7;">We've sent a secure login link to<br><strong id="auth-sent-email" style="color:#1a1a1a;"></strong><br><br>Click the link in the email to sign in.<br>It expires in 1 hour.</div>
@@ -10273,9 +10276,9 @@ if (isTokenView) {
       renderToolsTab(D.toolResults || [])
       $id('loading').classList.remove('show')
       $id('loading').style.display = 'none'
-      $id('auth-screen').style.display = 'none'
-      $id('app').style.display = 'flex'
-      $id('app').classList.add('visible')
+      // Show "Continue without signing in" now that data is ready
+      const contBtn = $id('token-continue-btn')
+      if (contBtn) contBtn.style.display = 'block'
       // Check for existing analyst/parent session (e.g. after page reload)
       const { data: { session } } = await sb.auth.getSession()
       if (session) {
@@ -10294,17 +10297,22 @@ if (isTokenView) {
               } catch(e) {}
             }
             renderAll()
+            $id('auth-screen').style.display = 'none'
+            $id('app').style.display = 'flex'
+            $id('app').classList.add('visible')
           } else if (!isAnalyst) {
             // Parent has an existing session — enable child manager bar silently
             window._token = session.access_token
             await initChildSwitcher(session.access_token)
+            $id('auth-screen').style.display = 'none'
+            $id('app').style.display = 'flex'
+            $id('app').classList.add('visible')
           }
-          // isAnalyst && isParentView: ignore analyst session, fall through to show overlay
-        } catch (e) { /* network error — show overlay */ }
+          // isAnalyst && isParentView: ignore analyst session, show auth-screen
+        } catch (e) { /* network error — show auth-screen */ }
       }
       if (!isAnalystView) {
-        const overlay = $id('analyst-login-overlay')
-        if (overlay) overlay.style.display = 'flex'
+        $id('auth-screen').style.display = 'flex'
       }
     } catch (err) {
       $id('loading').style.display = 'none'
@@ -11143,6 +11151,8 @@ async function checkClaimBanner() {
   const banner = $id('claim-banner')
   if (!banner) return
   if (!isTokenView) { banner.style.display = 'none'; return }
+  const app = $id('app')
+  if (!app || app.style.display === 'none' || app.style.display === '') return
   if (localStorage.getItem('portal_claimed_dismissed')) return
   if (sessionStorage.getItem('portal_claimed_dismissed')) return
 
@@ -11650,37 +11660,12 @@ sb.auth.onAuthStateChange(async (event, session) => {
 })
 </script>
 
-<!-- Analyst login overlay (token view, no ?view=parent) -->
-<div id="analyst-login-overlay" style="display:none;position:fixed;inset:0;background:#111;z-index:500;align-items:center;justify-content:center">
-  <div style="background:#161616;border:1px solid #2a2a2a;border-radius:10px;padding:36px 32px;width:340px;text-align:center">
-    <div style="font-family:'Cormorant Garamond',serif;color:#B8962E;font-size:20px;margin-bottom:6px">Sign in to your portal</div>
-    <div id="al-prompt" style="font-size:12px;color:#555;margin-bottom:20px">Parents and consultants sign in here</div>
-    <div id="al-form">
-      <input type="email" id="al-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')$id('al-password').focus()" style="width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;font-size:14px;color:#eee;outline:none;text-align:center;box-sizing:border-box" />
-      <input type="password" id="al-password" placeholder="password" onkeydown="if(event.key==='Enter')signInAnalyst()" style="margin-top:8px;width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;font-size:14px;color:#eee;outline:none;text-align:center;box-sizing:border-box" />
-      <button onclick="signInAnalyst()" id="al-btn" style="margin-top:12px;width:100%;padding:10px;background:#B8962E;color:#111;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">Sign In</button>
-    </div>
-    <div id="al-error" style="color:#e74c3c;font-size:12px;margin-top:8px;display:none"></div>
-    <div style="margin-top:16px"><button onclick="document.getElementById('analyst-login-overlay').style.display='none'" style="background:none;border:1px solid #444;border-radius:6px;color:#aaa;font-size:12px;cursor:pointer;padding:8px 16px">Continue without signing in</button></div>
-  </div>
-</div>
-
 <script>
-// ── Analyst login (token view) — email + password ─────────────────────────────
-async function signInAnalyst() {
-  const email = ($id('al-email').value || '').trim()
-  const password = ($id('al-password').value || '')
-  const errEl = $id('al-error')
-  const btn = $id('al-btn')
-  errEl.style.display = 'none'
-  if (!email || !password) { errEl.textContent = 'Email and password required.'; errEl.style.display = 'block'; return }
-  btn.textContent = 'Signing in...'
-  btn.disabled = true
-  const { error } = await sb.auth.signInWithPassword({ email, password })
-  btn.textContent = 'Sign In'
-  btn.disabled = false
-  if (error) { errEl.textContent = error.message; errEl.style.display = 'block'; return }
-  // onAuthStateChange below handles the rest
+function continueWithoutSignIn() {
+  $id('auth-screen').style.display = 'none'
+  $id('app').style.display = 'flex'
+  $id('app').classList.add('visible')
+  renderAll()
 }
 
 // Handle sign-in session on page load / auth state change (token view)
@@ -11694,16 +11679,19 @@ sb.auth.onAuthStateChange(async (event, session) => {
     if (!isAnalyst) {
       // Parent signed in at token URL — enable child manager bar
       window._token = session.access_token
-      const overlay = $id('analyst-login-overlay')
-      if (overlay) overlay.style.display = 'none'
+      $id('auth-screen').style.display = 'none'
+      $id('app').style.display = 'flex'
+      $id('app').classList.add('visible')
       await initChildSwitcher(session.access_token)
+      renderAll()
       return
     }
   } catch (e) { return }
   window._token = session.access_token
   isAnalystView = true
-  const overlay = $id('analyst-login-overlay')
-  if (overlay) overlay.style.display = 'none'
+  $id('auth-screen').style.display = 'none'
+  $id('app').style.display = 'flex'
+  $id('app').classList.add('visible')
   if ($id('btn-new-student')) $id('btn-new-student').style.display = 'inline-block'
   if ($id('btn-all-students')) $id('btn-all-students').style.display = 'inline-block'
   if (!D) return
