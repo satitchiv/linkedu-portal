@@ -1711,6 +1711,7 @@
     <button class="tab-btn" onclick="showTab('profile')">Profile</button>
     <button class="tab-btn" id="tab-btn-tools" onclick="showTab('tools')">My Tools</button>
     <button class="tab-btn" id="tab-btn-line-chats" onclick="showTab('line-chats')" style="display:none">LINE Chats</button>
+    <button class="tab-btn" id="tab-btn-school-docs" onclick="showTab('school-docs')" style="display:none">School Docs</button>
   </div>
   <div class="claim-banner" id="claim-banner" style="display:none">
     <div class="claim-banner-header">
@@ -1746,25 +1747,28 @@
   <!-- Add child modal — JWT parents only -->
   <div id="add-child-modal">
     <div class="add-child-card">
-      <div class="add-child-title">Add another child</div>
+      <div class="add-child-title">Add a child</div>
 
       <div class="add-child-section">
-        <div class="add-child-section-label">I have a portal link from Satit</div>
-        <input type="text" id="add-child-token" placeholder="Paste portal link or token" />
-        <div class="add-child-msg" id="add-child-msg"></div>
-        <button class="add-child-btn" onclick="submitAddChild()">Link child</button>
-      </div>
-
-      <div class="add-child-divider"><span>or</span></div>
-
-      <div class="add-child-section">
-        <div class="add-child-section-label">Add my child myself</div>
         <input type="text" id="add-child-name" placeholder="Child's name (e.g. Nong Pooh)" />
         <div class="add-child-msg" id="add-child-self-msg"></div>
-        <button class="add-child-btn add-child-btn-outline" onclick="submitAddChildSelf()">Add child</button>
+        <button class="add-child-btn" onclick="submitAddChildSelf()">Add child</button>
       </div>
 
       <button class="add-child-cancel" onclick="closeAddChildModal()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Analyst add child modal -->
+  <div id="analyst-add-child-modal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)closeAnalystAddChildModal()">
+    <div class="add-child-card">
+      <div class="add-child-title">Add a child</div>
+      <div class="add-child-section">
+        <input type="text" id="analyst-add-child-name" placeholder="Child's name (e.g. Nong Pooh)" />
+        <div class="add-child-msg" id="analyst-add-child-msg"></div>
+        <button class="add-child-btn" onclick="submitAnalystAddChild()">Add child</button>
+      </div>
+      <button class="add-child-cancel" onclick="closeAnalystAddChildModal()">Cancel</button>
     </div>
   </div>
 
@@ -1836,6 +1840,7 @@
     </div>
     <div class="tab-panel" id="tab-tools"><div id="tools-content"></div></div>
     <div class="tab-panel" id="tab-line-chats"><div id="line-chats-content"></div></div>
+    <div class="tab-panel" id="tab-school-docs"><div id="school-docs-content"></div></div>
     <div class="tab-panel" id="tab-reports"><div id="reports-container" style="padding:4px 0"><p style="font-size:13px;color:var(--muted);padding:20px 0">Loading school reports...</p></div></div>
   </div>
 </div>
@@ -1920,6 +1925,7 @@ let _reportsLoaded = false
 let _tennisLoaded = false
 let _lineChatsLoaded = false
 let _lineChatsData = []
+let _schoolDocsLoaded = false
 let _gmailEmails = []
 
 function escHtml(s) {
@@ -2179,7 +2185,7 @@ function showSignIn() {
   if (isLocal) {
     $id('dev-login-wrap').style.display = 'block'
   } else {
-    $id('magic-link-wrap').style.display = 'block'
+    $id('password-signin-wrap').style.display = 'block'
   }
   $id('auth-form-title').textContent = 'Sign in to your portal'
 }
@@ -2411,6 +2417,10 @@ function showTab(name) {
   // LINE Chats button is not in the index-based tabs array — toggle it separately
   const lcBtn = document.getElementById('tab-btn-line-chats')
   if (lcBtn) lcBtn.classList.toggle('active', name === 'line-chats')
+  // School Docs button — analyst-only, outside positional array
+  const sdBtn = document.getElementById('tab-btn-school-docs')
+  if (sdBtn) sdBtn.classList.toggle('active', name === 'school-docs')
+  if (name === 'school-docs' && !_schoolDocsLoaded) renderSchoolDocsTab()
 }
 
 // ── Overview (cockpit) ────────────────────────────────────────────────────────
@@ -8914,6 +8924,10 @@ function applyTabVisibility() {
   if (lineChatsBtn) {
     lineChatsBtn.style.display = isAnalystView && D && D.student && D.student.line_user_id ? '' : 'none'
   }
+  const schoolDocsBtn = document.getElementById('tab-btn-school-docs')
+  if (schoolDocsBtn) {
+    schoolDocsBtn.style.display = isAnalystView ? '' : 'none'
+  }
 }
 
 function _updateGolfVisBar() {
@@ -10115,6 +10129,14 @@ function renderComparisonTable(schools) {
   </div>`
 }
 
+function fmtRptDate(ds) {
+  if (!ds) return '\u2014'
+  try {
+    const d = new Date(ds + 'T12:00:00')
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  } catch(e) { return ds }
+}
+
 function renderReportCards(schools) {
   const isMobile = window.innerWidth < 768
   return `<div class="rpt-outer">${schools.map((s, i) => {
@@ -10202,6 +10224,67 @@ function renderReportCards(schools) {
         </div>` : ''}`
       : ''
 
+    // School info — term dates, visa, uniform, contacts (from admin doc pipeline)
+    const sd = s.school_info_documents || {}
+
+    const termDatesHtml = (sd.term_calendar && sd.term_calendar.terms && sd.term_calendar.terms.length)
+      ? `<div class="rpt-sh">Term Dates${sd.term_calendar.academicYear ? ' \u2014 ' + sd.term_calendar.academicYear : ''}</div>` +
+        sd.term_calendar.terms.map(t => `
+          <div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #f5f1ea">
+            <div style="font-family:'Playfair Display',serif;font-size:11px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:#8B7F5A;margin-bottom:6px">${escHtml(t.term || '')}</div>
+            ${t.startDate ? `<div class="rpt-dr"><span class="rpt-lbl">Start</span><span class="rpt-val">${fmtRptDate(t.startDate)}</span></div>` : ''}
+            ${t.endDate   ? `<div class="rpt-dr"><span class="rpt-lbl">End</span><span class="rpt-val">${fmtRptDate(t.endDate)}</span></div>` : ''}
+            ${(t.halfTermStart && t.halfTermEnd) ? `<div class="rpt-dr"><span class="rpt-lbl">Half-Term</span><span class="rpt-val">${fmtRptDate(t.halfTermStart)} \u2013 ${fmtRptDate(t.halfTermEnd)}</span></div>` : ''}
+            ${(t.exeatDates && t.exeatDates.length) ? `<div class="rpt-dr"><span class="rpt-lbl">Exeat</span><span class="rpt-val" style="font-size:13px">${t.exeatDates.map(fmtRptDate).join(', ')}</span></div>` : ''}
+            ${(t.keyEvents && t.keyEvents.length) ? t.keyEvents.map(e => `<div class="rpt-dr"><span class="rpt-lbl">${escHtml(e.title || '')}</span><span class="rpt-val">${e.date ? fmtRptDate(e.date) : '\u2014'}${e.time ? ' \u00b7 ' + escHtml(e.time) : ''}</span></div>`).join('') : ''}
+          </div>`).join('')
+      : ''
+
+    const visaHtml = sd.visa_guide
+      ? `<div class="rpt-sh">Visa Information</div>
+        ${sd.visa_guide.visaType ? `<div class="rpt-dr"><span class="rpt-lbl">Visa Type</span><span class="rpt-val">${escHtml(sd.visa_guide.visaType)}</span></div>` : ''}
+        ${sd.visa_guide.route    ? `<div class="rpt-dr"><span class="rpt-lbl">Route</span><span class="rpt-val">${escHtml(sd.visa_guide.route)}</span></div>` : ''}
+        ${(sd.visa_guide.keyRequirements && sd.visa_guide.keyRequirements.length) ? `
+          <div class="rpt-lta-panel" style="margin-top:8px">
+            <div class="rpt-lta-lbl">Key Requirements</div>
+            <ul style="font-family:'EB Garamond',Georgia,serif;font-size:15px;color:#555;line-height:1.7;padding-left:16px;margin:6px 0 0">
+              ${sd.visa_guide.keyRequirements.map(r => `<li>${escHtml(r)}</li>`).join('')}
+            </ul>
+          </div>` : ''}
+        ${(sd.visa_guide.keyDates && sd.visa_guide.keyDates.length) ? `
+          <div style="margin-top:10px">
+            ${sd.visa_guide.keyDates.map(d => `<div class="rpt-dr"><span class="rpt-lbl">${escHtml(d.label || '')}</span><span class="rpt-val">${d.date ? fmtRptDate(d.date) : '\u2014'}</span></div>`).join('')}
+          </div>` : ''}
+        ${sd.visa_guide.notes ? `<div class="rpt-lta-panel" style="margin-top:8px"><p class="rpt-lta-text">${escHtml(sd.visa_guide.notes)}</p></div>` : ''}`
+      : ''
+
+    const uniformHtml = (sd.uniform_list && sd.uniform_list.categories && sd.uniform_list.categories.length)
+      ? `<div class="rpt-sh">Uniform &amp; Dress Code</div>` +
+        sd.uniform_list.categories.map(cat => `
+          <div style="margin-bottom:12px">
+            <div style="font-family:'Playfair Display',serif;font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:#8B7F5A;margin-bottom:4px">${escHtml(cat.category || '')}</div>
+            <ul style="font-family:'EB Garamond',Georgia,serif;font-size:15px;color:#444;line-height:1.8;padding-left:16px;margin:0">
+              ${(cat.items || []).map(item => `<li>${escHtml(item.item || '')}${item.quantity ? ' \u00d7' + escHtml(item.quantity) : ''}${item.notes ? ' <span style="color:#999;font-size:13px">— ' + escHtml(item.notes) + '</span>' : ''}</li>`).join('')}
+            </ul>
+          </div>`).join('')
+      : ''
+
+    const contactsHtml = (sd.insurance_contacts && isAnalystView)
+      ? `<div class="rpt-sh">Contacts &amp; Insurance</div>
+        ${sd.insurance_contacts.insuranceProvider ? `<div class="rpt-dr"><span class="rpt-lbl">Insurance</span><span class="rpt-val">${escHtml(sd.insurance_contacts.insuranceProvider)}</span></div>` : ''}
+        ${sd.insurance_contacts.policyNumber ? `<div class="rpt-dr"><span class="rpt-lbl">Policy No.</span><span class="rpt-val">${escHtml(sd.insurance_contacts.policyNumber)}</span></div>` : ''}
+        ${(sd.insurance_contacts.emergencyContacts && sd.insurance_contacts.emergencyContacts.length) ? `
+          <div class="rpt-lta-panel" style="margin-top:8px">
+            <div class="rpt-lta-lbl">Emergency Contacts</div>
+            ${sd.insurance_contacts.emergencyContacts.map(c => `
+              <div style="font-family:'EB Garamond',serif;font-size:15px;color:#333;margin-top:8px">
+                <strong>${escHtml(c.name || '')}${c.role ? ' \u2014 ' + escHtml(c.role) : ''}</strong>
+                ${c.phone ? `<br><span style="color:#555">${escHtml(c.phone)}</span>` : ''}
+                ${c.email ? `<br><span style="color:#555">${escHtml(c.email)}</span>` : ''}
+              </div>`).join('')}
+          </div>` : ''}`
+      : ''
+
     // Key facts
     const factsHtml = (s.fees_per_year || s.fees_thb || s.founded_year || s.scholarships)
       ? `<div class="rpt-sh">Key Facts</div>
@@ -10240,6 +10323,10 @@ function renderReportCards(schools) {
         ${sportsHtml}
         ${alumniHtml}
         ${tennisHtml}
+        ${termDatesHtml}
+        ${visaHtml}
+        ${uniformHtml}
+        ${contactsHtml}
         ${factsHtml}
         ${notesHtml}
       </div>
@@ -11283,21 +11370,49 @@ async function renderAnalystFamilyBar() {
     // Only update DOM once we have fresh data
     const existing = $id('analyst-family-bar')
     if (existing) existing.remove()
-    if (!siblings || siblings.length === 0) return
     const bar = document.createElement('div')
     bar.id = 'analyst-family-bar'
     bar.innerHTML = `
       <span class="afb-label">Family:</span>
       <div class="afb-siblings">
-        ${siblings.map(s => {
+        ${(siblings || []).map(s => {
           const name = escHtml(s.preferredName || s.studentName)
           return `<button class="afb-sibling-btn" onclick="switchChild('${s.id}')">${name}</button>`
         }).join('')}
+        <button class="afb-sibling-btn" style="color:var(--gold)" onclick="openAnalystAddChildModal()">+ Add child</button>
       </div>
     `
     const main = $id('main')
     if (main) main.insertAdjacentElement('afterbegin', bar)
   } catch(e) { /* non-blocking */ }
+}
+
+function openAnalystAddChildModal() {
+  $id('analyst-add-child-name').value = ''
+  $id('analyst-add-child-msg').textContent = ''
+  $id('analyst-add-child-modal').style.display = 'flex'
+}
+function closeAnalystAddChildModal() {
+  $id('analyst-add-child-modal').style.display = 'none'
+}
+async function submitAnalystAddChild() {
+  const name  = ($id('analyst-add-child-name').value || '').trim()
+  const msgEl = $id('analyst-add-child-msg')
+  if (!name) { msgEl.textContent = 'Enter a name.'; return }
+  msgEl.textContent = 'Adding...'
+  try {
+    const res = await fetch('/api/analyst-add-child', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + window._token },
+      body: JSON.stringify({ child_name: name, current_student_id: D.student.id }),
+    })
+    const data = await res.json()
+    if (!res.ok) { msgEl.textContent = data.error || 'Error adding child.'; return }
+    msgEl.textContent = (data.student.preferredName || data.student.studentName) + ' added.'
+    setTimeout(() => { closeAnalystAddChildModal(); renderAnalystFamilyBar() }, 1500)
+  } catch(e) {
+    msgEl.textContent = 'Network error. Try again.'
+  }
 }
 
 async function removeChildFromAccount(studentId, studentName) {
@@ -11324,8 +11439,8 @@ async function removeChildFromAccount(studentId, studentName) {
 }
 
 function openAddChildModal() {
-  $id('add-child-token').value = ''
-  $id('add-child-msg').textContent = ''
+  $id('add-child-name').value = ''
+  $id('add-child-self-msg').textContent = ''
   $id('add-child-modal').style.display = 'flex'
 }
 

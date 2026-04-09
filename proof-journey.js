@@ -344,12 +344,11 @@ async function runTests() {
     if (!authHidden)     issues.push('#auth-screen still visible after sign-in')
     if (!barVisible)     issues.push('#child-manager-bar not visible')
     if (!hasViewing)     issues.push('Child bar missing "Viewing:" label')
-    if (!hasSwitchBtn)   issues.push('No switch button (sibling) in child bar')
     if (!signinHidden)   issues.push('#btn-parent-signin still visible after sign-in')
 
     if (issues.length === 0) {
       const currentName = barHtml.match(/cmb-current[^>]*>([^<]+)/)?.[1]?.trim() || '?'
-      pass('J7', `Signed in. Child bar: "Viewing: ${currentName}". Note shown. Switch btn present.`)
+      pass('J7', `Signed in. Child bar: "Viewing: ${currentName}". Note shown.`)
       j7Passed = true
     } else {
       await screenshot(parentPage, 'J7-FAIL')

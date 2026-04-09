@@ -171,8 +171,8 @@ exports.handler = async (event) => {
 
     if (!studentId) return { statusCode: 400, headers, body: JSON.stringify({ error: 'No student linked to this session' }) }
 
-    // ── Fetch in parallel: recommendations + Notion schools ───────────────────
-    const [recsResult, notionSchools] = await Promise.all([
+    // ── Fetch in parallel: recommendations + Notion schools + school_info ────
+    const [recsResult, notionSchools, schoolInfoResult] = await Promise.all([
       supabase
         .from('student_recommendations')
         .select('*')
@@ -180,6 +180,9 @@ exports.handler = async (event) => {
         .eq('approved', true)
         .order('score', { ascending: false }),
       fetchAllNotionSchools(),
+      supabase
+        .from('school_info')
+        .select('school_name, documents'),
     ])
 
     const recs = recsResult.data || []
@@ -192,9 +195,18 @@ exports.handler = async (event) => {
       }
     }
 
-    // Merge each rec with its Notion data
+    // Build normalised name → school_info documents map
+    const schoolInfoMap = {}
+    for (const si of (schoolInfoResult.data || [])) {
+      if (si.school_name) {
+        schoolInfoMap[normalise(si.school_name)] = si.documents || {}
+      }
+    }
+
+    // Merge each rec with Notion data + school_info documents
     const results = recs.map((rec, index) => {
-      const notionData = notionMap[normalise(rec.school_name)] || {}
+      const notionData   = notionMap[normalise(rec.school_name)]   || {}
+      const schoolInfoDocs = schoolInfoMap[normalise(rec.school_name)] || null
       return {
         rec_id:                  rec.id,
         rank:                    index + 1,
@@ -252,6 +264,8 @@ exports.handler = async (event) => {
         cs_gcse:                    notionData.cs_gcse                    || null,
         cs_alevel:                  notionData.cs_alevel                  || null,
         coding_programme:           notionData.coding_programme           || null,
+        // School-level document data from admin upload pipeline
+        school_info_documents:      schoolInfoDocs,
       }
     })
 
